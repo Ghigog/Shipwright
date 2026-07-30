@@ -72,6 +72,14 @@ void BuildCutsceneMessage(uint16_t* textId, bool* loadFromMessageTable) {
     for (const CutsceneTextEntry& entry : cutsceneTextEntries) {
         if (entry.textId == *textId) {
             CustomMessage msg(entry.dialogue);
+            // AutoFormat() is not optional: LoadIntoFont() copies the string in
+            // MF_RAW form, so the terminating MESSAGE_END byte has to already be
+            // there. Without it Message_Decode's `while (true)` loop never sees a
+            // stop byte, runs off the end of font->msgBuf, and keeps writing past
+            // msgCtx.msgBufDecoded[200] until it clears the tail of MessageContext
+            // and nulls interfaceCtx.view.gfxCtx - crashing in Interface_Draw.
+            // It also turns '^' into a real page break and wraps lines to width.
+            msg.AutoFormat();
             msg.LoadIntoFont();
             *loadFromMessageTable = false;
             return;
