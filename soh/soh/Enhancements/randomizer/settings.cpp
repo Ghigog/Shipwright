@@ -3,6 +3,7 @@
 #include "dungeon.h"
 #include "soh/Enhancements/randomizer/randomizerTypes.h"
 #include "soh/Enhancements/randomizer/rng.h"
+#include "soh/Enhancements/randomizer/savefile.h"
 #include "soh/OTRGlobals.h"
 
 #include <spdlog/spdlog.h>
@@ -274,6 +275,10 @@ void Settings::CreateOptions() {
     OPT_BOOL(RSK_MEDALLION_LOCKED_TRIALS, "Medallion Locked Trials", CVAR_RANDOMIZER_SETTING("MedallionLockedTrials"), mOptionDescriptions[RSK_MEDALLION_LOCKED_TRIALS]);
     OPT_U8(RSK_STARTING_AGE, "Starting Age", {"Child", "Adult", "Random"}, OptionCategory::Setting, CVAR_RANDOMIZER_SETTING("StartingAge"), mOptionDescriptions[RSK_STARTING_AGE], WIDGET_CVAR_COMBOBOX, RO_AGE_CHILD);
     OPT_U8(RSK_SELECTED_STARTING_AGE, "Selected Starting Age", {"Child", "Adult"}, OptionCategory::Setting, CVAR_RANDOMIZER_SETTING("SelectedStartingAge"), mOptionDescriptions[RSK_STARTING_AGE], WIDGET_CVAR_COMBOBOX, RO_AGE_CHILD);
+    OPT_U8(RSK_SELECTED_SAGE, "Selected Sage",
+           { "Rauru", "Saria", "Darunia", "Ruto", "Impa", "Nabooru", "Zelda" }, OptionCategory::Setting,
+           CVAR_RANDOMIZER_SETTING("SelectedSage"), mOptionDescriptions[RSK_SELECTED_SAGE], WIDGET_CVAR_COMBOBOX,
+           RO_SAGE_RAURU);
     OPT_BOOL(RSK_SHUFFLE_ENTRANCES, "Shuffle Entrances");
     OPT_U8(RSK_SHUFFLE_DUNGEON_ENTRANCES, "Dungeon Entrances", {"Off", "On", "On + Ganon"}, OptionCategory::Setting, CVAR_RANDOMIZER_SETTING("ShuffleDungeonsEntrances"), mOptionDescriptions[RSK_SHUFFLE_DUNGEON_ENTRANCES], WIDGET_CVAR_COMBOBOX, RO_DUNGEON_ENTRANCE_SHUFFLE_OFF);
     OPT_CALLBACK(RSK_SHUFFLE_DUNGEON_ENTRANCES, {
@@ -637,6 +642,7 @@ void Settings::CreateOptions() {
     OPT_BOOL(RSK_SHOPSANITY_PRICES_AFFORDABLE, "Shops Affordable Prices", CVAR_RANDOMIZER_SETTING("ShopsanityPricesAffordable"), mOptionDescriptions[RSK_SHOPSANITY_PRICES_AFFORDABLE]);
     OPT_BOOL(RSK_SHOP_SHIELDS_AND_TUNICS_ONLY_REFILL, "Gate Shop Shields & Tunics", CVAR_RANDOMIZER_SETTING("ShopShieldsTunicsGate"), mOptionDescriptions[RSK_SHOP_SHIELDS_AND_TUNICS_ONLY_REFILL]);
     OPT_U8(RSK_SHUFFLE_TOKENS, "Token Shuffle", {"Off", "Dungeons", "Overworld", "All Tokens"}, OptionCategory::Setting, CVAR_RANDOMIZER_SETTING("ShuffleTokens"), mOptionDescriptions[RSK_SHUFFLE_TOKENS], WIDGET_CVAR_COMBOBOX, RO_TOKENSANITY_OFF);
+    OPT_BOOL(RSK_TIERED_CHEST_PLACEMENT, "Tiered Chest Placement", CVAR_RANDOMIZER_SETTING("TieredChestPlacement"), mOptionDescriptions[RSK_TIERED_CHEST_PLACEMENT]);
     OPT_U8(RSK_SHUFFLE_SCRUBS, "Scrubs Shuffle", {"Off", "One-Time Only", "All"}, OptionCategory::Setting, CVAR_RANDOMIZER_SETTING("ShuffleScrubs"), mOptionDescriptions[RSK_SHUFFLE_SCRUBS], WIDGET_CVAR_COMBOBOX, RO_SCRUBS_OFF);
     OPT_CALLBACK(RSK_SHUFFLE_SCRUBS, {
         bool isTycoon = CVarGetInteger(CVAR_RANDOMIZER_SETTING("IncludeTycoonWallet"), RO_GENERIC_OFF);
@@ -1397,7 +1403,8 @@ void Settings::CreateOptions() {
     OPT_BOOL(RSK_KAK_40_SKULLS_HINT, "40 GS Hint", CVAR_RANDOMIZER_SETTING("40GSHint"), mOptionDescriptions[RSK_KAK_40_SKULLS_HINT], IMFLAG_NONE);
     OPT_BOOL(RSK_KAK_50_SKULLS_HINT, "50 GS Hint", CVAR_RANDOMIZER_SETTING("50GSHint"), mOptionDescriptions[RSK_KAK_50_SKULLS_HINT], IMFLAG_NONE);
     OPT_BOOL(RSK_KAK_100_SKULLS_HINT, "100 GS Hint", CVAR_RANDOMIZER_SETTING("100GSHint"), mOptionDescriptions[RSK_KAK_100_SKULLS_HINT], IMFLAG_NONE);
-    OPT_BOOL(RSK_MASK_SHOP_HINT, "Mask Shop Hint", CVAR_RANDOMIZER_SETTING("MaskShopHint"), mOptionDescriptions[RSK_MASK_SHOP_HINT]);
+    OPT_BOOL(RSK_NPC_HINTS, "NPC Hints", CVAR_RANDOMIZER_SETTING("NpcHints"), mOptionDescriptions[RSK_NPC_HINTS], IMFLAG_NONE);
+    OPT_BOOL(RSK_MASK_SHOP_HINT,"Mask Shop Hint", CVAR_RANDOMIZER_SETTING("MaskShopHint"), mOptionDescriptions[RSK_MASK_SHOP_HINT]);
     // TODO: Compasses show rewards/woth, maps show dungeon mode
     OPT_BOOL(RSK_BLUE_FIRE_ARROWS, "Blue Fire Arrows", CVAR_RANDOMIZER_SETTING("BlueFireArrows"), mOptionDescriptions[RSK_BLUE_FIRE_ARROWS]);
     OPT_BOOL(RSK_SUNLIGHT_ARROWS, "Sunlight Arrows", CVAR_RANDOMIZER_SETTING("SunlightArrows"), mOptionDescriptions[RSK_SUNLIGHT_ARROWS]);
@@ -1870,6 +1877,7 @@ void Settings::CreateOptions() {
                                                                       &mOptions[RSK_LOGIC_RULES],
                                                                       &mOptions[RSK_ALL_LOCATIONS_REACHABLE],
                                                                       &mOptions[RSK_STARTING_AGE],
+                                                                      &mOptions[RSK_SELECTED_SAGE],
                                                                       &mOptions[RSK_SKULLS_SUNS_SONG],
                                                                       &mOptions[RSK_BIG_POE_COUNT],
                                                                       &mOptions[RSK_BLUE_FIRE_ARROWS],
@@ -2019,6 +2027,7 @@ void Settings::CreateOptions() {
                               {
                                   &mOptions[RSK_SHUFFLE_SONGS],
                                   &mOptions[RSK_SHUFFLE_TOKENS],
+                                  &mOptions[RSK_TIERED_CHEST_PLACEMENT],
                                   &mOptions[RSK_SHUFFLE_KOKIRI_SWORD],
                                   &mOptions[RSK_SHUFFLE_MASTER_SWORD],
                                   &mOptions[RSK_SHUFFLE_OCARINA],
@@ -2162,7 +2171,7 @@ void Settings::CreateOptions() {
                           &mOptions[RSK_KAK_10_SKULLS_HINT], &mOptions[RSK_KAK_20_SKULLS_HINT],
                           &mOptions[RSK_KAK_30_SKULLS_HINT], &mOptions[RSK_KAK_40_SKULLS_HINT],
                           &mOptions[RSK_KAK_50_SKULLS_HINT], &mOptions[RSK_KAK_100_SKULLS_HINT],
-                          &mOptions[RSK_MASK_SHOP_HINT] },
+                          &mOptions[RSK_MASK_SHOP_HINT],     &mOptions[RSK_NPC_HINTS] },
         WidgetContainerType::SECTION, "This setting adds some hints at locations other than Gossip Stones.");
     mOptionGroups[RSG_MENU_COLUMN_STATIC_HINTS] =
         OptionGroup::SubGroup("", { &mOptionGroups[RSG_MENU_SECTION_STATIC_HINTS] }, WidgetContainerType::COLUMN);
@@ -2425,6 +2434,7 @@ void Settings::CreateOptions() {
                                               &mOptions[RSK_BOSS_KEY_HINT],
                                               &mOptions[RSK_DAMPES_DIARY_HINT],
                                               &mOptions[RSK_GREG_HINT],
+                                              &mOptions[RSK_NPC_HINTS],
                                               &mOptions[RSK_LOACH_HINT],
                                               &mOptions[RSK_SARIA_HINT],
                                               &mOptions[RSK_MIDO_HINT],
@@ -2976,6 +2986,14 @@ void Context::FinalizeSettings(const std::set<RandomizerCheck>& excludedLocation
     } else {
         mOptions[RSK_SELECTED_STARTING_AGE].Set(mOptions[RSK_STARTING_AGE].Get());
     }
+
+    // Ganon's Curse: the selected sage overrides both the starting age just resolved above and the
+    // relevant RSK_STARTING_* item options, because a sage's age and kit are fixed properties of
+    // that sage rather than free settings. This has to happen here, at the end of settings
+    // finalization, so everything downstream in Fill() - the logic solver's starting inventory and
+    // starting region, the item pool's duplicate removal, the spoiler log - sees the real values.
+    // See the sage definition table in savefile.cpp.
+    Randomizer_ApplySageGenerationSettings();
 
     // TODO: Random Starting Time
 

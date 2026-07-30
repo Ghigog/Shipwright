@@ -45,6 +45,10 @@ void Settings::CreateOptionDescriptions() {
         "Choose which age Link will start as.\n\n"
         "Starting as adult means you start with the Master Sword in your inventory.\n"
         "The child option is forcefully set if it would conflict with other options.";
+    mOptionDescriptions[RSK_SELECTED_SAGE] =
+        "Ganon's Curse: choose which sage plays this seed. Overrides starting scene, starting "
+        "age, and grants that sage's curated kit. Link is not playable in this mod - he's "
+        "already gone from Hyrule by the time Ganon's Curse begins - Rauru is the default.";
     mOptionDescriptions[RSK_GERUDO_FORTRESS] = "Sets the state of the carpenters captured by Gerudo "
                                                "in Gerudo Fortress, and with it the number of guards that spawn.\n"
                                                "\n"
@@ -224,6 +228,17 @@ void Settings::CreateOptionDescriptions() {
                                               "Overworld - Only shuffle GS tokens that are outside of dungeons.\n"
                                               "\n"
                                               "All Tokens - Shuffle all 100 GS tokens.";
+    mOptionDescriptions[RSK_NPC_HINTS] =
+        "Ganon's Curse: talking overworld NPCs each know something true about this seed and will tell you. "
+        "Every NPC has a fixed subject that suits them - what's stashed in a landmark they watch over, or "
+        "where a particular item ended up - so their phrasing stays in character while the answer changes "
+        "every seed.\n"
+        "\n"
+        "Densely populated places become worth combing through; empty ones stay quiet.";
+    mOptionDescriptions[RSK_TIERED_CHEST_PLACEMENT] =
+        "Major items are given priority placement in big chests. Junk items (rupees, etc.) never appear in any "
+        "chest, big or small. Since there are more major items than big chests, some majors will still land in "
+        "small chests or non-chest locations rather than seed generation failing.";
     mOptionDescriptions[RSK_SKULLS_SUNS_SONG] = "All Golden Skulltulas that require nighttime to appear will only be "
                                                 "expected to be collected after getting Sun's Song.";
     mOptionDescriptions[RSK_SHUFFLE_KOKIRI_SWORD] =

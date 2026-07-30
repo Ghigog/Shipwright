@@ -70,6 +70,25 @@ RANDO_ENUM_ITEM(RO_AGE_ADULT)
 RANDO_ENUM_ITEM(RO_AGE_RANDOM)
 RANDO_ENUM_END(RandoOptionStartingAge)
 
+// Ganon's Curse: Selected Sage (must be its own block - each RANDO_ENUM_BEGIN/END group is a
+// separate enum starting at 0, matching the 0-based index the settings widget actually stores.
+// These were originally, incorrectly, appended inside RandoOptionStartingAge above, which silently
+// offset every value by 3 and made every case in the sage-select switch statements never match.)
+// Ganon's Curse: Link is not a selectable sage (2026-07-28) - he plays no role in this
+// mod's premise (already gone to Termina by the time Ganon's Curse begins, see lore.md).
+// Rauru is index 0 / the default now, taking over Link's old Lon Lon Ranch / Hyrule Field
+// slot instead of Temple of Time. Deliberately no RO_SAGE_LINK entry at all, rather than
+// keeping it unused - every dropdown value must map to a real, selectable sage.
+RANDO_ENUM_BEGIN(RandoOptionSage)
+RANDO_ENUM_ITEM(RO_SAGE_RAURU)
+RANDO_ENUM_ITEM(RO_SAGE_SARIA)
+RANDO_ENUM_ITEM(RO_SAGE_DARUNIA)
+RANDO_ENUM_ITEM(RO_SAGE_RUTO)
+RANDO_ENUM_ITEM(RO_SAGE_IMPA)
+RANDO_ENUM_ITEM(RO_SAGE_NABOORU)
+RANDO_ENUM_ITEM(RO_SAGE_ZELDA)
+RANDO_ENUM_END(RandoOptionSage)
+
 // Fortress Carpenters settings (normal, fast, free)
 RANDO_ENUM_BEGIN(RandoOptionGerudoFortress)
 RANDO_ENUM_ITEM(RO_GF_CARPENTERS_NORMAL)
