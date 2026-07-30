@@ -2339,6 +2339,673 @@ void StaticData::HintTable_Init() {
 													    /*french*/ "Si je me souviens bien, il me&semble que je l'ai perdue&quelque part dans&#[[1]]#...^Fais-moi signe si jamais&tu la trouves!",
                                                                    {QM_RED}));
 
+// >>> GANONS_CURSE_GENERATED: HINT_TEXT - edit data/npc-hints.json, not this
+    // Hyrule Castle Guard - Castle Grounds
+    hintTextTable[RHT_NPC_HC_GUARD] = HintText(CustomMessage(
+        "You shouldn't be here, child.^...The royal lullaby isn't even in the castle any more. It's in "
+        "#[[1]]#. Nothing is where it should be.",
+        { QM_RED }));
+
+    // Hyrule Castle Malon - Castle Grounds
+    hintTextTable[RHT_NPC_HC_MALON] = HintText(CustomMessage(
+        "Oh! Have you seen my dad? He came to deliver milk and never came out.^Here, hold this for me - it's "
+        "#[[1]]#. Everything's mixed up today.",
+        { QM_RED }));
+
+    // Death Mountain Trail Goron Bomb Flower - Death Mountain Trail
+    hintTextTable[RHT_NPC_DMT_GORON_BOMB_FLOWER] = HintText(CustomMessage(
+        "Goro! Don't stand near the flower when it's lit.^There's a chest up the path with #[[1]]# in it. "
+        "Mind the rocks.",
+        { QM_RED }));
+
+    // Death Mountain Trail Goron Dc - Death Mountain Trail
+    hintTextTable[RHT_NPC_DMT_GORON_DC] = HintText(CustomMessage(
+        "The cavern's not the cavern any more, brother. Doors lead everywhere.^Bright thing on the ledge "
+        "above, though. #[[1]]#. That much I can still tell you.",
+        { QM_RED }));
+
+    // Death Mountain Trail Goron Fairy - Death Mountain Trail
+    hintTextTable[RHT_NPC_DMT_GORON_FAIRY] = HintText(CustomMessage(
+        "You climbed all the way up here, goro? Then you have earned something.^The great blade my brother "
+        "forges - the enormous one - waits in #[[1]]#.",
+        { QM_RED }));
+
+    // Death Mountain Trail Goron Rolling - Death Mountain Trail
+    hintTextTable[RHT_NPC_DMT_GORON_ROLLING] = HintText(CustomMessage(
+        "GORO! Coming through! ...Oh. Sorry.^Storm-hole near the top has #[[1]]# in a chest. Now MOVE!",
+        { QM_RED }));
+
+    // Gerudo Valley Gerudo Floor - Gerudo Valley
+    hintTextTable[RHT_NPC_GV_GERUDO_FLOOR] = HintText(CustomMessage(
+        "You fell, did you? Everyone falls.^Behind the waterfall there is #[[1]]#. Consider it payment for "
+        "the climb back up.",
+        { QM_RED }));
+
+    // Gerudo Valley Mutoh - Gerudo Valley
+    hintTextTable[RHT_NPC_GV_MUTOH] = HintText(CustomMessage(
+        "All four of my men out, and the world still in pieces! But I pay my debts.^The boots that walk on "
+        "air are in #[[1]]#. Go on, you've earned knowing.",
+        { QM_RED }));
+
+    // Gerudo Fortress Gerudo Card Giver - Gerudo's Fortress
+    hintTextTable[RHT_NPC_GF_GERUDO_CARD_GIVER] = HintText(CustomMessage(
+        "You freed our prisoners, so you have our respect. Few earn it.^Then take this: the fire spell of the "
+        "royal family lies in #[[1]]#.",
+        { QM_RED }));
+
+    // Gerudo Fortress Gerudo Gate Guard - Gerudo's Fortress
+    hintTextTable[RHT_NPC_GF_GERUDO_GATE_GUARD] = HintText(CustomMessage(
+        "None pass without the card. Those are the orders.^If you free the prisoners their chief will part "
+        "with #[[1]]#. That is all I will say.",
+        { QM_RED }));
+
+    // Gerudo Fortress Gerudo Gate Op - Gerudo's Fortress
+    hintTextTable[RHT_NPC_GF_GERUDO_GATE_OP] = HintText(CustomMessage(
+        "I open the gate. That is all I do.^The desert song is in #[[1]]#. With it you would not need me at "
+        "all.",
+        { QM_RED }));
+
+    // Gerudo Fortress Gerudo Normal - Gerudo's Fortress
+    hintTextTable[RHT_NPC_GF_GERUDO_NORMAL] = HintText(CustomMessage(
+        "Halt. ...You carry the token, so I will talk.^The rooftop stash is not what it was. Someone's "
+        "#[[1]]# is in there now.^Take it if you can climb. It is no use to us.",
+        { QM_RED }));
+
+    // Gerudo Fortress Gerudo Patrol - Gerudo's Fortress
+    hintTextTable[RHT_NPC_GF_GERUDO_PATROL] = HintText(CustomMessage(
+        "Move and I throw you in a cell.^...The chest across the valley has #[[1]]#. Now move somewhere else.",
+        { QM_RED }));
+
+    // Gerudo Fortress Gerudo Stationary - Gerudo's Fortress
+    hintTextTable[RHT_NPC_GF_GERUDO_STATIONARY] = HintText(CustomMessage(
+        "I stand here. I watch. That is the post.^The freezing arrows are in #[[1]]#. I would rather have "
+        "them than this post.",
+        { QM_RED }));
+
+    // Gerudo Fortress Gerudo Tg Guard - Gerudo's Fortress
+    hintTextTable[RHT_NPC_GF_GERUDO_TG_GUARD] = HintText(CustomMessage(
+        "The training ground is not the training ground any more. The door leads elsewhere.^If strength is "
+        "what you came for, it lies in #[[1]]#.",
+        { QM_RED }));
+
+    // Thieves' Hideout carpenter 1Torch - Gerudo's Fortress
+    hintTextTable[RHT_NPC_TH_CARP_1TORCH] = HintText(CustomMessage(
+        "You're not one of them! Get me out of here!^Here - take #[[1]]#, it's all I've got on me. Just open "
+        "the door!",
+        { QM_RED }));
+
+    // Thieves' Hideout carpenter Dead End - Gerudo's Fortress
+    hintTextTable[RHT_NPC_TH_CARP_DEAD_END] = HintText(CustomMessage(
+        "I've been down here since the world came apart. Nobody comes this way.^Free me and #[[1]]# is yours.",
+        { QM_RED }));
+
+    // Thieves' Hideout carpenter Double - Gerudo's Fortress
+    hintTextTable[RHT_NPC_TH_CARP_DOUBLE] = HintText(CustomMessage(
+        "Two cells, two of us, and the corridors keep moving!^Get me out. I'll pay you #[[1]]#.",
+        { QM_RED }));
+
+    // Thieves' Hideout carpenter Steep - Gerudo's Fortress
+    hintTextTable[RHT_NPC_TH_CARP_STEEP] = HintText(CustomMessage(
+        "Careful on the slope, it's worse than it looks.^Open this and take #[[1]]#. Then let's both never "
+        "come back.",
+        { QM_RED }));
+
+    // Goron City Darunia - Goron City
+    hintTextTable[RHT_NPC_GC_DARUNIA] = HintText(CustomMessage(
+        "Brother! You come at a bad time - the world itself has been broken.^Even the fire song is gone from "
+        "us. It waits in #[[1]]#.",
+        { QM_RED }));
+
+    // Goron City Goron Entrance - Goron City
+    hintTextTable[RHT_NPC_GC_GORON_ENTRANCE] = HintText(CustomMessage(
+        "Welcome to Goron City, goro. Mind the mess.^Left chest in the maze has #[[1]]#. Everyone's been "
+        "arguing about it.",
+        { QM_RED }));
+
+    // Goron City Goron Generic - Goron City
+    hintTextTable[RHT_NPC_GC_GORON_GENERIC] = HintText(CustomMessage(
+        "Goro! Careful wanderin' the maze, brother.^The rocks shifted when the world did. There's #[[1]]# "
+        "sittin' in the middle of it now. Goro goro!",
+        { QM_RED }));
+
+    // Goron City Goron Island - Goron City
+    hintTextTable[RHT_NPC_GC_GORON_ISLAND] = HintText(CustomMessage(
+        "I like it out here on the island. Quiet.^Right maze chest has #[[1]]#, if you're the digging sort.",
+        { QM_RED }));
+
+    // Goron City Goron Link - Goron City
+    hintTextTable[RHT_NPC_GC_GORON_LINK] = HintText(CustomMessage(
+        "You look just like me, goro! Well. A bit.^Little rolling brother downstairs is holding #[[1]]#. Try "
+        "him.",
+        { QM_RED }));
+
+    // Goron City Goron Lost Woods - Goron City
+    hintTextTable[RHT_NPC_GC_GORON_LOST_WOODS] = HintText(CustomMessage(
+        "There's a tunnel to the forest from here, goro. Or there was.^Now it opens on the crater. Chest up "
+        "on the ledge there has #[[1]]#.",
+        { QM_RED }));
+
+    // Goron City Goron Lowest - Goron City
+    hintTextTable[RHT_NPC_GC_GORON_LOWEST] = HintText(CustomMessage(
+        "Down here we still dance when the big brother dances.^Dance with him and you get #[[1]]#. Goro goro!",
+        { QM_RED }));
+
+    // Goron City Goron Rolling Big - Goron City
+    hintTextTable[RHT_NPC_GC_GORON_ROLLING_BIG] = HintText(CustomMessage(
+        "STOP ME IF YOU CAN, GORO!^...You did? Fine. Take #[[1]]#. I'm dizzy.",
+        { QM_RED }));
+
+    // Goron City Goron Stairwell - Goron City
+    hintTextTable[RHT_NPC_GC_GORON_STAIRWELL] = HintText(CustomMessage(
+        "Up and down, up and down. Good for the legs, goro.^Big pot on the landing's got #[[1]]# in it.",
+        { QM_RED }));
+
+    // Shop Goron - Goron City
+    hintTextTable[RHT_NPC_SHOP_GORON] = HintText(CustomMessage(
+        "Goro! Buy something, brother.^First shelf has #[[1]]#. Rolled in on its own, I think.",
+        { QM_RED }));
+
+    // Dampe Hut - Graveyard
+    hintTextTable[RHT_NPC_DAMPE_HUT] = HintText(CustomMessage(
+        "Heh heh... came into the gravekeeper's hut on purpose, did you?^The royal tomb's singing something "
+        "new since the fracture. #[[1]]#.",
+        { QM_RED }));
+
+    // Graveyard Dampe - Graveyard
+    hintTextTable[RHT_NPC_GY_DAMPE] = HintText(CustomMessage(
+        "Heh heh... digging's the same work whatever the world does.^The long chain-hook? #[[1]]#. I'd know. "
+        "I've dug everywhere.",
+        { QM_RED }));
+
+    // Graveyard Kid - Graveyard
+    hintTextTable[RHT_NPC_GY_KID] = HintText(CustomMessage(
+        "I'm not scared of this place. I'm NOT.^...The brothers buried here wrote a song about the sun. "
+        "Somebody in #[[1]]# has it now. That's why it's always dark.",
+        { QM_RED }));
+
+    // Haunted Wasteland Chest Tip - Haunted Wasteland
+    hintTextTable[RHT_NPC_HW_CHEST_TIP] = HintText(CustomMessage(
+        "Lost, are you? Everyone is, out here.^There is a chest in the sand with #[[1]]# in it. Follow the "
+        "flags or follow nothing.",
+        { QM_RED }));
+
+    // Kakariko Carpenters Son - Kakariko Village
+    hintTextTable[RHT_NPC_KAK_CARPENTERS_SON] = HintText(CustomMessage(
+        "My dad's off building something. I'm not allowed to help.^So I count the bazaar shelves. Second "
+        "one's #[[1]]# today.",
+        { QM_RED }));
+
+    // Kakariko carpenter Ichiro - Kakariko Village
+    hintTextTable[RHT_NPC_KAK_CARP_ICHIRO] = HintText(CustomMessage(
+        "Mutoh's got us hauling rock we can't lift.^I spend my wages at the bazaar instead. Fifth shelf: "
+        "#[[1]]#.",
+        { QM_RED }));
+
+    // Kakariko carpenter Jiro - Kakariko Village
+    hintTextTable[RHT_NPC_KAK_CARP_JIRO] = HintText(CustomMessage(
+        "You can't work the mountain without something to clear the way.^Burning arrows ended up in #[[1]]#. "
+        "So we're here instead. Suits me.",
+        { QM_RED }));
+
+    // Kakariko carpenter Sabooro - Kakariko Village
+    hintTextTable[RHT_NPC_KAK_CARP_SABOORO] = HintText(CustomMessage(
+        "A hammer big enough to crack the black rocks exists, you know.^It's in #[[1]]#. Not in my hands, "
+        "which is where it'd be useful.",
+        { QM_RED }));
+
+    // Kakariko carpenter Shiro - Kakariko Village
+    hintTextTable[RHT_NPC_KAK_CARP_SHIRO] = HintText(CustomMessage(
+        "Don't tell the boss I'm resting.^...A sealed royal letter turned up in #[[1]]#, if that's any use to "
+        "you. Now shoo.",
+        { QM_RED }));
+
+    // Kakariko Cucco Girl - Kakariko Village
+    hintTextTable[RHT_NPC_KAK_CUCCO_GIRL] = HintText(CustomMessage(
+        "The cuccos got loose AGAIN.^Anju's holding #[[1]]# for whoever helps her. She's been holding it a "
+        "while.",
+        { QM_RED }));
+
+    // Kakariko Hylian Ahg 2 - Kakariko Village
+    hintTextTable[RHT_NPC_KAK_HY_AHG_2] = HintText(CustomMessage(
+        "There's a hole near the graveyard side with dead things in it.^And a chest with #[[1]]#. My husband "
+        "won't go. I won't either.",
+        { QM_RED }));
+
+    // Kakariko Hylian Bji 7 - Kakariko Village
+    hintTextTable[RHT_NPC_KAK_HY_BJI_7] = HintText(CustomMessage(
+        "The shadow song used to keep something sealed. It's in #[[1]]# now.^Sleep well, if you can.",
+        { QM_RED }));
+
+    // Kakariko Hylian Boj 10 - Kakariko Village
+    hintTextTable[RHT_NPC_KAK_HY_BOJ_10] = HintText(CustomMessage(
+        "DON'T GO IN THE HOLE! ...WELL. DO GO IN THE HOLE.^THERE'S #[[1]]# IN A CHEST DOWN THERE! I SHOUTED "
+        "IT AT EVERYONE ALREADY!",
+        { QM_RED }));
+
+    // Kakariko Hylian Boj 12 - Kakariko Village
+    hintTextTable[RHT_NPC_KAK_HY_BOJ_12] = HintText(CustomMessage(
+        "Impa's old house is standing open since the shuffling.^There's #[[1]]# in there, plain as day. "
+        "Nobody's taken it.",
+        { QM_RED }));
+
+    // Kakariko Hylian Boj 9 - Kakariko Village
+    hintTextTable[RHT_NPC_KAK_HY_BOJ_9] = HintText(CustomMessage(
+        "HEY! YOU! LISTEN!^EVER SINCE THE WORLD GOT ALL SHUFFLED AROUND, THERE'S BEEN #[[1]]# STUCK UP IN THE "
+        "WINDMILL!^HOW DID IT GET THERE?! NOBODY KNOWS!",
+        { QM_RED }));
+
+    // Kakariko Mutoh - Kakariko Village
+    hintTextTable[RHT_NPC_KAK_MUTOH] = HintText(CustomMessage(
+        "My men are scattered and so is everything else!^Even the hero's blade is loose - it's in #[[1]]#. "
+        "Not that I've time to fetch it.",
+        { QM_RED }));
+
+    // Kakariko Roof Guy - Kakariko Village
+    hintTextTable[RHT_NPC_KAK_ROOF_GUY] = HintText(CustomMessage(
+        "Ha! Took you long enough to look up.^I've been sat here holding #[[1]]# since the world turned over. "
+        "It's yours.",
+        { QM_RED }));
+
+    // Guest Hylian Ahg 17 - Kakariko interiors
+    hintTextTable[RHT_NPC_GUEST_HY_AHG_17] = HintText(CustomMessage(
+        "Keep your voice down, he's been asleep for days.^...The potion shop's second shelf has #[[1]]#, if "
+        "you're going out anyway.",
+        { QM_RED }));
+
+    // Guest Hylian Ahg 2 - Kakariko interiors
+    hintTextTable[RHT_NPC_GUEST_HY_AHG_2] = HintText(CustomMessage(
+        "A hooded one waits out by the well some nights.^Says nothing to me. Gave up #[[1]]# to someone, "
+        "though.",
+        { QM_RED }));
+
+    // Guest Hylian Aob - Kakariko interiors
+    hintTextTable[RHT_NPC_GUEST_HY_AOB] = HintText(CustomMessage(
+        "That poor Malon girl, left minding the ranch alone.^She still hums something, you know. #[[1]]#, if "
+        "you can get her to teach it.",
+        { QM_RED }));
+
+    // Guest Hylian Bji 7 - Kakariko interiors
+    hintTextTable[RHT_NPC_GUEST_HY_BJI_7] = HintText(CustomMessage(
+        "At my age you stop being surprised when the world rearranges itself.^Bazaar's third shelf has "
+        "#[[1]]#. That surprised me.",
+        { QM_RED }));
+
+    // Guest Hylian Bob 18 - Kakariko interiors
+    hintTextTable[RHT_NPC_GUEST_HY_BOB_18] = HintText(CustomMessage(
+        "Mmf... zzz...^...the song of time... they took it to #[[1]]#... zzz...^...deliver the milk...",
+        { QM_RED }));
+
+    // Guest Hylian Boj 9 - Kakariko interiors
+    hintTextTable[RHT_NPC_GUEST_HY_BOJ_9] = HintText(CustomMessage(
+        "KEEP IT DOWN, HE'S SLEEPING!^...FOURTH SHELF AT THE BAZAAR HAS #[[1]]#! SORRY! I ONLY HAVE ONE "
+        "VOLUME!",
+        { QM_RED }));
+
+    // Impas Hylian Boj 10 - Kakariko interiors
+    hintTextTable[RHT_NPC_IMPAS_HY_BOJ_10] = HintText(CustomMessage(
+        "Impa's house stands open and I keep watch. Somebody should.^She left word of the truth-glass. It "
+        "rests in #[[1]]#.",
+        { QM_RED }));
+
+    // Shop Kakariko Potion - Kakariko interiors
+    hintTextTable[RHT_NPC_SHOP_KAK_POTION] = HintText(CustomMessage(
+        "Mind the shelves, they've been rearranging themselves.^First one's #[[1]]#. I stopped keeping a "
+        "ledger.",
+        { QM_RED }));
+
+    // Windmill Man - Kakariko interiors
+    hintTextTable[RHT_NPC_WINDMILL_MAN] = HintText(CustomMessage(
+        "GRRR! A song ruined my well and now the WORLD is ruined too!^That song - the storm one - is loose in "
+        "#[[1]]#! If you find it, DO NOT play it here!",
+        { QM_RED }));
+
+    // Fado - Kokiri Forest
+    hintTextTable[RHT_NPC_FADO] = HintText(CustomMessage(
+        "The forest had a song of its own once. You could feel it in the trees.^It's in #[[1]]# now. The "
+        "woods have been quiet ever since.",
+        { QM_RED }));
+
+    // Know It All Bros - Kokiri Forest
+    hintTextTable[RHT_NPC_KNOW_IT_ALL_BROS] = HintText(CustomMessage(
+        "We know everything! Ask us anything!^...Very well. The travelling spell - the one that folds "
+        "distance - is in #[[1]]#. We told you first.",
+        { QM_RED }));
+
+    // Kokiri 0 - Kokiri Forest
+    hintTextTable[RHT_NPC_KOKIRI_0] = HintText(CustomMessage(
+        "Hey! You're not supposed to be pokin' around the training grounds!^...Fine. There's #[[1]]# in the "
+        "chest back there. Nothing's where it belongs since the world broke.",
+        { QM_RED }));
+
+    // Kokiri 1 - Kokiri Forest
+    hintTextTable[RHT_NPC_KOKIRI_1] = HintText(CustomMessage(
+        "Mido's been hoarding again. He thinks nobody counts his chests.^Top left one's got #[[1]]# in it. "
+        "Don't tell him I told you.",
+        { QM_RED }));
+
+    // Kokiri 10 - Kokiri Forest
+    hintTextTable[RHT_NPC_KOKIRI_10] = HintText(CustomMessage(
+        "You can't hear Saria's song anywhere in the forest any more.^Someone's carried it off to #[[1]]#. It "
+        "isn't right.",
+        { QM_RED }));
+
+    // Kokiri 11 - Kokiri Forest
+    hintTextTable[RHT_NPC_KOKIRI_11] = HintText(CustomMessage(
+        "A funny little man used to sell beans by the river.^His whole stock ended up scattered into #[[1]]#. "
+        "He's furious.",
+        { QM_RED }));
+
+    // Kokiri 2 - Kokiri Forest
+    hintTextTable[RHT_NPC_KOKIRI_2] = HintText(CustomMessage(
+        "You want to know what's in Mido's house?^Top right chest. #[[1]]#. I looked when he was out being "
+        "important.",
+        { QM_RED }));
+
+    // Kokiri 3 - Kokiri Forest
+    hintTextTable[RHT_NPC_KOKIRI_3] = HintText(CustomMessage(
+        "Bottom left chest in Mido's place has #[[1]]# in it now.^It didn't yesterday. That's how it is "
+        "lately.",
+        { QM_RED }));
+
+    // Kokiri 4 - Kokiri Forest
+    hintTextTable[RHT_NPC_KOKIRI_4] = HintText(CustomMessage(
+        "Everyone's counting Mido's chests. Fine, I'll do the last one.^Bottom right. #[[1]]#. Happy?",
+        { QM_RED }));
+
+    // Kokiri 5 - Kokiri Forest
+    hintTextTable[RHT_NPC_KOKIRI_5] = HintText(CustomMessage(
+        "When it storms, a hole opens up round here. There's a chest down in it.^#[[1]]#, last I looked. Play "
+        "something stormy if you want in.",
+        { QM_RED }));
+
+    // Kokiri 6 - Kokiri Forest
+    hintTextTable[RHT_NPC_KOKIRI_6] = HintText(CustomMessage(
+        "Nobody's lived in that house up the ladder for ages.^There's still a pot inside though. Somebody "
+        "left #[[1]]# in it.",
+        { QM_RED }));
+
+    // Kokiri 7 - Kokiri Forest
+    hintTextTable[RHT_NPC_KOKIRI_7] = HintText(CustomMessage(
+        "The slingshot's gone from the training grounds!^A Deku told me it turned up in #[[1]]#. How does "
+        "that even happen?",
+        { QM_RED }));
+
+    // Kokiri 8 - Kokiri Forest
+    hintTextTable[RHT_NPC_KOKIRI_8] = HintText(CustomMessage(
+        "Careful out there without a shield.^The shop's out. Somebody said there are some in #[[1]]#, if you "
+        "can believe it.",
+        { QM_RED }));
+
+    // Kokiri 9 - Kokiri Forest
+    hintTextTable[RHT_NPC_KOKIRI_9] = HintText(CustomMessage(
+        "Saria's always playing, but her spare ocarina went missing when the world came apart.^Word is it's "
+        "in #[[1]]# now.",
+        { QM_RED }));
+
+    // Shop Kokiri - Kokiri Forest
+    hintTextTable[RHT_NPC_SHOP_KOKIRI] = HintText(CustomMessage(
+        "Welcome! Business is strange lately - stock turns up that I never ordered.^First shelf has #[[1]]# "
+        "on it today. Have a look round.",
+        { QM_RED }));
+
+    // Twins House - Kokiri Forest
+    hintTextTable[RHT_NPC_TWINS_HOUSE] = HintText(CustomMessage(
+        "We heard it from a Deku who heard it from a bird!^Something frozen up north is guarding #[[1]]#.",
+        { QM_RED }));
+
+    // Lake Hylia Professor - Lake Hylia
+    hintTextTable[RHT_NPC_LH_PROFESSOR] = HintText(CustomMessage(
+        "Fascinating! The water, the fish, the sky - all wrong!^I have catalogued one thing, though. The "
+        "shielding spell of the goddess is in #[[1]]#. Tell nobody.",
+        { QM_RED }));
+
+    // Ingo - Lon Lon Ranch
+    hintTextTable[RHT_NPC_INGO] = HintText(CustomMessage(
+        "Hmph. Talon sleeps while I work.^Even his precious cucco game's been meddled with. Winner gets "
+        "#[[1]]# now. Ridiculous.",
+        { QM_RED }));
+
+    // Malon Corral - Lon Lon Ranch
+    hintTextTable[RHT_NPC_MALON_CORRAL] = HintText(CustomMessage(
+        "I hum to the horses but the tune won't come out right any more.^Somebody in #[[1]]# has it. I'd like "
+        "it back.",
+        { QM_RED }));
+
+    // Malon Ranch - Lon Lon Ranch
+    hintTextTable[RHT_NPC_MALON_RANCH] = HintText(CustomMessage(
+        "The songs have all come loose, not just mine.^The light one is in #[[1]]#, they tell me. Nothing "
+        "stays where it's put.",
+        { QM_RED }));
+
+    // Talon - Lon Lon Ranch
+    hintTextTable[RHT_NPC_TALON] = HintText(CustomMessage(
+        "Zzzz... huh? Oh, it's you.^Strange days. Nothin's where it oughta be no more.^Found #[[1]]# up in "
+        "the silo, of all places. Don't ask me how it got there.",
+        { QM_RED }));
+
+    // Market Guard House - Market
+    hintTextTable[RHT_NPC_MARKET_GUARD_HOUSE] = HintText(CustomMessage(
+        "Off duty. Don't tell anyone.^Word from the temple: a hooded one there is holding #[[1]]#. Now shoo.",
+        { QM_RED }));
+
+    // Market Cucco Girl - Market
+    hintTextTable[RHT_NPC_MKT_CUCCO_GIRL] = HintText(CustomMessage(
+        "My cuccos scattered and so did everything else!^They're giving #[[1]]# as the runner-up prize at the "
+        "bowling now.",
+        { QM_RED }));
+
+    // Market Dancers - Market
+    hintTextTable[RHT_NPC_MKT_DANCERS] = HintText(CustomMessage(
+        "We dance to keep our minds off it, friend.^Someone's chu-pouch ended up in #[[1]]#. Mind where you "
+        "step.",
+        { QM_RED }));
+
+    // Market Goron Bazaar - Market
+    hintTextTable[RHT_NPC_MKT_GORON_BAZAAR] = HintText(CustomMessage(
+        "Goro! A Goron this far from the mountain, yes. Trade is trade.^A long fragile blade ended up in "
+        "#[[1]]#. It will snap, but it is something.",
+        { QM_RED }));
+
+    // Market Guard - Market
+    hintTextTable[RHT_NPC_MKT_GUARD] = HintText(CustomMessage(
+        "Move along. ...Actually, wait.^The armoury's bare - proper shields all ended up in #[[1]]#. Bring "
+        "one back and there's a reward in it.",
+        { QM_RED }));
+
+    // Market Hagglers - Market
+    hintTextTable[RHT_NPC_MKT_HAGGLERS] = HintText(CustomMessage(
+        "- and I'm telling you the biggest purse in Hyrule is sitting in #[[1]]#!^- And I'm telling you it's "
+        "nonsense!^...Ask him. He's got that look.",
+        { QM_RED }));
+
+    // Market Hylian Ahg 13 - Market
+    hintTextTable[RHT_NPC_MKT_HY_AHG_13] = HintText(CustomMessage(
+        "Somebody's nut pouch ended up in #[[1]]#.^Small thing to lose, but it all adds up.",
+        { QM_RED }));
+
+    // Market Hylian Ahg 2 - Market
+    hintTextTable[RHT_NPC_MKT_HY_AHG_2] = HintText(CustomMessage(
+        "The bazaar's stock arrives from nowhere these days.^Second shelf has #[[1]]# on it. Nobody ordered "
+        "it.",
+        { QM_RED }));
+
+    // Market Hylian Ahg 20 - Market
+    hintTextTable[RHT_NPC_MKT_HY_AHG_20] = HintText(CustomMessage(
+        "That gambling den by the gate is worse than ever since the fracture.^First chest's got #[[1]]# in it "
+        "tonight. Half of what I see I'd rather not confirm.",
+        { QM_RED }));
+
+    // Market Hylian Ahg 4 - Market
+    hintTextTable[RHT_NPC_MKT_HY_AHG_4] = HintText(CustomMessage(
+        "Fourth shelf, #[[1]]#.^My husband says I spend too long in that shop. He isn't wrong.",
+        { QM_RED }));
+
+    // Market Hylian Aob - Market
+    hintTextTable[RHT_NPC_MKT_HY_AOB] = HintText(CustomMessage(
+        "My poor Richard has been wandering since the world turned over.^Bring him back and I'll give you "
+        "#[[1]]#. It's what I've got.",
+        { QM_RED }));
+
+    // Market Hylian Bba - Market
+    hintTextTable[RHT_NPC_MKT_HY_BBA] = HintText(CustomMessage(
+        "Seventh shelf, dear. #[[1]]#.^I've watched that shop forty years and never seen stock behave like "
+        "this.",
+        { QM_RED }));
+
+    // Market Hylian Bji 15 - Market
+    hintTextTable[RHT_NPC_MKT_HY_BJI_15] = HintText(CustomMessage(
+        "I knew a song that called the rain. It's gone from my head entirely.^These days I just watch the "
+        "potion shop shelves. Second one's #[[1]]#.",
+        { QM_RED }));
+
+    // Market Hylian Bji 19 - Market
+    hintTextTable[RHT_NPC_MKT_HY_BJI_19] = HintText(CustomMessage(
+        "There's a shop under the town, you know. Rough sorts.^Second shelf down there has #[[1]]#. I'd not "
+        "go myself.",
+        { QM_RED }));
+
+    // Market Hylian Boj 14 - Market
+    hintTextTable[RHT_NPC_MKT_HY_BOJ_14] = HintText(CustomMessage(
+        "Fifth shelf of the bazaar's got #[[1]]#, and they want a fortune for it.^Everything's a fortune now.",
+        { QM_RED }));
+
+    // Market Hylian Boj 16 - Market
+    hintTextTable[RHT_NPC_MKT_HY_BOJ_16] = HintText(CustomMessage(
+        "The big Goron's receipt turned up in #[[1]]#!^How do you lose a promissory note that size?",
+        { QM_RED }));
+
+    // Market Hylian Boj 3 - Market
+    hintTextTable[RHT_NPC_MKT_HY_BOJ_3] = HintText(CustomMessage(
+        "Third shelf of the bazaar. #[[1]]#.^I check every morning just to see what the curse dragged in.",
+        { QM_RED }));
+
+    // Market Hylian Boj 5 - Market
+    hintTextTable[RHT_NPC_MKT_HY_BOJ_5] = HintText(CustomMessage(
+        "You can't carry blue fire without a bottle, and every bottle's been flung somewhere.^There's one in "
+        "#[[1]]#. I'd go myself if I were younger.",
+        { QM_RED }));
+
+    // Market Hylian Cne 11 - Market
+    hintTextTable[RHT_NPC_MKT_HY_CNE_11] = HintText(CustomMessage(
+        "First shelf at the Bazaar has #[[1]]# on it.^Night's been lasting too long lately, hasn't it. "
+        "Nothing to do but shop.",
+        { QM_RED }));
+
+    // Market Hylian Cne 8 - Market
+    hintTextTable[RHT_NPC_MKT_HY_CNE_8] = HintText(CustomMessage(
+        "Sixth shelf at the bazaar has #[[1]]#.^A purse the size of a pumpkin would help me afford it.",
+        { QM_RED }));
+
+    // Market Hylian Cob - Market
+    hintTextTable[RHT_NPC_MKT_HY_COB] = HintText(CustomMessage(
+        "Did you hear? The royal archers lost their bow when everything got scrambled!^Word around the market "
+        "is it turned up somewhere in #[[1]]#.^What a mess this all is...",
+        { QM_RED }));
+
+    // Market Mask Customer - Market
+    hintTextTable[RHT_NPC_MKT_MASK_CUSTOMER] = HintText(CustomMessage(
+        "I came for a mask and the shop's shuttered!^So I've been playing the chest game instead. Top prize "
+        "is #[[1]]#.",
+        { QM_RED }));
+
+    // Shop Bazaar Kakariko - Market
+    hintTextTable[RHT_NPC_SHOP_BAZAAR_KAK] = HintText(CustomMessage(
+        "Village folk buy less than city folk, but the shelves still fill themselves.^Back one has #[[1]]#.",
+        { QM_RED }));
+
+    // Shop Bazaar Market - Market
+    hintTextTable[RHT_NPC_SHOP_BAZAAR_MARKET] = HintText(CustomMessage(
+        "Welcome to the Bazaar! Browse away.^Last shelf's got #[[1]]# on it, and I can't tell you why.",
+        { QM_RED }));
+
+    // Shop Bombchu - Market
+    hintTextTable[RHT_NPC_SHOP_BOMBCHU] = HintText(CustomMessage(
+        "Heh... you found us. Not everyone does.^First shelf, #[[1]]#. We deal in what arrives.",
+        { QM_RED }));
+
+    // Shop Market Potion - Market
+    hintTextTable[RHT_NPC_SHOP_MARKET_POTION] = HintText(CustomMessage(
+        "Since the world came apart my stock arrives from everywhere.^First shelf: #[[1]]#. Don't ask me "
+        "where it came from.",
+        { QM_RED }));
+
+    // Shop Mask - Market
+    hintTextTable[RHT_NPC_SHOP_MASK] = HintText(CustomMessage(
+        "Welcome to the Happy Mask Shop!^...I have nothing to sell. Everything scattered. Someone traded in a "
+        "red tunic and it ended up in #[[1]]#.",
+        { QM_RED }));
+
+    // Shop Zora - Zora's Domain
+    hintTextTable[RHT_NPC_SHOP_ZORA] = HintText(CustomMessage(
+        "The water brings us goods now, whether we ask or not.^First shelf holds #[[1]]#.",
+        { QM_RED }));
+
+    // Zora's Domain King Zora - Zora's Domain
+    hintTextTable[RHT_NPC_ZD_KING_ZORA] = HintText(CustomMessage(
+        "Mmmmm... You seek the heavy boots of my people, do you not?^They were swept away when the world came "
+        "apart. My scouts say they came to rest in #[[1]]#.^Mmmmm... go, and be swift.",
+        { QM_RED }));
+
+    // Zora's Domain Ruto - Zora's Domain
+    hintTextTable[RHT_NPC_ZD_RUTO] = HintText(CustomMessage(
+        "Do you know who I am? I am the princess of the Zoras!^...And even our shop is a mess. Second shelf "
+        "has #[[1]]#. Fetch it yourself.",
+        { QM_RED }));
+
+    // Zora's Domain Zora 0 - Zora's Domain
+    hintTextTable[RHT_NPC_ZD_ZORA_0] = HintText(CustomMessage(
+        "The water remembers, even when the land forgets.^There is #[[1]]# in the chest by the falls. It was "
+        "not there before.",
+        { QM_RED }));
+
+    // Zora's Domain Zora 1 - Zora's Domain
+    hintTextTable[RHT_NPC_ZD_ZORA_1] = HintText(CustomMessage(
+        "Still diving for rupees, still handing out prizes.^Prize is #[[1]]# now. The shuffling reached even "
+        "our little game.",
+        { QM_RED }));
+
+    // Zora's Domain Zora 2 - Zora's Domain
+    hintTextTable[RHT_NPC_ZD_ZORA_2] = HintText(CustomMessage(
+        "If ever His Majesty is freed from the ice, he will part with #[[1]]#.^He has been holding it since "
+        "the world turned.",
+        { QM_RED }));
+
+    // Zora's Domain Zora 3 - Zora's Domain
+    hintTextTable[RHT_NPC_ZD_ZORA_3] = HintText(CustomMessage(
+        "You cannot dive as we do without a scale.^The lesser one lies in #[[1]]#. Do not drown proving me "
+        "wrong.",
+        { QM_RED }));
+
+    // Zora's Domain Zora 4 - Zora's Domain
+    hintTextTable[RHT_NPC_ZD_ZORA_4] = HintText(CustomMessage(
+        "Our blue cloth is gone and so is our song.^The water song rests in #[[1]]#. Bring that first.",
+        { QM_RED }));
+
+    // Zora's Domain Zora 5 - Zora's Domain
+    hintTextTable[RHT_NPC_ZD_ZORA_5] = HintText(CustomMessage(
+        "The throwing-blade from our guardian's belly is in #[[1]]#.^Far from any water. The curse has no "
+        "sense of order.",
+        { QM_RED }));
+
+    // Zora's Fountain Zora 6 - Zora's Fountain
+    hintTextTable[RHT_NPC_ZF_ZORA_6] = HintText(CustomMessage(
+        "The fountain has frozen over strangely since the fracture.^Something bright sits on one of the "
+        "bergs. #[[1]]#, I think.",
+        { QM_RED }));
+
+    // Zora's Fountain Zora 7 - Zora's Fountain
+    hintTextTable[RHT_NPC_ZF_ZORA_7] = HintText(CustomMessage(
+        "Dive to the fountain floor if your scale allows.^#[[1]]# has been resting down there since the world "
+        "broke.",
+        { QM_RED }));
+
+    // Zora's River Zora 8 - Zora's River
+    hintTextTable[RHT_NPC_ZR_ZORA_8] = HintText(CustomMessage(
+        "The river runs the same, at least.^There is a chest in the hole by the bank. #[[1]]#, if nobody has "
+        "taken it.",
+        { QM_RED }));
+
+// <<< GANONS_CURSE_GENERATED: HINT_TEXT
     /*--------------------------
     |    Static Entrance Hint   |
     ---------------------------*/
