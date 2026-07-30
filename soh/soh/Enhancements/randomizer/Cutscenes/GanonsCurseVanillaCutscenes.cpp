@@ -213,6 +213,67 @@ int32_t ListVanillaCutscenesCommand(std::shared_ptr<Ship::Console> console, std:
     return 0;
 }
 
+/**
+ * `gc_chamber <0-4>` - enter the Chamber of Sages set up to play one sage's
+ * awakening cutscene.
+ *
+ * Warping to the chamber by raw entrance index is not enough. Each sage's
+ * cutscene lives inside that sage's own actor overlay and only fires when
+ * gSaveContext.chamberCutsceneNum selects it AND sceneLayer < 4 - see
+ * z_demo_sa.c:255 and its four siblings. Vanilla sets both from Door_Warp1
+ * (the boss blue warp); this reproduces that setup so the cutscenes can be
+ * evaluated without playing a dungeon to get there.
+ *
+ *   0 Saria (Forest)   1 Darunia (Fire)   2 Ruto (Water)
+ *   3 Nabooru (Spirit) 4 Impa (Shadow)
+ *
+ * Rauru has no entry: he is not one of the chamberCutsceneNum cases.
+ */
+int32_t ChamberOfSagesCommand(std::shared_ptr<Ship::Console> console, std::vector<std::string> args,
+                              std::string* output) {
+    if (gPlayState == nullptr) {
+        if (output != nullptr) {
+            *output = "no active play session";
+        }
+        return 1;
+    }
+    if (args.size() < 2) {
+        if (output != nullptr) {
+            *output = "usage: gc_chamber <0-4>  (0 Saria, 1 Darunia, 2 Ruto, 3 Nabooru, 4 Impa)";
+        }
+        return 1;
+    }
+
+    int32_t which = -1;
+    try {
+        which = std::stoi(args[1]);
+    } catch (...) {
+        which = -1;
+    }
+    if (which < 0 || which > 4) {
+        if (output != nullptr) {
+            *output = "expected 0-4 (0 Saria, 1 Darunia, 2 Ruto, 3 Nabooru, 4 Impa)";
+        }
+        return 1;
+    }
+
+    gSaveContext.chamberCutsceneNum = which;
+    // sceneLayer is derived from cutsceneIndex on load; anything >= 0xFFF0 puts
+    // it at 4+ and the sage checks would fail.
+    gSaveContext.cutsceneIndex = 0;
+
+    gPlayState->nextEntranceIndex = 0x6B; // ENTR_CHAMBER_OF_THE_SAGES_0
+    gPlayState->transitionTrigger = TRANS_TRIGGER_START;
+    gPlayState->transitionType = TRANS_TYPE_FADE_WHITE_SLOW;
+    gSaveContext.nextTransitionType = TRANS_TYPE_FADE_WHITE_SLOW;
+
+    if (output != nullptr) {
+        static const char* kNames[] = { "Saria", "Darunia", "Ruto", "Nabooru", "Impa" };
+        *output = std::string("entering Chamber of Sages set up for ") + kNames[which];
+    }
+    return 0;
+}
+
 void RegisterGanonsCurseVanillaCutsceneCommands() {
     auto console = Ship::Context::GetRawInstance()->GetConsole();
     console->AddCommand("gc_play_vanilla_cs",
@@ -221,6 +282,9 @@ void RegisterGanonsCurseVanillaCutsceneCommands() {
     console->AddCommand("gc_list_vanilla_cs",
                         { ListVanillaCutscenesCommand,
                           "Ganon's Curse (dev): list named vanilla cutscenes, optionally filtered." });
+    console->AddCommand("gc_chamber",
+                        { ChamberOfSagesCommand,
+                          "Ganon's Curse (dev): enter the Chamber of Sages set up for one sage's cutscene (0-4)." });
 }
 
 } // namespace
