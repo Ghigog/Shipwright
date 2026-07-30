@@ -134,6 +134,19 @@ void Sram_OpenSave() {
                 break;
             }
 
+            // Ganon's Curse: this branch is what vanilla uses to route every non-dungeon continue back to
+            // Link's House (child) / Temple of Time (adult), which was silently overwriting the sage's
+            // starting entrance set in Sram_InitSave on every single load (not just the first one, since
+            // entranceIndex isn't a persisted field - it's recomputed here each time the file is opened).
+            // Reapply the sage's home-base entrance here instead of falling through to the Link default.
+            {
+                s32 sageEntrance = Randomizer_GetSageHomeEntrance();
+                if (sageEntrance != -1) {
+                    gSaveContext.entranceIndex = sageEntrance;
+                    break;
+                }
+            }
+
             if (gSaveContext.savedSceneNum != SCENE_LINKS_HOUSE) {
                 gSaveContext.entranceIndex =
                     (LINK_AGE_IN_YEARS == YEARS_CHILD) ? ENTR_LINKS_HOUSE_CHILD_SPAWN : ENTR_TEMPLE_OF_TIME_WARP_PAD;
@@ -226,6 +239,16 @@ void Sram_OpenSave() {
     gSaveContext.magicLevel = 0;
 }
 
+// Ganon's Curse: recolor the Kokiri Tunic (what every sage actually starts wearing - none of the
+// kits equip Goron/Zora tunic directly, those are just carried for later) so each sage is visually
+// distinct at a glance. This is a global cosmetic cvar, not save-specific, so it just reflects
+// whichever sage was most recently generated - fine for a single-player curated experience.
+static void Sram_SetSageTunicColor(u8 r, u8 g, u8 b) {
+    Color_RGB8 color = { r, g, b };
+    CVarSetColor24(CVAR_COSMETIC("Link.KokiriTunic.Value"), color);
+    CVarSetInteger(CVAR_COSMETIC("Link.KokiriTunic.Changed"), 1);
+}
+
 void Sram_InitSave(FileChooseContext* fileChooseCtx) {
     u16 offset;
     u16 j;
@@ -265,6 +288,48 @@ void Sram_InitSave(FileChooseContext* fileChooseCtx) {
         gSaveContext.ship.quest.id = QUEST_RANDOMIZER;
 
         Randomizer_InitSaveFile();
+
+        // Ganon's Curse: override starting scene + age based on the selected sage. Must run
+        // after Randomizer_InitSaveFile(), not before - that function sets linkAge/entranceIndex
+        // itself based on the unrelated RSK_SELECTED_STARTING_AGE setting, which was silently
+        // clobbering this override when it ran first (entranceIndex happened to get recomputed
+        // correctly later in Sram_OpenSave anyway, which is why only linkAge looked broken).
+        // Link is not selectable at all (see RandomizerOptions.h) - Rauru takes his old Lon Lon
+        // Ranch / Hyrule Field slot instead of Temple of Time, as the mod's new default sage.
+        // Age is set to whichever vanilla equip-slot restrictions the sage's kit actually needs
+        // (e.g. Hookshot/Hover Boots/Mirror Shield/Megaton Hammer are adult-only equipment in
+        // vanilla), not a narrative choice.
+        // Ganon's Curse: age/entrance/tunic all come from the single sage definition table in
+        // savefile.cpp, which generation-time code reads too. These used to be hardcoded here in a
+        // parallel switch; the duplication is what let the generator and the runtime disagree about a
+        // sage's starting age.
+        {
+            int32_t sageEntrance = Randomizer_GetSageHomeEntrance();
+            if (sageEntrance != -1) {
+                uint8_t tunicR = 0, tunicG = 0, tunicB = 0;
+        
+                gSaveContext.entranceIndex = sageEntrance;
+                gSaveContext.linkAge =
+                    Randomizer_GetSageStartingAge() == RO_AGE_ADULT ? LINK_AGE_ADULT : LINK_AGE_CHILD;
+        
+                Randomizer_GetSageTunicColor(&tunicR, &tunicG, &tunicB);
+                Sram_SetSageTunicColor(tunicR, tunicG, tunicB);
+            }
+        }
+
+        // Ganon's Curse: cutsceneIndex >= 0xFFF0 (the "skip cutscene" sentinel this function set
+        // earlier, and what Randomizer_InitSaveFile() above also uses for RO_AGE_CHILD) is NOT a
+        // generic "no cutscene" flag - z_play.c's scene-layer computation treats it as
+        // "sceneLayer = 4 + (cutsceneIndex & 0xF)", and that sceneLayer gets ADDED DIRECTLY to
+        // entranceIndex when indexing gEntranceTable. That +5 offset only lands somewhere safe for
+        // ENTR_LINKS_HOUSE_CHILD_SPAWN specifically (a legitimate "cutscene variant" of Link's House
+        // - literally how the vanilla opening/Navi cutscene triggers). For any other entranceIndex it
+        // lands on a completely unrelated, arbitrary entry 5 slots later in the global table -
+        // confirmed via live testing that Nabooru's entrance+5 pulled in the game's own credits
+        // sequence. Every sage (including Link now, since he has his own fixed Lon Lon Ranch entrance
+        // instead of Link's House) needs a normal (< 0xFFF0) cutsceneIndex so scene-layer falls
+        // through to the ordinary child/adult day/night branch instead.
+        gSaveContext.cutsceneIndex = 0;
     } else {
         gSaveContext.ship.quest.id = currentQuest;
     }

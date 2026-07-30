@@ -46,6 +46,13 @@ void RegionTable_Init_Root() {
         ENTRANCE(RR_PRELUDE_OF_LIGHT_WARP,   logic->CanUse(RG_PRELUDE_OF_LIGHT)),
     });
 
+    // Ganon's Curse: do NOT repoint these two exits at the selected sage's home region. Tried it,
+    // it crashes (SIGABRT). RR_CHILD_SPAWN/RR_ADULT_SPAWN are registered in entrance.cpp as real
+    // EntranceType::Spawn entrances ({RR_CHILD_SPAWN, RR_KF_LINKS_HOUSE} and {RR_ADULT_SPAWN,
+    // RR_TEMPLE_OF_TIME}), and SetAllEntrancesData() looks up exactly those exits by connected
+    // region - Region::GetExit asserts when the exit it expects is missing. Relocating the solver's
+    // start has to go through the entrance machinery instead (the way RSK_SHUFFLE_OVERWORLD_SPAWNS
+    // does), not by rewriting the region graph. See testing-log.md 2026-07-29.
     areaTable[RR_CHILD_SPAWN] = Region("Child Spawn", SCENE_ID_MAX, TIME_DOESNT_PASS, {RA_LINKS_POCKET}, {}, {}, {
         //Exits
         ENTRANCE(RR_KF_LINKS_HOUSE, true),

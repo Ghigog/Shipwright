@@ -10,6 +10,7 @@
 
 #include "randomizer_entrance.h"
 #include "randomizer_grotto.h"
+#include "savefile.h"
 #include "soh/OTRGlobals.h"
 #include "soh/SaveManager.h"
 #include <string.h>
@@ -422,6 +423,16 @@ void Entrance_SetSavewarpEntrance(void) {
         // Use the saved entrance value with remember save location, except when in grottos/fairy fountains or if
         // the entrance index is -1 (new save)
         return;
+    } else if (Randomizer_GetSageHomeEntrance() != -1) {
+        // Ganon's Curse: this whole function is entrance-rando's own independent recompute of
+        // "where does this file spawn" (separate from, and running after, Sram_OpenSave's version
+        // of the same fallback - see the matching comment there). It has no knowledge of the
+        // selected sage's home base, so it was routing every sage to the vanilla generic
+        // child/adult overworld spawn regardless of the sage-specific entrance already set. Only
+        // reached here when entrance shuffle is on (RSK_SHUFFLE_ENTRANCES), which our preset's
+        // ShuffleDungeonsEntrances setting turns on - so this genuinely needs its own fix, not
+        // just the one in Sram_OpenSave.
+        gSaveContext.entranceIndex = Randomizer_GetSageHomeEntrance();
     } else if (LINK_IS_CHILD) {
         gSaveContext.entranceIndex = Entrance_OverrideNextIndex(ENTR_LINKS_HOUSE_CHILD_SPAWN); // Child Overworld Spawn
     } else {

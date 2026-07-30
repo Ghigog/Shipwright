@@ -421,6 +421,215 @@ void SetStartingItems() {
     }
 }
 
+// Ganon's Curse: single source of truth for every sage's fixed starting state.
+//
+// The kit is expressed as real SoH RSK_STARTING_* option values rather than raw Item_Give calls,
+// and that distinction is the entire point. SoH already threads those options through three
+// separate places that all have to agree:
+//   - starting_inventory.cpp  -> so the logic solver knows what the run actually begins with
+//   - item_pool.cpp           -> so a kit item is removed from the shuffled pool instead of also
+//                                being placed in the world as a redundant duplicate
+//   - SetStartingItems()      -> the real runtime grant at file creation
+// The original implementation granted kits with bare Item_Give calls at file creation, which
+// bypassed all three: the solver reasoned as if the sage started empty-handed, every kit item was
+// also placed somewhere in the world (wasting that location), and the spoiler log disagreed with
+// what the player was actually holding.
+//
+// Read by generation-time code (Randomizer_ApplySageGenerationSettings, called from
+// Context::FinalizeSettings) and by runtime file creation (z_sram.c's Sram_InitSave, for
+// age/entrance/tunic). Keeping all of it in one table is deliberate - age in particular used to be
+// duplicated between this file and z_sram.c, and drift between those two copies is exactly what
+// left the generator computing reachability from the wrong starting age.
+//
+// Known follow-up, still unimplemented: Saria's "random mask" has no RSK_STARTING_* equivalent
+// (see characters.md).
+#define SAGE_MAX_KIT_OPTIONS 8
+
+struct SageStartingOption {
+    RandomizerSettingKey key;
+    uint8_t value;
+};
+
+struct SageDefinition {
+    uint8_t sage;
+    uint8_t age;             // RO_AGE_CHILD / RO_AGE_ADULT
+    int32_t homeEntrance;    // ENTR_* - the runtime spawn point
+    uint16_t homeRegion;     // RandomizerRegion - the solver's starting position
+    uint8_t tunic[3];        // Kokiri Tunic recolor; doubles as an at-a-glance "sage select took" signal
+    SageStartingOption kit[SAGE_MAX_KIT_OPTIONS];
+    uint8_t kitCount;
+};
+
+static const SageDefinition sSageDefinitions[] = {
+    // Light Arrows are an arrow *type* - useless without a Bow to fire them, and firing one costs
+    // magic. All three have to be present together or none of them function.
+    { RO_SAGE_RAURU,
+      RO_AGE_ADULT,
+      ENTR_LON_LON_RANCH_ENTRANCE,
+      RR_LON_LON_RANCH,
+      { 25, 25, 25 }, // black
+      { { RSK_STARTING_MEGATON_HAMMER, 1 },
+        { RSK_STARTING_BOW, 1 },
+        { RSK_STARTING_LIGHT_ARROWS, 1 },
+        { RSK_STARTING_MAGIC_METER, 1 } },
+      4 },
+    { RO_SAGE_SARIA,
+      RO_AGE_CHILD,
+      ENTR_SACRED_FOREST_MEADOW_SOUTH_EXIT,
+      RR_SACRED_FOREST_MEADOW,
+      { 110, 225, 70 }, // light green, matching her hair
+      { { RSK_STARTING_STICKS, 1 }, { RSK_STARTING_NUTS, 1 } },
+      2 },
+    { RO_SAGE_DARUNIA,
+      RO_AGE_CHILD,
+      ENTR_GORON_CITY_UPPER_EXIT,
+      RR_GORON_CITY,
+      { 190, 30, 30 }, // red
+      { { RSK_STARTING_BOMB_BAG, 1 },
+        { RSK_STARTING_BOMBCHU_BAG, 1 },
+        { RSK_STARTING_STRENGTH, 1 }, // Goron's Bracelet
+        { RSK_STARTING_GORON_TUNIC, 1 } },
+      4 },
+    { RO_SAGE_RUTO,
+      RO_AGE_CHILD,
+      ENTR_ZORAS_DOMAIN_ENTRANCE,
+      RR_ZORAS_DOMAIN,
+      { 40, 130, 220 }, // blue
+      { { RSK_STARTING_SCALE, 2 }, // golden scale - the max tier, i.e. "all diving scales"
+        { RSK_STARTING_IRON_BOOTS, 1 },
+        { RSK_STARTING_ZORA_TUNIC, 1 } },
+      3 },
+    // The Lens of Truth drains magic continuously while active, so it's as inert without a meter as
+    // Light Arrows are without a Bow - basic magic (level 1), not Zelda's double.
+    { RO_SAGE_IMPA,
+      RO_AGE_ADULT,
+      ENTR_KAKARIKO_VILLAGE_FRONT_GATE,
+      RR_KAKARIKO_VILLAGE,
+      { 130, 60, 170 }, // purple
+      { { RSK_STARTING_BUNNY_HOOD, 1 },
+        { RSK_STARTING_HOOKSHOT, 1 },
+        { RSK_STARTING_LENS_OF_TRUTH, 1 },
+        { RSK_STARTING_MAGIC_METER, 1 } },
+      4 },
+    // Nabooru's entrance is NOT ENTR_GERUDO_TRAINING_GROUND_ENTRANCE (the dungeon interior -
+    // confirmed via live testing to cause an infinite void-out softlock when cold-spawned into) and
+    // NOT ENTR_GERUDOS_FORTRESS_OUTSIDE_GERUDO_TRAINING_GROUND either (looks like a safe overworld
+    // spot by name, but entrance.cpp registers it as a SHUFFLED DUNGEON connector - same pool as the
+    // interior door - so under our preset's ShuffleDungeonsEntrances its real destination gets
+    // reassigned per-seed; that's what dumped a retest into the ending credits). EAST_EXIT is
+    // EntranceType::Overworld (Gerudo Valley <-> Gerudo Fortress), genuinely outside every shuffle
+    // pool our preset enables, and the normal vanilla arrival into Gerudo territory. Her Gerudo Card
+    // keeps her from being captured there. General rule learned here: always check entrance.cpp's
+    // EntranceType registration before using any entrance near a dungeon door as a fixed spawn.
+    { RO_SAGE_NABOORU,
+      RO_AGE_ADULT,
+      ENTR_GERUDOS_FORTRESS_EAST_EXIT,
+      RR_GF_OUTSKIRTS,
+      { 235, 190, 20 }, // yellow
+      { { RSK_STARTING_HOVER_BOOTS, 1 },
+        { RSK_STARTING_GERUDO_CARD, 1 },
+        { RSK_STARTING_MIRROR_SHIELD, 1 } },
+      3 },
+    // Magic meter 2 is double magic (SetStartingItems derives isDoubleMagicAcquired from >= 2),
+    // which her three-spell kit needs to be usable at all.
+    { RO_SAGE_ZELDA,
+      RO_AGE_CHILD,
+      ENTR_CASTLE_GROUNDS_SOUTH_EXIT,
+      RR_CASTLE_GROUNDS,
+      { 235, 235, 235 }, // white
+      { { RSK_STARTING_FARORES_WIND, 1 },
+        { RSK_STARTING_NAYRUS_LOVE, 1 },
+        { RSK_STARTING_DINS_FIRE, 1 },
+        { RSK_STARTING_OCARINA, RO_STARTING_OCARINA_TIME },
+        { RSK_STARTING_ZELDAS_LULLABY, 1 },
+        { RSK_STARTING_MAGIC_METER, 2 } },
+      6 },
+};
+
+static const SageDefinition* FindSageDefinition(uint8_t sage) {
+    for (const SageDefinition& def : sSageDefinitions) {
+        if (def.sage == sage) {
+            return &def;
+        }
+    }
+    return nullptr;
+}
+
+// The selected sage, or nullptr when the randomizer isn't active.
+static const SageDefinition* GetSelectedSageDefinition() {
+    if (!IS_RANDO) {
+        return nullptr;
+    }
+    return FindSageDefinition(Randomizer_GetSettingValue(RSK_SELECTED_SAGE));
+}
+
+// Generation-time hook: fold the selected sage's fixed starting state into the real settings the
+// generator reads, before Fill() runs. This is the single step that keeps the logic solver, the
+// item pool, and the spoiler log all in agreement with what the player will actually start with.
+//
+// Writes land in the Context's own option array (OptionValue::Set is a plain in-memory assignment,
+// no CVar write), so this is scoped to the seed being generated and never leaks back into the
+// user's saved settings UI.
+extern "C" void Randomizer_ApplySageGenerationSettings() {
+    auto ctx = Rando::Context::GetInstance();
+    const SageDefinition* def = FindSageDefinition(ctx->GetOption(RSK_SELECTED_SAGE).Get());
+    if (def == nullptr) {
+        return;
+    }
+
+    // The sage's age IS the run's starting age. RSK_SELECTED_STARTING_AGE drives the solver's
+    // starting position, whether the Temple of Time pedestal check auto-resolves, and the
+    // "can you still reach ToT as the other age" seed validation. Leaving it derived from the
+    // static preset value meant every child-starting sage was generated as if it started adult.
+    ctx->GetOption(RSK_SELECTED_STARTING_AGE).Set(def->age);
+
+    for (uint8_t i = 0; i < def->kitCount; i++) {
+        ctx->GetOption(def->kit[i].key).Set(def->kit[i].value);
+    }
+
+    // Ganon's Curse: an adult-starting sage gets the Temple of Time pedestal check's contents for
+    // free at file creation - SetStartingItems() does that for any adult start with Master Sword
+    // shuffled, on the reasoning that an adult start has already pulled the sword. That grant can't
+    // simply be removed: an adult sage has no Master Sword, so it can never turn child, so it can
+    // never reach that pedestal, and the item would be stranded (potentially unbeatable seed).
+    // Instead exclude the location so the freebie is junk rather than a real item - live testing
+    // found Nabooru being handed a Lens of Truth this way, which is exactly the kind of
+    // outside-the-kit bonus we disabled Link's Pocket to avoid. The Master Sword itself is
+    // unaffected and still placed somewhere in the world.
+    if (def->age == RO_AGE_ADULT) {
+        ctx->GetItemLocation(RC_TOT_MASTER_SWORD)->SetExcludedOption(RO_LOCATION_EXCLUDE);
+    }
+}
+
+extern "C" uint8_t Randomizer_GetSageStartingAge() {
+    const SageDefinition* def = GetSelectedSageDefinition();
+    return def == nullptr ? RO_AGE_CHILD : def->age;
+}
+
+// RR_NONE-equivalent isn't meaningful here; callers check IS_RANDO first via HasSageHomeRegion.
+extern "C" uint16_t Randomizer_GetSageHomeRegion() {
+    const SageDefinition* def = GetSelectedSageDefinition();
+    return def == nullptr ? 0 : def->homeRegion;
+}
+
+extern "C" void Randomizer_GetSageTunicColor(uint8_t* r, uint8_t* g, uint8_t* b) {
+    const SageDefinition* def = GetSelectedSageDefinition();
+    if (def == nullptr) {
+        return;
+    }
+    *r = def->tunic[0];
+    *g = def->tunic[1];
+    *b = def->tunic[2];
+}
+
+// Ganon's Curse: see savefile.h - the single source of truth for each sage's fixed home-base
+// entrance, shared by every piece of code that independently recomputes the fallback "where does
+// this file spawn" entrance. -1 means no override (randomizer not active).
+int32_t Randomizer_GetSageHomeEntrance() {
+    const SageDefinition* def = GetSelectedSageDefinition();
+    return def == nullptr ? -1 : def->homeEntrance;
+}
+
 extern "C" void Randomizer_InitSaveFile() {
     auto ctx = Rando::Context::GetInstance();
     ctx->GetLogic()->SetSaveContext(&gSaveContext);
@@ -434,6 +643,11 @@ extern "C" void Randomizer_InitSaveFile() {
     // Reset Bombchu Bag Upgrade
     gSaveContext.ship.quest.data.randomizer.bombchuUpgradeLevel = 0;
 
+    // Ganon's Curse: the selected sage's kit is granted right here by SetStartingItems(), from the
+    // real RSK_STARTING_* options that Randomizer_ApplySageGenerationSettings() set at generation
+    // time. There is deliberately no separate sage-kit grant step anymore - the old one used bare
+    // Item_Give calls that the generator knew nothing about, which is what caused kit items to also
+    // be placed in the world as duplicates. See the sage definition table above.
     SetStartingItems();
 
     // Set Cutscene flags and texts to skip them.
