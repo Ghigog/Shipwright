@@ -64,7 +64,7 @@ struct CutsceneTextEntry {
 // not this table.
 constexpr CutsceneTextEntry cutsceneTextEntries[] = {
 // >>> GANONS_CURSE_GENERATED: TEXT_IDS - edit data/cutscenes.json, not this
-    { 0xF800, "This line was authored in cutscenes.json, not hand-written C.^The camera above is copied from a vanilla file - only these words are new." },  // TEST_REUSED_CAMERA
+
 // <<< GANONS_CURSE_GENERATED: TEXT_IDS
 };
 
@@ -94,30 +94,7 @@ void BuildCutsceneMessage(uint16_t* textId, bool* loadFromMessageTable) {
 // need real external linkage to match the `extern` declarations in
 // GanonsCurseCutscenes.h.
 // >>> GANONS_CURSE_GENERATED: CUTSCENE_DATA - edit data/cutscenes.json, not this
-CutsceneData gGanonsCurseTestReusedCamera[] = {
-    CS_BEGIN_CUTSCENE(3, 164),
-    CS_CAM_EYE_REL_TO_PLAYER_LIST(0, 135),
-        CS_CAM_EYE_REL_TO_PLAYER(CS_CMD_CONTINUE, 0, 0, 60.324856f, 31, 79, 59, 271),
-        CS_CAM_EYE_REL_TO_PLAYER(CS_CMD_CONTINUE, 0, 0, 60.324856f, 31, 78, 60, 288),
-        CS_CAM_EYE_REL_TO_PLAYER(CS_CMD_CONTINUE, 0, 0, 60.324856f, 32, 78, 60, 305),
-        CS_CAM_EYE_REL_TO_PLAYER(CS_CMD_CONTINUE, 0, 0, 60.324856f, 30, 79, 59, 500),
-        CS_CAM_EYE_REL_TO_PLAYER(CS_CMD_CONTINUE, 0, 0, 60.324856f, 30, 78, 60, 502),
-        CS_CAM_EYE_REL_TO_PLAYER(CS_CMD_CONTINUE, 0, 0, 60.324856f, 30, 78, 60, 519),
-        CS_CAM_EYE_REL_TO_PLAYER(CS_CMD_STOP, 0, 0, 60.324856f, 30, 78, 60, 0),
-    CS_CAM_AT_REL_TO_PLAYER_LIST(0, 164),
-        CS_CAM_AT_REL_TO_PLAYER(CS_CMD_CONTINUE, 0, 30, 60.324856f, 11, 50, 23, 271),
-        CS_CAM_AT_REL_TO_PLAYER(CS_CMD_CONTINUE, 0, 30, 60.324856f, 11, 48, 22, 288),
-        CS_CAM_AT_REL_TO_PLAYER(CS_CMD_CONTINUE, 0, 7, 60.324856f, 11, 48, 22, 305),
-        CS_CAM_AT_REL_TO_PLAYER(CS_CMD_CONTINUE, 0, 7, 60.324856f, 57, 101, 21, 500),
-        CS_CAM_AT_REL_TO_PLAYER(CS_CMD_CONTINUE, 0, 30, 60.324856f, 57, 101, 21, 502),
-        CS_CAM_AT_REL_TO_PLAYER(CS_CMD_CONTINUE, 0, 30, 60.324856f, 57, 101, 21, 519),
-        CS_CAM_AT_REL_TO_PLAYER(CS_CMD_STOP, 0, 30, 60.324856f, 57, 101, 21, 0),
-    CS_TEXT_LIST(3),
-        CS_TEXT_NONE(0, 10),
-        CS_TEXT_DISPLAY_TEXTBOX(0xF800, 10, 150, 0x0000, 0xFFFF, 0xFFFF),
-        CS_TEXT_NONE(150, 164),
-    CS_END(),
-};
+
 // <<< GANONS_CURSE_GENERATED: CUTSCENE_DATA
 
 namespace {
@@ -126,7 +103,7 @@ namespace {
 // gc_play_cutscene debug console command below.
 const std::unordered_map<std::string, CutsceneData*> cutsceneById = {
 // >>> GANONS_CURSE_GENERATED: CUTSCENE_REGISTRY - edit data/cutscenes.json, not this
-    { "TEST_REUSED_CAMERA", gGanonsCurseTestReusedCamera },
+
 // <<< GANONS_CURSE_GENERATED: CUTSCENE_REGISTRY
 };
 
