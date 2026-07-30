@@ -27,6 +27,7 @@ extern PlayState* gPlayState;
 #include <macros.h>
 #include <functions.h>
 #include <variables.h>
+#include "src/overlays/actors/ovl_En_Ossan/z_en_ossan.h"
 }
 
 namespace {
@@ -46,14 +47,18 @@ struct NpcHintSpeaker {
     RandomizerHint hint;
 };
 
-// A specific line that is safe to replace even mid-conversation, because it
-// carries no choice or flow control codes. sceneNum -1 means "any scene".
+// A shopkeeper's talk-to-owner line, identified by message ID. sceneNum -1 means
+// "any scene".
 //
 // This is how shopkeepers are reached: EnOssan_Talk*Shopkeeper (z_en_ossan.c)
 // delivers their conversational line through Message_ContinueTextbox, so it is
-// never a conversation start and the actor table can never see it. Browsing and
-// buying use entirely different text, which is left untouched - so shop
-// functionality is unchanged.
+// never a conversation start and the actor table can never see it.
+//
+// A text ID alone is NOT a safe key - several of these IDs are reused elsewhere
+// in the same scene for messages that drive a flow (0x9C is also the Lon Lon Milk
+// purchase, 0x9D also a can't-buy refusal, 0x10BA also an EN_KO line). Matching
+// one of those and replacing it softlocks the shop. So every row here is gated on
+// IsShopOwnerTalking() as well; see that function.
 struct NpcHintTextId {
     uint16_t textId;
     int16_t sceneNum;
@@ -70,6 +75,7 @@ constexpr NpcHintTextId npcHintTextIds[] = {
     { 0x3057, SCENE_GORON_SHOP, RH_NPC_SHOP_GORON },  // Shop Goron
     { 0x305B, SCENE_GORON_SHOP, RH_NPC_SHOP_GORON },  // Shop Goron
     { 0x5046, SCENE_POTION_SHOP_KAKARIKO, RH_NPC_SHOP_KAK_POTION },  // Shop Kakariko Potion
+    { 0x504E, SCENE_POTION_SHOP_KAKARIKO, RH_NPC_SHOP_KAK_POTION },  // Shop Kakariko Potion
     { 0x10BA, SCENE_KOKIRI_SHOP, RH_NPC_SHOP_KOKIRI },  // Shop Kokiri
     { 0x009C, SCENE_BAZAAR, RH_NPC_SHOP_BAZAAR_KAK },  // Shop Bazaar Kakariko
     { 0x009D, SCENE_BAZAAR, RH_NPC_SHOP_BAZAAR_MARKET },  // Shop Bazaar Market
@@ -77,6 +83,7 @@ constexpr NpcHintTextId npcHintTextIds[] = {
     { 0x504E, SCENE_POTION_SHOP_MARKET, RH_NPC_SHOP_MARKET_POTION },  // Shop Market Potion
     { 0x70AE, SCENE_HAPPY_MASK_SHOP, RH_NPC_SHOP_MASK },  // Shop Mask
     { 0x70A3, SCENE_HAPPY_MASK_SHOP, RH_NPC_SHOP_MASK },  // Shop Mask
+    { 0x70A4, SCENE_HAPPY_MASK_SHOP, RH_NPC_SHOP_MASK },  // Shop Mask
     { 0x403A, SCENE_ZORA_SHOP, RH_NPC_SHOP_ZORA },  // Shop Zora
     { 0x403B, SCENE_ZORA_SHOP, RH_NPC_SHOP_ZORA },  // Shop Zora
 // <<< GANONS_CURSE_GENERATED: TEXT_IDS
@@ -216,7 +223,30 @@ bool IsConversationStart() {
     return gPlayState->msgCtx.msgMode == MSGMODE_NONE;
 }
 
+// True only while an EnOssan is delivering its talk-to-owner line.
+//
+// EnOssan_ChooseTalkToOwner() sets stateFlag *before* calling into
+// sShopkeeperTalkOwner[], so by the time that function's Message_ContinueTextbox
+// reaches our hook the flag already reads OSSAN_STATE_TALKING_TO_SHOPKEEPER.
+// Every other shop message - purchase prompts, refusals, milk fanfare - is sent
+// by a helper that sets its state *after* the textbox call, so none of them can
+// be mistaken for this one even when they share a text ID.
+//
+// player->talkActor holds for the whole shop conversation: it is only cleared
+// when the player loses ACTOR_FLAG_TALK (z_player.c), which happens at the end of
+// the interaction, not between the shop's internal states.
+bool IsShopOwnerTalking() {
+    Player* player = GET_PLAYER(gPlayState);
+    if (player == nullptr || player->talkActor == nullptr || player->talkActor->id != ACTOR_EN_OSSAN) {
+        return false;
+    }
+    return ((EnOssan*)player->talkActor)->stateFlag == OSSAN_STATE_TALKING_TO_SHOPKEEPER;
+}
+
 RandomizerHint FindHintForTextId(uint16_t textId) {
+    if (!IsShopOwnerTalking()) {
+        return RH_NONE;
+    }
     for (const NpcHintTextId& entry : npcHintTextIds) {
         if (entry.textId == textId && (entry.sceneNum < 0 || entry.sceneNum == gPlayState->sceneNum)) {
             return entry.hint;
@@ -251,12 +281,12 @@ RandomizerHint FindHintForCurrentTalkActor() {
 } // namespace
 
 void BuildNpcHintMessage(uint16_t* textId, bool* loadFromMessageTable) {
-    // Allowlisted text IDs first: these are specific lines known to carry no
-    // choice or flow codes, so they are safe to replace even mid-conversation.
-    // Shopkeepers reach their "talk to me" line via Message_ContinueTextbox, which
-    // is never a conversation start, so they can only be caught this way - and
-    // browsing and buying go through different text entirely and stay untouched.
+    // Shopkeepers first: their talk-to-owner line arrives mid-conversation via
+    // Message_ContinueTextbox, so it is never a conversation start and the actor
+    // table can never see it. Matched by text ID plus shop state - see
+    // IsShopOwnerTalking(). Browsing and buying stay untouched.
     RandomizerHint hint = FindHintForTextId(*textId);
+    const bool isShopOwnerLine = hint != RH_NONE;
     if (hint == RH_NONE && IsConversationStart()) {
         hint = FindHintForCurrentTalkActor();
     }
@@ -279,6 +309,19 @@ void BuildNpcHintMessage(uint16_t* textId, bool* loadFromMessageTable) {
     msg.Replace("Acheter: ", "");
     msg.Replace(" kaufen ", "");
     msg.Replace(" kaufen", "");
+    // A shop owner's line has to end with the EVENT control code, not the plain
+    // END that CustomMessage appends. EnOssan_State_TalkingToShopkeeper only
+    // advances on Message_GetState() == TEXT_STATE_EVENT, which needs
+    // textboxEndType EVENT (z_message_PAL.c). And the message system will not
+    // close the box itself either, because the shop sets YREG(31) while browsing.
+    // Terminate with END here and both sides wait forever: the textbox stays up
+    // with every input dead until the game is reset.
+    if (isShopOwnerLine) {
+        // CTRL_EVENT, spelled out because message_data_fmt.h is not in this TU and
+        // CustomMessageManager.h #undefs the MESSAGE_* macros it would provide.
+        constexpr char kMessageEvent = '\x0B';
+        msg.Replace(CustomMessage::MESSAGE_END(), std::string(1, kMessageEvent));
+    }
     msg.LoadIntoFont();
     *loadFromMessageTable = false;
 }
