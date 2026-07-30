@@ -1449,12 +1449,98 @@ int Fill() {
         // Then place the rest of the advancement items
         std::vector<RandomizerGet> remainingAdvancementItems = FilterAndEraseFromPool(
             itemPool, [](const auto i) { return Rando::StaticData::RetrieveItem(i).IsAdvancement(); });
-        AssumedFill(remainingAdvancementItems, ctx->allLocations, true);
+
+        // Ganon's Curse: grass/pot/crate (RSK_SHUFFLE_GRASS/POTS/CRATES) locations exist
+        // specifically as a destination for JUNK overflow - since junk can't go in chests,
+        // it needs somewhere else to live. They were never meant to be genuine "any item"
+        // shuffle locations like a chest or NPC give-item slot. Confirmed via live playtesting:
+        // a Bottle with Ruto's Letter and an Empty Bottle (both ITEM_CATEGORY_MAJOR) turned up
+        // in a crate and a pot respectively. Exclude these location types from the majors
+        // AssumedFill's candidate pool entirely - majors place anywhere else reachable, same as
+        // before this locations list existed.
+        auto isTrivialContainer = [](const auto loc) {
+            RandomizerCheckType type = Rando::StaticData::GetLocation(loc)->GetRCType();
+            return type == RCTYPE_GRASS || type == RCTYPE_POT || type == RCTYPE_CRATE ||
+                   type == RCTYPE_NLCRATE || type == RCTYPE_SMALL_CRATE;
+        };
+        std::vector<RandomizerCheck> nonTrivialContainerLocations =
+            FilterFromPool(ctx->allLocations, [&](const auto loc) { return !isTrivialContainer(loc); });
+
+        // Ganon's Curse: majors used to get a priority pass into empty big chests here, but
+        // that's no longer needed - chest SIZE now automatically follows contents at render
+        // time (EnBox_UpdateTexture, z_en_box.c: a major always renders as a big chest
+        // regardless of the location's original size, and vice versa), so a major can place
+        // anywhere reachable (other than a trivial container, per above) via normal fill and
+        // still look correct. Simpler and one fewer AssumedFill pass to reason about.
+        AssumedFill(remainingAdvancementItems, nonTrivialContainerLocations, true);
         StopPerformanceTimer(PT_ADVANCEMENT_ITEMS);
 
         StartPerformanceTimer(PT_REMAINING_ITEMS);
         // Fast fill for the rest of the pool
         SPDLOG_INFO("Shuffling Remaining Items");
+        if (ctx->GetOption(RSK_TIERED_CHEST_PLACEMENT)) {
+            // Ganon's Curse: junk (rupees, etc.) should never land in any chest, big or small -
+            // that's the one placement constraint tiered-chest-placement still needs, now that
+            // chest size is handled entirely by rendering (see above). The final catch-all
+            // FastFill below places whatever's left in itemPool (genuine junk, by this point)
+            // into every remaining empty location with no chest exclusion at all, and
+            // AssumedFill doesn't preferentially route majors to chests over other location
+            // types - so a chest can still be empty here even with more majors+filler in
+            // aggregate than chests exist. Confirmed via live playtesting this was letting junk
+            // slip into chests. Guard against it directly: claim every still-empty chest (big or
+            // small, no distinction needed anymore) with a non-junk item first, so only
+            // non-chest locations are left for the catch-all fill to hand real junk to.
+            std::vector<RandomizerCheck> emptyChests = GetEmptyLocations(FilterFromPool(
+                ctx->allLocations, [](const auto loc) {
+                    return Rando::StaticData::GetLocation(loc)->IsBigChest() ||
+                           Rando::StaticData::GetLocation(loc)->IsSmallChest();
+                }));
+            std::vector<RandomizerGet> nonJunkFiller = FilterAndEraseFromPool(itemPool, [](const auto i) {
+                return Rando::StaticData::RetrieveItem(i).GetCategory() != ITEM_CATEGORY_JUNK;
+            });
+
+            if (!emptyChests.empty() && !nonJunkFiller.empty()) {
+                if (nonJunkFiller.size() > emptyChests.size()) {
+                    // More non-junk filler than empty chests: FastFill takes items by value and
+                    // drops whatever's left over once locations run out, so only hand it exactly
+                    // as many items as there are chests, and return the rest to itemPool. Losing
+                    // items here would silently remove them from the seed entirely.
+                    Shuffle(nonJunkFiller);
+                    SohUtils::AppendVector(
+                        itemPool, std::vector<RandomizerGet>(nonJunkFiller.begin() + emptyChests.size(),
+                                                             nonJunkFiller.end()));
+                    nonJunkFiller.resize(emptyChests.size());
+                }
+                FastFill(nonJunkFiller, emptyChests, true);
+            } else {
+                // Nothing non-junk left to give chests priority - put it back for the general fill below.
+                SohUtils::AppendVector(itemPool, nonJunkFiller);
+            }
+
+            // Ganon's Curse: any non-junk left over after the chest guard above (only possible
+            // if non-junk filler outnumbered empty chests) must still avoid trivial containers -
+            // same rule as majors, just catching the residual. Whatever's genuinely left after
+            // this is junk-only, safe for the catch-all below to hand to any remaining location,
+            // trivial containers included (exactly where junk should go).
+            std::vector<RandomizerCheck> emptyNonTrivialLocations = GetEmptyLocations(nonTrivialContainerLocations);
+            std::vector<RandomizerGet> nonJunkResidual = FilterAndEraseFromPool(itemPool, [](const auto i) {
+                return Rando::StaticData::RetrieveItem(i).GetCategory() != ITEM_CATEGORY_JUNK;
+            });
+
+            if (!emptyNonTrivialLocations.empty() && !nonJunkResidual.empty()) {
+                if (nonJunkResidual.size() > emptyNonTrivialLocations.size()) {
+                    Shuffle(nonJunkResidual);
+                    SohUtils::AppendVector(itemPool,
+                                           std::vector<RandomizerGet>(nonJunkResidual.begin() +
+                                                                           emptyNonTrivialLocations.size(),
+                                                                       nonJunkResidual.end()));
+                    nonJunkResidual.resize(emptyNonTrivialLocations.size());
+                }
+                FastFill(nonJunkResidual, emptyNonTrivialLocations, true);
+            } else {
+                SohUtils::AppendVector(itemPool, nonJunkResidual);
+            }
+        }
         FastFill(std::move(itemPool), GetAllEmptyLocations(), false);
         StopPerformanceTimer(PT_REMAINING_ITEMS);
 

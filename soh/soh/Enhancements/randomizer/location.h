@@ -94,6 +94,10 @@ class Location {
     RandomizerCheckType GetRCType() const;
     ActorID GetActorID() const;
     int32_t GetActorParams() const;
+    // Ganon's Curse: chest-size classification for tiered placement (Phase 1).
+    // Decodes the same EnBoxType bits the EnBox actor itself reads (z_en_box.c: type = params >> 12 & 0xF).
+    bool IsBigChest() const;
+    bool IsSmallChest() const;
     SceneID GetScene() const;
     RandomizerHintTextKey GetHintKey() const;
     HintText* GetHint();

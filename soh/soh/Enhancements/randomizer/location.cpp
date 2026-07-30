@@ -31,6 +31,47 @@ int32_t Rando::Location::GetActorParams() const {
     return actorParams;
 }
 
+// Ganon's Curse: chest-size classification for tiered placement (Phase 1).
+// EnBoxType values, from soh/src/overlays/actors/ovl_En_Box/z_en_box.h:
+//   Big:   0 (default), 1 (room clear), 2 (decorated/boss key), 3 (switch flag fall),
+//          4, 9, 10 (variant draws), 11 (switch flag)
+//   Small: 5 (default), 6 (variant draw), 7 (room clear), 8 (switch flag fall)
+bool Rando::Location::IsBigChest() const {
+    if (actorId != ACTOR_EN_BOX) {
+        return false;
+    }
+    const uint8_t chestType = (actorParams >> 12) & 0xF;
+    switch (chestType) {
+        case 0:
+        case 1:
+        case 2:
+        case 3:
+        case 4:
+        case 9:
+        case 10:
+        case 11:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool Rando::Location::IsSmallChest() const {
+    if (actorId != ACTOR_EN_BOX) {
+        return false;
+    }
+    const uint8_t chestType = (actorParams >> 12) & 0xF;
+    switch (chestType) {
+        case 5:
+        case 6:
+        case 7:
+        case 8:
+            return true;
+        default:
+            return false;
+    }
+}
+
 SceneID Rando::Location::GetScene() const {
     return scene;
 }
