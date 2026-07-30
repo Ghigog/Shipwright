@@ -16,23 +16,36 @@
  * (z_demo.c:2215) does those same two writes from Play_Init, so a naive
  * "trigger ours at startup too" stomps the entrance cutscene.
  *
- * So we sequence explicitly: arm at file creation, let the entrance cutscene
- * run, and fire ours the frame csCtx returns to idle.
+ * ORDER: PREMISE FIRST, THEN THE ESTABLISHING SHOT
  *
- * THE RACE, AND WHY sSawEntranceCsRunning EXISTS
+ * The universal opening replaces vanilla's Navi-wakes-Link intro, so it goes
+ * first; the home region's entrance cutscene is the establishing shot that
+ * follows it.
  *
- * Cutscene_HandleEntranceTriggers only *requests* the cutscene - it sets
- * cutsceneTrigger and returns. The cutscene does not actually start until a
- * later frame, so csCtx.state is still CS_STATE_IDLE for a frame or two after
- * Play_Init. Firing on "armed && state == IDLE" alone would therefore win that
- * race and overwrite the entrance cutscene's segment before it ever plays -
- * the exact bug this file exists to avoid.
+ * Getting that order is not just "trigger ours at startup", because
+ * Cutscene_HandleEntranceTriggers has already queued the entrance cutscene by
+ * the time we get a frame. So we *displace* it: take the segment it queued,
+ * put ours in its place, and replay the displaced one once ours has finished.
  *
- * The fix is to require having *observed* the entrance cutscene running before
- * accepting a return to idle as "it finished". Saria has no entrance cutscene
- * at all, so for her the VB hook never fires, sExpectEntranceCs stays false,
- * and we fire on the first idle frame instead of waiting for a cutscene that
- * is never coming.
+ * Displacing rather than suppressing (via VB_PLAY_ENTRANCE_CS) is deliberate -
+ * it leaves sEntranceCutsceneTable's age and event-flag logic completely
+ * intact and simply reuses its answer, instead of reimplementing the decision
+ * about which cutscene this spawn should get.
+ *
+ * THE RACE, AND WHY sSawOpeningRunning EXISTS
+ *
+ * Cutscene_HandleEntranceTriggers only *requests* its cutscene - it sets
+ * cutsceneTrigger and returns. Nothing actually starts until a later frame, so
+ * csCtx.state is still CS_STATE_IDLE for a frame or two after Play_Init. That
+ * window is what lets us swap the segment safely, but it also means a return
+ * to idle right after triggering ours means "hasn't started yet", not
+ * "finished". So we require having *observed* our cutscene running before
+ * accepting idle as the end of it - otherwise we would replay the entrance
+ * cutscene instantly and stomp our own opening.
+ *
+ * Saria's Sacred Forest Meadow has no entrance cutscene, so nothing gets
+ * displaced, sDisplacedEntranceCs stays null, and the sequence simply ends
+ * after the opening.
  *
  * KNOWN LIMITATION: the arm flag is process-local, not saved. Quitting during
  * the entrance cutscene loses the universal opening for that file. Fixing it
@@ -56,73 +69,87 @@ extern PlayState* gPlayState;
 
 namespace {
 
-// Set once at sage file creation, cleared the moment the opening is triggered.
+// Set once at sage file creation, cleared once the whole sequence is done.
 bool sArmed = false;
 
-// True if a vanilla entrance cutscene was allowed to play for this spawn. Set
-// from the VB_PLAY_ENTRANCE_CS hook, which runs during Play_Init - i.e. always
-// before the first OnGameFrameUpdate, so the state machine below can trust it.
-bool sExpectEntranceCs = false;
+// True once the universal opening has been triggered and we are waiting on it.
+bool sOpeningTriggered = false;
 
-// Guards the race described in the file header: proves the entrance cutscene
-// actually started, so a return to idle means "finished" and not "not yet".
-bool sSawEntranceCsRunning = false;
+// Guards the race described in the file header: proves our cutscene actually
+// started, so a return to idle means "finished" and not "not yet".
+bool sSawOpeningRunning = false;
 
-void PlayUniversalOpening(PlayState* play) {
-    Cutscene_SetSegment(play, gGanonsCurseUniversalOpening);
-    gSaveContext.cutsceneTrigger = 1;
-
-    sArmed = false;
-    sExpectEntranceCs = false;
-    sSawEntranceCsRunning = false;
-}
+// The entrance cutscene Play_Init had queued, displaced so ours can go first
+// and replayed once ours ends. Null when the sage's home has no entrance
+// cutscene (Saria), in which case nothing is replayed.
+void* sDisplacedEntranceCs = nullptr;
 
 void TickUniversalOpening() {
     if (!sArmed || gPlayState == nullptr) {
         return;
     }
 
-    const bool cutscenePlaying = gPlayState->csCtx.state != CS_STATE_IDLE;
+    CutsceneContext& csCtx = gPlayState->csCtx;
+    const bool cutscenePlaying = csCtx.state != CS_STATE_IDLE;
 
-    if (sExpectEntranceCs) {
+    if (!sOpeningTriggered) {
+        // Only safe to touch csCtx.segment while idle. Once a cutscene is
+        // actually running the segment is being read, and swapping it would
+        // corrupt playback mid-scene.
         if (cutscenePlaying) {
-            // The entrance cutscene is on screen. Note it and keep waiting.
-            sSawEntranceCsRunning = true;
             return;
         }
-        if (!sSawEntranceCsRunning) {
-            // Requested but not started yet - firing here would stomp its segment.
-            return;
+
+        // Displace whatever Cutscene_HandleEntranceTriggers queued during
+        // Play_Init, so the premise beat plays first and the home region's
+        // establishing shot follows it. Taking the segment here rather than
+        // suppressing it via VB_PLAY_ENTRANCE_CS keeps sEntranceCutsceneTable's
+        // age/flag logic entirely intact - we reuse its answer instead of
+        // reimplementing it.
+        if (gSaveContext.cutsceneTrigger != 0 && csCtx.segment != nullptr) {
+            sDisplacedEntranceCs = csCtx.segment;
         }
-    } else if (cutscenePlaying) {
-        // No entrance cutscene expected, but something else is playing. Wait it
-        // out rather than fighting it for the segment pointer.
+
+        Cutscene_SetSegment(gPlayState, gGanonsCurseUniversalOpening);
+        gSaveContext.cutsceneTrigger = 1;
+        sOpeningTriggered = true;
+        sSawOpeningRunning = false;
         return;
     }
 
-    PlayUniversalOpening(gPlayState);
+    if (cutscenePlaying) {
+        sSawOpeningRunning = true;
+        return;
+    }
+    if (!sSawOpeningRunning) {
+        // Triggered but not started yet - a return to idle here means "not yet",
+        // not "finished".
+        return;
+    }
+
+    // The opening has played out. Hand the moment back to the entrance cutscene.
+    sArmed = false;
+    sOpeningTriggered = false;
+    sSawOpeningRunning = false;
+
+    if (sDisplacedEntranceCs != nullptr) {
+        Cutscene_SetSegment(gPlayState, sDisplacedEntranceCs);
+        gSaveContext.cutsceneTrigger = 1;
+        sDisplacedEntranceCs = nullptr;
+    }
 }
 
 void RegisterGanonsCurseOpenings() {
     COND_HOOK(OnGameFrameUpdate, IS_RANDO, TickUniversalOpening);
-
-    // Observe, don't override: `should` is passed through untouched so 4a's
-    // restored entrance cutscenes still play exactly as they would otherwise.
-    // We only need to know *whether* one is coming, to pick which branch of the
-    // state machine above applies.
-    COND_VB_SHOULD(VB_PLAY_ENTRANCE_CS, IS_RANDO, {
-        if (sArmed && *should) {
-            sExpectEntranceCs = true;
-        }
-    });
 }
 
 } // namespace
 
 extern "C" void GanonsCurse_ArmUniversalOpening(void) {
     sArmed = true;
-    sExpectEntranceCs = false;
-    sSawEntranceCsRunning = false;
+    sOpeningTriggered = false;
+    sSawOpeningRunning = false;
+    sDisplacedEntranceCs = nullptr;
 }
 
 static RegisterShipInitFunc ganonsCurseOpeningsInitFunc(RegisterGanonsCurseOpenings, { "IS_RANDO" });

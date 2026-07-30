@@ -64,7 +64,7 @@ struct CutsceneTextEntry {
 // not this table.
 constexpr CutsceneTextEntry cutsceneTextEntries[] = {
 // >>> GANONS_CURSE_GENERATED: TEXT_IDS - edit data/cutscenes.json, not this
-    { 0xF800, "In a last, desperate act, Ganon turned the Triforce of Power on time itself.^The past shattered into countless scrambled timelines. He means to survive in one of them.^Link is gone - searching for a lost friend, far beyond Hyrule's borders. He is not coming.^So Zelda spent her own magic to wake the sages. You are one of them. Set this timeline right." },  // UNIVERSAL_OPENING
+    { 0xF800, "In a last, desperate act, Ganon turned the Triforce of Power on time itself.^The past shattered into countless scrambled timelines. He means to survive in one of them.^The hero is gone. Sent back to his own time, to a childhood he had earned - beyond our reach, and beyond returning.^We are what remains. Seven sages, awakened. Set this timeline right." },  // UNIVERSAL_OPENING
 // <<< GANONS_CURSE_GENERATED: TEXT_IDS
 };
 
