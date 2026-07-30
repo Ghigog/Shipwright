@@ -2502,7 +2502,8 @@ void StaticData::HintTable_Init() {
 
     // Shop Goron - Goron City
     hintTextTable[RHT_NPC_SHOP_GORON] = HintText(CustomMessage(
-        "Goro! Buy something, brother.^First shelf has #[[1]]#. Rolled in on its own, I think.",
+        "Goro! We used to keep a Goron Tunic on that shelf.^These days it's sitting in #[[1]]#. Everything "
+        "rolled off somewhere.",
         { QM_RED }));
 
     // Dampe Hut - Graveyard
@@ -2744,8 +2745,8 @@ void StaticData::HintTable_Init() {
 
     // Shop Kokiri - Kokiri Forest
     hintTextTable[RHT_NPC_SHOP_KOKIRI] = HintText(CustomMessage(
-        "Welcome! Business is strange lately - stock turns up that I never ordered.^First shelf has #[[1]]# "
-        "on it today. Have a look round.",
+        "Welcome... though there's not much for you here.^I used to keep a Deku Shield on the first shelf. "
+        "Word is it's turned up in #[[1]]# now. Strange days.",
         { QM_RED }));
 
     // Twins House - Kokiri Forest
@@ -2910,12 +2911,14 @@ void StaticData::HintTable_Init() {
 
     // Shop Bazaar Kakariko - Market
     hintTextTable[RHT_NPC_SHOP_BAZAAR_KAK] = HintText(CustomMessage(
-        "Village folk buy less than city folk, but the shelves still fill themselves.^Back one has #[[1]]#.",
+        "Village folk buy less than city folk these days.^I used to keep a Hylian Shield in stock. Heard it "
+        "ended up in #[[1]]#, of all places.",
         { QM_RED }));
 
     // Shop Bazaar Market - Market
     hintTextTable[RHT_NPC_SHOP_BAZAAR_MARKET] = HintText(CustomMessage(
-        "Welcome to the Bazaar! Browse away.^Last shelf's got #[[1]]# on it, and I can't tell you why.",
+        "Welcome to the Bazaar, such as it is.^We used to carry a Hylian Shield here. Somebody says it's "
+        "sitting in #[[1]]# now.",
         { QM_RED }));
 
     // Shop Bombchu - Market
@@ -2932,12 +2935,13 @@ void StaticData::HintTable_Init() {
     // Shop Mask - Market
     hintTextTable[RHT_NPC_SHOP_MASK] = HintText(CustomMessage(
         "Welcome to the Happy Mask Shop!^...I have nothing to sell. Everything scattered. Someone traded in a "
-        "red tunic and it ended up in #[[1]]#.",
+        "strange stone and it ended up in #[[1]]#.",
         { QM_RED }));
 
     // Shop Zora - Zora's Domain
     hintTextTable[RHT_NPC_SHOP_ZORA] = HintText(CustomMessage(
-        "The water brings us goods now, whether we ask or not.^First shelf holds #[[1]]#.",
+        "We used to keep a Zora Tunic on that shelf, back when the world made sense.^Now it's sitting in "
+        "#[[1]]#, apparently. The water took it there, or so they say.",
         { QM_RED }));
 
     // Zora's Domain King Zora - Zora's Domain
@@ -3194,9 +3198,9 @@ void StaticData::HintTable_Init() {
                                                  /*french*/ "tes poches"));
                                               // /*spanish*/tu bolsillo
 
-    hintTextTable[RHT_ISOLATED_PLACE] = HintText(CustomMessage("an Isolated Place",
-                                                    /*german*/ "an einem abgelegenen Ort",
-                                                    /*french*/ "un lieu isolé"));
+    hintTextTable[RHT_ISOLATED_PLACE] = HintText(CustomMessage("a place I've forgotten",
+                                                    /*german*/ "an einem Ort, den ich vergessen habe",
+                                                    /*french*/ "un endroit que j'ai oublié"));
 
     hintTextTable[RHT_DUNGEON_ORDINARY] = HintText(CustomMessage("&It's %gordinary%w.",
                                                       /*german*/ "&Man kann darauf die Worte&%gOcarina of Time%w entziffern...",
