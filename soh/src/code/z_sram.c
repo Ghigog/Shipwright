@@ -314,6 +314,29 @@ void Sram_InitSave(FileChooseContext* fileChooseCtx) {
         
                 Randomizer_GetSageTunicColor(&tunicR, &tunicG, &tunicB);
                 Sram_SetSageTunicColor(tunicR, tunicG, tunicB);
+
+                // Ganon's Curse: mark Saria's Kokiri Forest greeting as already happened.
+                //
+                // EnSa plays gSpot04Cs_10E20 (z_en_sa.c:511) whenever the player is in Kokiri
+                // Forest without the Kokiri Emerald and INFTABLE_GREETED_BY_SARIA is unset. That
+                // cutscene is the vanilla *opening* - it shows Link coming out of his house and
+                // being greeted - so it is a hard lore break here: Link isn't playable, and Saria
+                // herself is a selectable sage who may be the one watching it.
+                //
+                // It used to be suppressed as a side effect of TimeSavers.SkipCutscene.Entrances,
+                // which force-set this flag via VB_NOT_BE_GREETED_BY_SARIA. Phase 4a turned that
+                // setting off to restore genuine entrance cutscenes, which un-suppressed this too.
+                // Setting the flag directly is the narrow fix: it keeps every real establishing
+                // shot (DMT, Kakariko, Zora's Domain, Lake Hylia, Gerudo Valley, ...) while killing
+                // only the one cutscene that depicts the vanilla opening.
+                //
+                // Note this is NOT an entrance cutscene - Kokiri Forest's only entry in
+                // sEntranceCutsceneTable is the Deku Sprout CS, which is unrelated. Turning
+                // entrance cutscenes back off would not have fixed this.
+                //
+                // Bonus: with the flag set, Saria falls through to her ordinary talk path, which is
+                // what RSK_SARIA_HINT needs in order to deliver her hint (see npc-hints.md).
+                Flags_SetInfTable(INFTABLE_GREETED_BY_SARIA);
             }
         }
 
