@@ -2745,8 +2745,8 @@ void StaticData::HintTable_Init() {
 
     // Shop Kokiri - Kokiri Forest
     hintTextTable[RHT_NPC_SHOP_KOKIRI] = HintText(CustomMessage(
-        "Welcome... though there's not much for you here.^I used to keep a Deku Shield on the first shelf. "
-        "Word is it's turned up in #[[1]]# now. Strange days.",
+        "Welcome, I guess... though there's nothing much to sell now.^I used to keep a Deku Shield on the "
+        "first shelf. Somebody said it's in #[[1]]# now. Weird, right?",
         { QM_RED }));
 
     // Twins House - Kokiri Forest
@@ -2940,8 +2940,8 @@ void StaticData::HintTable_Init() {
 
     // Shop Zora - Zora's Domain
     hintTextTable[RHT_NPC_SHOP_ZORA] = HintText(CustomMessage(
-        "We used to keep a Zora Tunic on that shelf, back when the world made sense.^Now it's sitting in "
-        "#[[1]]#, apparently. The water took it there, or so they say.",
+        "We used to keep a Zora Tunic on that shelf, back when the world made sense.^Now it rests in #[[1]]#. "
+        "The water carried it there, and the water does not lie.",
         { QM_RED }));
 
     // Zora's Domain King Zora - Zora's Domain
