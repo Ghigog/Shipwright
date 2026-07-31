@@ -258,9 +258,24 @@ int32_t ChamberOfSagesCommand(std::shared_ptr<Ship::Console> console, std::vecto
     }
 
     gSaveContext.chamberCutsceneNum = which;
+
     // sceneLayer is derived from cutsceneIndex on load; anything >= 0xFFF0 puts
-    // it at 4+ and the sage checks would fail.
+    // it at 4+ and the sage checks would fail. Write nextCutsceneIndex, not
+    // cutsceneIndex: z_play.c:424 copies next -> current on load whenever next
+    // isn't 0xFFEF, so writing current alone only survives while next happens to
+    // be at its resting value. Vanilla's blue warp writes next; match it.
+    gSaveContext.nextCutsceneIndex = 0;
     gSaveContext.cutsceneIndex = 0;
+
+    // CAVEAT, unresolved as of 2026-07-30: this does NOT control which sage actor
+    // spawns. kenjyanoma has three alternate room headers besides the base, and
+    // alternate headers are picked by sceneLayer - which, once cutsceneIndex is 0,
+    // is decided by Link's age and the time of day, not by anything here. On the
+    // one save this was tried, only Darunia ever appeared while the return warp
+    // was correct for all five, which is the signature of "chamberCutsceneNum is
+    // read, actor presence is decided elsewhere". Before theorising further, open
+    // the Actor Viewer in the chamber and look at whether the sage is in the room
+    // at all - see ganons-curse/docs/opening-cutscene.md section 3c.
 
     gPlayState->nextEntranceIndex = 0x6B; // ENTR_CHAMBER_OF_THE_SAGES_0
     gPlayState->transitionTrigger = TRANS_TRIGGER_START;

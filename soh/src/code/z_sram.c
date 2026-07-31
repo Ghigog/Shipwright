@@ -5,7 +5,6 @@
 #include "soh/Enhancements/game-interactor/GameInteractor.h"
 #include "soh/Enhancements/game-interactor/GameInteractor_Hooks.h"
 #include "soh/Enhancements/randomizer/savefile.h"
-#include "soh/Enhancements/randomizer/Cutscenes/GanonsCurseOpenings.h"
 #include "soh/OTRGlobals.h"
 #include "soh/SaveManager.h"
 #include "soh/ResourceManagerHelpers.h"
@@ -355,13 +354,13 @@ void Sram_InitSave(FileChooseContext* fileChooseCtx) {
         // through to the ordinary child/adult day/night branch instead.
         gSaveContext.cutsceneIndex = 0;
 
-        // Ganon's Curse (4c): arm the universal opening. This is the only place it
-        // is armed, so it fires once per new sage file and never on a normal load.
-        // It must stay inside this branch and after the cutsceneIndex = 0 above -
-        // that assignment is what lets the home region's vanilla entrance cutscene
-        // fire at all (Cutscene_HandleEntranceTriggers gates on cutsceneIndex <
-        // 0xFFF0), and the opening is sequenced to play after that cutscene ends.
-        GanonsCurse_ArmUniversalOpening();
+        // Ganon's Curse (4c): this is also the hook point for the universal opening,
+        // which is specified but deliberately not built - see
+        // ganons-curse/docs/opening-cutscene.md section 7. Whatever arms it must go
+        // here, inside this branch and after the cutsceneIndex = 0 above: that
+        // assignment is what lets the home region's vanilla entrance cutscene fire at
+        // all (Cutscene_HandleEntranceTriggers gates on cutsceneIndex < 0xFFF0), and
+        // the opening is sequenced around that cutscene.
     } else {
         gSaveContext.ship.quest.id = currentQuest;
     }
