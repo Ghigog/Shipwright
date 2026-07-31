@@ -444,6 +444,8 @@ void SetStartingItems() {
 // Known follow-up, still unimplemented: Saria's "random mask" has no RSK_STARTING_* equivalent
 // (see characters.md).
 #define SAGE_MAX_KIT_OPTIONS 8
+#define SAGE_MAX_WORLD_OPTIONS 4
+#define SAGE_MAX_SAVE_FLAGS 4
 
 struct SageStartingOption {
     RandomizerSettingKey key;
@@ -458,84 +460,204 @@ struct SageDefinition {
     uint8_t tunic[3];        // Kokiri Tunic recolor; doubles as an at-a-glance "sage select took" signal
     SageStartingOption kit[SAGE_MAX_KIT_OPTIONS];
     uint8_t kitCount;
+    // World-state options, kept separate from `kit` on purpose even though both are applied by the
+    // same generation-time loop. A kit entry changes what the sage is *holding*; a world entry
+    // changes what the *world* looks like for the whole seed (e.g. King Zora already stepped
+    // aside). The solver has to reason about them differently, and mixing them into one list made
+    // it easy to misread a world change as a free item. Set at generation time so the logic solver,
+    // the item pool and the spoiler log all agree, exactly like the kit.
+    SageStartingOption world[SAGE_MAX_WORLD_OPTIONS];
+    uint8_t worldCount;
+    // EventChkInf flags forced on at file creation, for world state SoH exposes no setting for.
+    // These are invisible to the generator, so they may only ever make MORE of the world reachable
+    // than the solver assumed - never less. That direction is safe (a seed stays beatable, it just
+    // has a shortcut the spoiler log didn't predict); the reverse would produce unbeatable seeds.
+    uint16_t saveFlags[SAGE_MAX_SAVE_FLAGS];
+    uint8_t saveFlagCount;
 };
 
+// Ganon's Curse: every sage spawns INSIDE their home region, at the landmark they are actually
+// tied to, rather than at the doormat of the region they own (changed 2026-07-31). A sage arriving
+// at their own front gate like a tourist was backwards.
+//
+// Two hard constraints govern every entrance below, and both have already cost a retest:
+//
+//  1. NEVER use an EntranceType::Dungeon entrance. Our preset sets ShuffleDungeonsEntrances, so
+//     those indices are reassigned per-seed and a fixed spawn on one lands somewhere arbitrary.
+//     Check entrance.cpp's registration, not the name - several innocuous-sounding overworld-ish
+//     entrances are in the dungeon pool. This rules out the three most obvious picks here:
+//     SACRED_FOREST_MEADOW_OUTSIDE_TEMPLE (Saria), KAKARIKO_VILLAGE_OUTSIDE_BOTTOM_OF_THE_WELL
+//     (Impa) and GERUDOS_FORTRESS_OUTSIDE_GERUDO_TRAINING_GROUND (Nabooru - the original offender,
+//     which dumped a retest into the ending credits). Overworld/Interior/WarpSong are all safe
+//     under this preset because none of their pools are shuffled.
+//
+//  2. Moving off an entrance LOSES its vanilla entrance cutscene. sEntranceCutsceneTable
+//     (z_demo.c:61) is keyed on the exact entranceIndex, so e.g. Rauru at the ranch tower no
+//     longer triggers gLonLonRanchIntroCs the way LON_LON_RANCH_ENTRANCE did. That is deliberate
+//     and handled elsewhere: GanonsCurseOpenings.cpp re-fires the same vanilla cutscene from the
+//     new spawn, which works because each new spawn is in the SAME SCENE as the old one (camera
+//     shots are absolute world coordinates, so a shot reused in its own scene is pixel-identical).
+//     Ruto is the exception in the good direction - her new spawn has an entrance cutscene of its
+//     own, so vanilla still handles her and Openings must NOT double-fire.
 static const SageDefinition sSageDefinitions[] = {
     // Light Arrows are an arrow *type* - useless without a Bow to fire them, and firing one costs
     // magic. All three have to be present together or none of them function.
+    // Spawns at the ranch tower (the tall round silo at the back), not the front gate. Interior
+    // pool, unshuffled here. Same scene as before, so gLonLonRanchIntroCs still frames correctly.
     { RO_SAGE_RAURU,
       RO_AGE_ADULT,
-      ENTR_LON_LON_RANCH_ENTRANCE,
+      ENTR_LON_LON_RANCH_OUTSIDE_TOWER,
       RR_LON_LON_RANCH,
       { 25, 25, 25 }, // black
       { { RSK_STARTING_MEGATON_HAMMER, 1 },
         { RSK_STARTING_BOW, 1 },
         { RSK_STARTING_LIGHT_ARROWS, 1 },
         { RSK_STARTING_MAGIC_METER, 1 } },
-      4 },
+      4,
+      {},
+      0,
+      {},
+      0 },
+    // Spawns on the Minuet warp pad at the top of the meadow, at the Forest Temple steps - i.e.
+    // where the Sage of Forest belongs, rather than at the maze entrance. WarpSong pool, and warp
+    // songs aren't shuffled under this preset. The meadow itself needs no unlocking: ClosedForest
+    // is already RO_CLOSED_FOREST_OFF in the seed preset, so Mido never blocks the way in.
     { RO_SAGE_SARIA,
       RO_AGE_CHILD,
-      ENTR_SACRED_FOREST_MEADOW_SOUTH_EXIT,
+      ENTR_SACRED_FOREST_MEADOW_WARP_PAD,
       RR_SACRED_FOREST_MEADOW,
       { 110, 225, 70 }, // light green, matching her hair
       { { RSK_STARTING_STICKS, 1 }, { RSK_STARTING_NUTS, 1 } },
-      2 },
+      2,
+      {},
+      0,
+      {},
+      0 },
+    // Spawns inside Darunia's own chamber, at the door to the crater. Deliberately the Goron City
+    // side of that door, NOT DEATH_MOUNTAIN_CRATER_GC_EXIT: Darunia is a child, RG_GORON_TUNIC is
+    // adult-only equipment (logic.cpp's ItemUseAllowed), so the crater side is uninterruptible heat
+    // damage on three hearts - and dying there respawns him right back into it. This is also a real
+    // benefit rather than just flavour: child access to this chamber otherwise needs Zelda's
+    // Lullaby, which is not in his kit, so he would never have gotten in on his own.
     { RO_SAGE_DARUNIA,
       RO_AGE_CHILD,
-      ENTR_GORON_CITY_UPPER_EXIT,
-      RR_GORON_CITY,
+      ENTR_GORON_CITY_DARUNIA_ROOM_EXIT,
+      RR_GC_DARUNIAS_CHAMBER,
       { 190, 30, 30 }, // red
       { { RSK_STARTING_BOMB_BAG, 1 },
         { RSK_STARTING_BOMBCHU_BAG, 1 },
         { RSK_STARTING_STRENGTH, 1 }, // Goron's Bracelet
         { RSK_STARTING_GORON_TUNIC, 1 } },
-      4 },
+      4,
+      {},
+      0,
+      {},
+      0 },
+    // Spawns in Zora's Fountain at the mouth of the King Zora tunnel, facing Jabu-Jabu. Overworld
+    // pool, unshuffled. RSK_ZORAS_FOUNTAIN must be RO_ZF_OPEN for this to be playable at all: as a
+    // child she is on the far side of King Zora, and VB_KING_ZORA_BE_MOVED (hook_handlers.cpp) only
+    // returns true unconditionally on Open - the preset's global RO_ZF_CLOSED_CHILD would leave her
+    // walled into the fountain. Setting it per-sage at generation time rather than globally keeps
+    // the other six seeds unaffected.
+    // Note this is the one sage whose new spawn is itself in sEntranceCutsceneTable
+    // (gZorasFountainIntroCs, age-2 so child qualifies), so vanilla plays her opening and
+    // GanonsCurseOpenings.cpp deliberately has no entry for her.
     { RO_SAGE_RUTO,
       RO_AGE_CHILD,
-      ENTR_ZORAS_DOMAIN_ENTRANCE,
-      RR_ZORAS_DOMAIN,
+      ENTR_ZORAS_FOUNTAIN_TUNNEL_EXIT,
+      RR_ZORAS_FOUNTAIN,
       { 40, 130, 220 }, // blue
       { { RSK_STARTING_SCALE, 2 }, // golden scale - the max tier, i.e. "all diving scales"
         { RSK_STARTING_IRON_BOOTS, 1 },
         { RSK_STARTING_ZORA_TUNIC, 1 } },
-      3 },
+      3,
+      { { RSK_ZORAS_FOUNTAIN, RO_ZF_OPEN } },
+      1,
+      {},
+      0 },
     // The Lens of Truth drains magic continuously while active, so it's as inert without a meter as
     // Light Arrows are without a Bow - basic magic (level 1), not Zelda's double.
+    // Spawns in the middle of Kakariko, arriving from the graveyard, rather than at the front gate.
+    // Overworld pool, unshuffled. NOT the Bottom of the Well exit, which reads like the obvious
+    // "Impa's own place" pick but is an EntranceType::Dungeon connector and would be reassigned.
+    // The well is instead handed to her via EVENTCHKINF_DRAINED_WELL_IN_KAKARIKO below: her kit has
+    // no ocarina, so she can never play Song of Storms to drain it herself, and the well would
+    // otherwise be permanently shut to the one sage it belongs to. Draining it only widens what she
+    // can reach, which is the safe direction for a flag the generator can't see.
     { RO_SAGE_IMPA,
       RO_AGE_ADULT,
-      ENTR_KAKARIKO_VILLAGE_FRONT_GATE,
+      ENTR_KAKARIKO_VILLAGE_SOUTHEAST_EXIT,
       RR_KAKARIKO_VILLAGE,
       { 130, 60, 170 }, // purple
       { { RSK_STARTING_BUNNY_HOOD, 1 },
         { RSK_STARTING_HOOKSHOT, 1 },
         { RSK_STARTING_LENS_OF_TRUTH, 1 },
         { RSK_STARTING_MAGIC_METER, 1 } },
-      4 },
+      4,
+      {},
+      0,
+      { EVENTCHKINF_DRAINED_WELL_IN_KAKARIKO },
+      1 },
     // Nabooru's entrance is NOT ENTR_GERUDO_TRAINING_GROUND_ENTRANCE (the dungeon interior -
     // confirmed via live testing to cause an infinite void-out softlock when cold-spawned into) and
     // NOT ENTR_GERUDOS_FORTRESS_OUTSIDE_GERUDO_TRAINING_GROUND either (looks like a safe overworld
     // spot by name, but entrance.cpp registers it as a SHUFFLED DUNGEON connector - same pool as the
     // interior door - so under our preset's ShuffleDungeonsEntrances its real destination gets
-    // reassigned per-seed; that's what dumped a retest into the ending credits). EAST_EXIT is
-    // EntranceType::Overworld (Gerudo Valley <-> Gerudo Fortress), genuinely outside every shuffle
-    // pool our preset enables, and the normal vanilla arrival into Gerudo territory. Her Gerudo Card
-    // keeps her from being captured there. General rule learned here: always check entrance.cpp's
-    // EntranceType registration before using any entrance near a dungeon door as a fixed spawn.
+    // reassigned per-seed; that's what dumped a retest into the ending credits). General rule
+    // learned here: always check entrance.cpp's EntranceType registration before using any entrance
+    // near a dungeon door as a fixed spawn.
+    //
+    // She used to spawn at EAST_EXIT, which is safe but is the ordinary arrival from Gerudo Valley -
+    // the tourist doormat this whole pass is moving away from. GATE_EXIT is the west gate, arriving
+    // out of the Haunted Wasteland: also EntranceType::Overworld and unshuffled, and it reads as the
+    // Gerudo leader coming home across her own desert. It does NOT strand her outside the fortress -
+    // RR_GF_OUTSIDE_GATE -> RR_GF_OUTSKIRTS needs LOGIC_GF_GATE_OPEN (adult + Gerudo Card + Gerudo
+    // speech, gerudo_fortress.cpp:257) and she satisfies all three, the Card from her kit and the
+    // speech because RSK_SHUFFLE_SPEAK is off in our preset.
+    // The Gerudo Training Ground needs no unlocking for her: its door only asks for the Gerudo Card,
+    // which she starts with.
     { RO_SAGE_NABOORU,
       RO_AGE_ADULT,
-      ENTR_GERUDOS_FORTRESS_EAST_EXIT,
-      RR_GF_OUTSKIRTS,
+      ENTR_GERUDOS_FORTRESS_GATE_EXIT,
+      RR_GF_OUTSIDE_GATE,
       { 235, 190, 20 }, // yellow
       { { RSK_STARTING_HOVER_BOOTS, 1 },
         { RSK_STARTING_GERUDO_CARD, 1 },
         { RSK_STARTING_MIRROR_SHIELD, 1 } },
-      3 },
+      3,
+      {},
+      0,
+      {},
+      0 },
     // Magic meter 2 is double magic (SetStartingItems derives isDoubleMagicAcquired from >= 2),
     // which her three-spell kit needs to be usable at all.
+    // Zelda starts inside the castle proper - the guarded courtyard - and has to sneak her way out
+    // of her own home. TimeSavers.SkipChildStealth is already 0 in the enhancements preset, so the
+    // guards are live.
+    //
+    // Two things about this spawn are knowingly irregular, both accepted deliberately:
+    //
+    //  - homeRegion is a best-effort fiction. SCENE_CASTLE_COURTYARD_GUARDS_DAY has NO region in
+    //    the rando graph at all: castle_grounds.cpp routes RR_HC_MOAT -> RR_HC_DRAIN_LEDGE ->
+    //    RR_HC_GARDEN through the crawlspace and models the stealth section not at all. RR_HC_GARDEN
+    //    is where sneaking forward actually lands her, and it is not a dead end for the solver
+    //    (-> RR_HC_DRAIN_LEDGE is unconditional, and RSK_SHUFFLE_CRAWL is off so she has Crawl), so
+    //    the seed stays connected either way. Getting caught throws her out to the castle grounds,
+    //    which is also connected. If the stealth courtyard ever gains a real region, use it.
+    //  - She gets no opening cutscene. Every other relocated sage kept theirs because the new spawn
+    //    is in the old spawn's scene; this one crosses from SCENE_HYRULE_CASTLE into
+    //    SCENE_CASTLE_COURTYARD_GUARDS_DAY, so gHyruleCastleIntroCs's absolute camera coordinates
+    //    would point at the wrong place entirely. 4c's premise text has to carry her opening alone.
+    //
+    // NOT addressed here: opening the Great Fairy fountains. SoH has no setting for it - the
+    // boulders are ordinary actors gated on BlastOrSmash() (explosives or Megaton Hammer), neither
+    // of which is in her kit - so it would take real engine work. It is also worth less than it
+    // looks: five of the six fountains are adult-only, leaving just the Hyrule Castle one in reach
+    // of a child sage.
     { RO_SAGE_ZELDA,
       RO_AGE_CHILD,
-      ENTR_CASTLE_GROUNDS_SOUTH_EXIT,
-      RR_CASTLE_GROUNDS,
+      ENTR_CASTLE_COURTYARD_GUARDS_DAY_0,
+      RR_HC_GARDEN,
       { 235, 235, 235 }, // white
       { { RSK_STARTING_FARORES_WIND, 1 },
         { RSK_STARTING_NAYRUS_LOVE, 1 },
@@ -543,7 +665,11 @@ static const SageDefinition sSageDefinitions[] = {
         { RSK_STARTING_OCARINA, RO_STARTING_OCARINA_TIME },
         { RSK_STARTING_ZELDAS_LULLABY, 1 },
         { RSK_STARTING_MAGIC_METER, 2 } },
-      6 },
+      6,
+      {},
+      0,
+      {},
+      0 },
 };
 
 static const SageDefinition* FindSageDefinition(uint8_t sage) {
@@ -585,6 +711,15 @@ extern "C" void Randomizer_ApplySageGenerationSettings() {
 
     for (uint8_t i = 0; i < def->kitCount; i++) {
         ctx->GetOption(def->kit[i].key).Set(def->kit[i].value);
+    }
+
+    // World-state overrides go through the same Set() as the kit, and for the same reason: applied
+    // before Fill() they are simply what this seed's world IS, so the solver, the item pool and the
+    // spoiler log all reason about the real world rather than the preset's. Ruto's RO_ZF_OPEN is
+    // the current example - it is what removes King Zora from her path home, and doing it here
+    // rather than in the shared preset keeps the other six sages on the preset's own value.
+    for (uint8_t i = 0; i < def->worldCount; i++) {
+        ctx->GetOption(def->world[i].key).Set(def->world[i].value);
     }
 
     // Ganon's Curse: an adult-starting sage gets the Temple of Time pedestal check's contents for
@@ -649,6 +784,18 @@ extern "C" void Randomizer_InitSaveFile() {
     // Item_Give calls that the generator knew nothing about, which is what caused kit items to also
     // be placed in the world as duplicates. See the sage definition table above.
     SetStartingItems();
+
+    // Ganon's Curse: per-sage world flags SoH exposes no setting for (see SageDefinition::saveFlags
+    // for why this direction is safe). Applied after SetStartingItems() so a sage flag always wins
+    // over anything the generic starting-item path set.
+    {
+        const SageDefinition* sageDef = GetSelectedSageDefinition();
+        if (sageDef != nullptr) {
+            for (uint8_t i = 0; i < sageDef->saveFlagCount; i++) {
+                Flags_SetEventChkInf(sageDef->saveFlags[i]);
+            }
+        }
+    }
 
     // Set Cutscene flags and texts to skip them.
     Flags_SetEventChkInf(EVENTCHKINF_FIRST_SPOKE_TO_MIDO);
