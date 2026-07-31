@@ -2937,6 +2937,14 @@ RANDO_ENUM_ITEM(RAND_INF_HAS_FOUND_HYLIAN_SHIELD)
 RANDO_ENUM_ITEM(RAND_INF_HAS_FOUND_GORON_TUNIC)
 RANDO_ENUM_ITEM(RAND_INF_HAS_FOUND_ZORA_TUNIC)
 
+// Ganon's Curse: Saria's home-region establishing shot has played on this file.
+// The other relocated sages reuse the vanilla EVENTCHKINF their cutscene already owns
+// (see GanonsCurseOpenings.cpp), but the Sacred Forest Meadow has no vanilla entrance cutscene and
+// therefore no flag to borrow - and the undefined gaps in the EVENTCHKINF entrance block (0xA2,
+// 0xAB, 0xAE/AF, 0xC2) are only undefined in the header, not provably unused by the game.
+// randomizerInf is sized from RAND_INF_MAX and serialised generically, so appending here is safe.
+RANDO_ENUM_ITEM(RAND_INF_GANONS_CURSE_SARIA_OPENING_PLAYED)
+
 RANDO_ENUM_ITEM(RAND_INF_MAX)
 
 RANDO_ENUM_END(RandomizerInf)

@@ -76,10 +76,25 @@ const SageOpening sSageOpenings[] = {
     { ENTR_KAKARIKO_VILLAGE_SOUTHEAST_EXIT, EVENTCHKINF_ENTERED_KAKARIKO_VILLAGE, gKakarikoVillageIntroCs },
     // Nabooru - the fortress west gate. Was ENTR_GERUDOS_FORTRESS_EAST_EXIT.
     { ENTR_GERUDOS_FORTRESS_GATE_EXIT, EVENTCHKINF_ENTERED_GERUDOS_FORTRESS, gGerudoFortressIntroCs },
-    // Saria (Sacred Forest Meadow) and Zelda (castle courtyard) have no entry on purpose: the
-    // meadow has no vanilla entrance cutscene at all, and Zelda's spawn changed scene. Both fall
-    // through to 4c's premise text with no establishing shot.
+    // Zelda (castle courtyard) has no entry on purpose - her spawn changed scene, so no vanilla
+    // shot's absolute coordinates fit. She falls through to 4c's premise text with no
+    // establishing shot.
 };
+
+// Saria is handled separately from the table above because her shot is ours, not a whole vanilla
+// cutscene. The Sacred Forest Meadow has no vanilla ENTRANCE cutscene - it only has two NPC
+// scenes, Sheik's gMinuetCs and Saria's own Saria's Song - and neither is usable: playing the one
+// she stars in would show the player watching herself, the same lore break the Kokiri Forest
+// greeting already needed suppressing for, and gMinuetCs is 3270 frames of conversation coverage
+// built around a Sheik who isn't there.
+//
+// What IS reusable is gMinuetCs's opening shot in isolation: a wide (viewAngle 60) push-in on the
+// Forest Temple with no actor cues and no text. It was lifted verbatim into data/cutscenes.json as
+// SARIA_FOREST_TEMPLE_OPENING via tools/dump_vanilla_cutscene.py, and comes back through the 4b
+// pipeline as a normal generated CutsceneData[]. Frames its subject correctly regardless of
+// entrance shuffle, since it establishes the meadow's landmark building rather than asserting
+// which dungeon is behind the door.
+constexpr int32_t kSariaHomeEntrance = ENTR_SACRED_FOREST_MEADOW_WARP_PAD;
 
 void PlaySageOpening(int16_t sceneNum) {
     // Deliberately gated on the SELECTED sage's own home entrance, not merely on any entrance in
@@ -90,6 +105,19 @@ void PlaySageOpening(int16_t sceneNum) {
     // Play_Init.
     const int32_t sageEntrance = Randomizer_GetSageHomeEntrance();
     if (sageEntrance == -1 || gSaveContext.entranceIndex != sageEntrance) {
+        return;
+    }
+
+    // Saria's own shot. The table entries reuse the vanilla EVENTCHKINF their cutscene already
+    // owns; the meadow has no vanilla entrance cutscene and so no flag to borrow, hence a
+    // mod-owned RandomizerInf. Same play-once-per-file, survives-a-quit behaviour either way,
+    // which is the property that matters.
+    if (sageEntrance == kSariaHomeEntrance) {
+        if (!Flags_GetRandomizerInf(RAND_INF_GANONS_CURSE_SARIA_OPENING_PLAYED)) {
+            Flags_SetRandomizerInf(RAND_INF_GANONS_CURSE_SARIA_OPENING_PLAYED);
+            Cutscene_SetSegment(gPlayState, gGanonsCurseSariaForestTempleOpening);
+            gSaveContext.cutsceneTrigger = 1;
+        }
         return;
     }
 

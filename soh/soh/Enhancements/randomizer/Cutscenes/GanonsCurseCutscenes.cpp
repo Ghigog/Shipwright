@@ -94,7 +94,28 @@ void BuildCutsceneMessage(uint16_t* textId, bool* loadFromMessageTable) {
 // need real external linkage to match the `extern` declarations in
 // GanonsCurseCutscenes.h.
 // >>> GANONS_CURSE_GENERATED: CUTSCENE_DATA - edit data/cutscenes.json, not this
-
+CutsceneData gGanonsCurseSariaForestTempleOpening[] = {
+    CS_BEGIN_CUTSCENE(2, 140),
+    CS_CAM_EYE_LIST(0, 1181),
+        CS_CAM_EYE(CS_CMD_CONTINUE, 0, 0, 60.0f, 0, 567, -2138, 0),
+        CS_CAM_EYE(CS_CMD_CONTINUE, 0, 0, 60.0f, 0, 567, -2138, 0),
+        CS_CAM_EYE(CS_CMD_CONTINUE, 0, 0, 60.0f, 0, 565, -2157, -10128),
+        CS_CAM_EYE(CS_CMD_CONTINUE, 0, 0, 60.0f, 0, 567, -2194, 16376),
+        CS_CAM_EYE(CS_CMD_CONTINUE, 0, 0, 60.0f, 0, 567, -2194, 0),
+        CS_CAM_EYE(CS_CMD_CONTINUE, 0, 0, 60.0f, 0, 567, -2194, -11392),
+        CS_CAM_EYE(CS_CMD_CONTINUE, 0, 0, 60.0f, 0, 567, -2194, 0),
+        CS_CAM_EYE(CS_CMD_STOP, 0, 0, 60.0f, 0, 567, -2194, 7412),
+    CS_CAM_AT_LIST(0, 1210),
+        CS_CAM_AT(CS_CMD_CONTINUE, 0, 30, 70.5999f, 0, 596, -2225, 0),
+        CS_CAM_AT(CS_CMD_CONTINUE, 0, 30, 70.3999f, 0, 596, -2225, 0),
+        CS_CAM_AT(CS_CMD_CONTINUE, 0, 30, 70.5999f, 0, 593, -2245, -10128),
+        CS_CAM_AT(CS_CMD_CONTINUE, 0, 30, 60.0f, 0, 538, -2281, 16376),
+        CS_CAM_AT(CS_CMD_CONTINUE, 0, 30, 60.0f, 0, 538, -2281, 0),
+        CS_CAM_AT(CS_CMD_CONTINUE, 0, 1000, 60.0f, 0, 538, -2281, -11392),
+        CS_CAM_AT(CS_CMD_CONTINUE, 0, 30, 60.0f, 0, 538, -2281, 0),
+        CS_CAM_AT(CS_CMD_STOP, 0, 30, 60.0f, 0, 538, -2281, 7412),
+    CS_END(),
+};
 // <<< GANONS_CURSE_GENERATED: CUTSCENE_DATA
 
 namespace {
@@ -103,7 +124,7 @@ namespace {
 // gc_play_cutscene debug console command below.
 const std::unordered_map<std::string, CutsceneData*> cutsceneById = {
 // >>> GANONS_CURSE_GENERATED: CUTSCENE_REGISTRY - edit data/cutscenes.json, not this
-
+    { "SARIA_FOREST_TEMPLE_OPENING", gGanonsCurseSariaForestTempleOpening },
 // <<< GANONS_CURSE_GENERATED: CUTSCENE_REGISTRY
 };
 
