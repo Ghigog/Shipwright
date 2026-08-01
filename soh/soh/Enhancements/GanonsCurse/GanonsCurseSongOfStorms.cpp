@@ -35,6 +35,7 @@
 #include "soh/Enhancements/game-interactor/GameInteractor.h"
 #include "soh/Enhancements/game-interactor/GameInteractor_Hooks.h"
 #include "overlays/actors/ovl_Obj_Syokudai/z_obj_syokudai.h"
+#include "overlays/actors/ovl_En_Okarina_Effect/z_en_okarina_effect.h"
 
 extern "C" PlayState* gPlayState;
 
@@ -45,27 +46,51 @@ constexpr s16 STORMS_SONG_MAGIC_COST = 24;
 // makes - confirm empirically and adjust if a full meter does not take roughly three real minutes.
 constexpr s32 STORMS_RAIN_FRAMES = 20 * 60 * 3;
 
+// Vanilla's rain runs on a fixed 400-frame (20 second) timer inside En_Okarina_Effect, the actor
+// Oceff_Storm spawns whenever the song is performed (z_en_okarina_effect.c:60, z_oceff_storm.c:56).
+// When that timer expires the actor zeroes the rain intensity, stops the storm ambience and kills
+// itself - which stomped an earlier attempt to hold the weather on through RawAction, because that
+// only set the same envCtx fields the actor then cleared 20 seconds later.
+//
+// So rather than fight it, the vanilla actor is driven directly: its timer is topped back up while
+// the refill is running, and dropped to 1 when the rain should end so the actor performs its own
+// cleanup (ambience, gloomy sky, lightning mode) and dies. The rain then lasts exactly as long as
+// the effect does, in both directions - which matters, because the rain IS the only indication that
+// magic is refilling.
+constexpr u16 STORM_TIMER_TOPUP = 240;
+
 s32 sRainFramesRemaining = 0;
 s32 sRefillAccumulator = 0;
-bool sStormActive = false;
 s8 sRainRoomNum = -1;
 
-// Vanilla's own Song of Storms rain is a brief flourish that fades long before three minutes are
-// up, which left the refill running with no sign it was happening. Hold the storm on for the whole
-// duration instead, so the rain IS the buff's indicator. Only ever turned off if this turned it on.
-void SetStorm(bool active) {
-    if (sStormActive == active) {
+// Only ever raises the timer, never lowers it (except the deliberate 1 that ends the storm), so the
+// vanilla actor keeps its own countdown from 400 on the way down and simply gets pinned at
+// STORM_TIMER_TOPUP once it drops that far. That matters for the bean-growing env flag the actor
+// fires at exactly 308: it happens once during the initial descent, then the timer never rises back
+// above it, so beans grow once per cast the same as vanilla.
+void SetVanillaStormTimer(u16 timer) {
+    if (gPlayState == nullptr) {
         return;
     }
-    sStormActive = active;
-    GameInteractor::RawAction::SetWeatherStorm(active);
+
+    GanonsCurseForEachActorInRoom(gPlayState, ACTORCAT_ITEMACTION, [timer](Actor* actor) {
+        if (actor->id != ACTOR_EN_OKARINA_EFFECT) {
+            return;
+        }
+        EnOkarinaEffect* storm = (EnOkarinaEffect*)actor;
+        if (timer > storm->timer || timer <= 1) {
+            storm->timer = timer;
+        }
+    });
 }
 
 void StopRain() {
     sRainFramesRemaining = 0;
     sRefillAccumulator = 0;
     sRainRoomNum = -1;
-    SetStorm(false);
+    // 1, not 0: ManageStorm decrements before testing for zero, so setting 0 outright would let it
+    // wrap past the check and never clean up.
+    SetVanillaStormTimer(1);
 }
 
 void DouseTorch(Actor* actor) {
@@ -100,7 +125,6 @@ void GanonsCurseSongOfStormsPlayed() {
         sRainFramesRemaining = STORMS_RAIN_FRAMES;
         sRefillAccumulator = 0;
         sRainRoomNum = gPlayState->roomCtx.curRoom.num;
-        SetStorm(true);
     });
 }
 
@@ -127,6 +151,9 @@ void GanonsCurseSongOfStormsFrameUpdate() {
         return;
     }
 
+    // Keep vanilla's 20-second storm alive for as long as the refill runs.
+    SetVanillaStormTimer(STORM_TIMER_TOPUP);
+
     // Don't fight the magic meter's own state machine - only top up from a settled idle state.
     if (gSaveContext.magicState != MAGIC_STATE_IDLE) {
         return;
@@ -150,12 +177,12 @@ void GanonsCurseSongOfStormsFrameUpdate() {
 // survive transitions. Scene changes are caught here; room changes within one scene are caught by
 // the room-number poll in the frame update, since they never reach this hook.
 void GanonsCurseSongOfStormsOnSceneInit(int16_t sceneNum) {
-    // The storm belongs to the scene being left, which is already gone - just drop the state rather
-    // than calling into envCtx for a PlayState that is mid-reload.
+    // Only the state is dropped here, deliberately - the vanilla storm actor belonged to the scene
+    // being left and went with it, so there is nothing to reach into. Touching the actor list of a
+    // PlayState that is mid-reload would be the actual risk.
     sRainFramesRemaining = 0;
     sRefillAccumulator = 0;
     sRainRoomNum = -1;
-    sStormActive = false;
 }
 
 } // namespace
