@@ -3,10 +3,19 @@
  *
  * Full spec and the reasoning behind every value: docs/sage-cosmetics.md.
  *
- * This is slice 1 of five: the infrastructure only. It does exactly what the code it replaces did
- * - recolor the Kokiri Tunic - but from a place that can grow, and at a moment that is actually
- * correct. Slices 2-5 (the rest of the colors, HUD layout, proportions/fairy, audio) hang off
- * ApplySageCosmetics below.
+ * Slices 1 and 2 of five are built: the infrastructure, and every color. Slices 3-5 (HUD layout,
+ * proportions and the random fairy, audio) hang off ApplySageCosmetics below.
+ *
+ * ── Derived, not transcribed ────────────────────────────────────────────────────────────────
+ * Each sage has ONE identity color. Tunics, hearts, Double Defence hearts, all four HUD button
+ * tiers and every spell tint are computed from it by the shade/tint helpers below, rather than
+ * written out as ~60 triples. Retuning how a Goron tunic feels is a one-number edit here instead
+ * of seven table rows, and the values cannot drift out of agreement with each other.
+ *
+ * The other half of that discipline is that every option this file touches is explicitly SET or
+ * CLEARED on each apply. These are global CVars: a sage who merely fails to mention the Master
+ * Sword blade inherits whichever blade color the previously-loaded sage set. "Say nothing" is not
+ * a safe default here; there is no such thing as leaving an option alone.
  *
  * ── Why this exists at all: CVars are global, saves are not ─────────────────────────────────
  * Every cosmetic and audio setting in SoH is a global config value living in
@@ -51,8 +60,9 @@
 #include "soh/Enhancements/randomizer/savefile.h"
 #include "soh/Enhancements/GanonsCurse/GanonsCurseSageCosmetics.h"
 
+// randomizerTypes.h pulls in randomizerEnums.h, which is an X-macro header with no include guard
+// of its own - including both here re-expands every enum and fails to compile. One is enough.
 #include "soh/Enhancements/randomizer/randomizerTypes.h"
-#include "soh/Enhancements/randomizer/randomizerEnums.h"
 
 #include "z64save.h"
 #include "variables.h"
@@ -88,24 +98,55 @@ struct Rgb {
     }
 };
 
-uint8_t ScaleChannel(uint8_t c, float f) {
-    return static_cast<uint8_t>(std::clamp(std::lround(c * f), 0L, 255L));
-}
-
-uint8_t LightenChannel(uint8_t c, float f) {
-    return static_cast<uint8_t>(std::clamp(std::lround(c + (255.0f - c) * f), 0L, 255L));
+uint8_t ClampChannel(long v) {
+    return static_cast<uint8_t>(std::clamp(v, 0L, 255L));
 }
 
 uint8_t BlendChannel(uint8_t a, uint8_t b, float aWeight) {
-    return static_cast<uint8_t>(std::clamp(std::lround(a * aWeight + b * (1.0f - aWeight)), 0L, 255L));
+    return ClampChannel(std::lround(a * aWeight + b * (1.0f - aWeight)));
 }
 
-Rgb Darker(Rgb c, float f) {
-    return { ScaleChannel(c.r, f), ScaleChannel(c.g, f), ScaleChannel(c.b, f) };
+uint8_t MaxChannel(Rgb c) {
+    return std::max(c.r, std::max(c.g, c.b));
 }
 
-Rgb Lighter(Rgb c, float f) {
-    return { LightenChannel(c.r, f), LightenChannel(c.g, f), LightenChannel(c.b, f) };
+uint8_t MinChannel(Rgb c) {
+    return std::min(c.r, std::min(c.g, c.b));
+}
+
+/**
+ * Shade a color toward black or white by a proportion `t`, with an optional guarantee that the
+ * result differs from the input by at least `minDelta` on some channel.
+ *
+ * The floor exists because a proportional shade has no room left at the extremes, which is exactly
+ * where two of our sages live. Zelda's base is near-white: shifting it 45% toward white moves it 13
+ * points, so her Kokiri and Zora tunics come out as two near-identical greys. Rauru's near-black
+ * base has the same problem in the other direction. Nudging the base colors (which the spec did)
+ * was not enough on its own - white and black are walls, not slopes.
+ *
+ * The floor is measured on the channel with the most room, and applied by scaling `t` up rather
+ * than by clamping channels individually. That matters: a per-channel floor would drag the low
+ * channels of a saturated color up on their own and wash the hue out - it would turn Darunia's
+ * orange grey. Scaling `t` keeps the shift proportional, so hue is preserved and the floor only
+ * ever engages for colors that are already close to the extreme. In practice it fires for exactly
+ * two of the twenty-one tunics: Rauru's Goron and Zelda's Zora.
+ */
+Rgb TowardBlack(Rgb c, float t, int32_t minDelta = 0) {
+    uint8_t room = MaxChannel(c);
+    if (minDelta > 0 && room > 0 && room * t < minDelta) {
+        t = std::min(1.0f, static_cast<float>(minDelta) / room);
+    }
+    return { ClampChannel(std::lround(c.r - c.r * t)), ClampChannel(std::lround(c.g - c.g * t)),
+             ClampChannel(std::lround(c.b - c.b * t)) };
+}
+
+Rgb TowardWhite(Rgb c, float t, int32_t minDelta = 0) {
+    int32_t room = 255 - MinChannel(c);
+    if (minDelta > 0 && room > 0 && room * t < minDelta) {
+        t = std::min(1.0f, static_cast<float>(minDelta) / room);
+    }
+    return { ClampChannel(std::lround(c.r + (255 - c.r) * t)), ClampChannel(std::lround(c.g + (255 - c.g) * t)),
+             ClampChannel(std::lround(c.b + (255 - c.b) * t)) };
 }
 
 // Sage identity tinted toward a vanilla effect color. Keeps a spell recognisable as fire/wind/love
@@ -176,19 +217,44 @@ constexpr Rgb kNayrusVanillaSecondary = { 0, 100, 255 };
 constexpr float kSpellPrimarySageWeight = 0.70f;
 constexpr float kSpellSecondarySageWeight = 0.45f;
 
-constexpr float kGoronTunicDarken = 0.55f;
-constexpr float kZoraTunicLighten = 0.45f;
-constexpr float kDoubleDefenseDarken = 0.55f;
-constexpr float kMagicActiveLighten = 0.35f;
+// Shade amounts, as "how far toward the extreme", so 0.45 means 45% of the way to black/white.
+constexpr float kGoronTunicShade = 0.45f;
+constexpr float kZoraTunicShade = 0.45f;
+constexpr float kDoubleDefenseShade = 0.45f;
+constexpr float kMagicActiveShade = 0.35f;
+
+// Minimum perceptible difference between a shade and the color it came from. Applied only where
+// the requirement is "must not look like the base" - the tunics, Double Defence hearts, and the
+// draining half of the magic bar.
+constexpr int32_t kMinShadeSeparation = 28;
 
 // Button tiers. All darker than the sage's base, but separated from each other so B/A/C stay
-// tellable apart by brightness now that the vanilla blue/green/amber cue is gone.
-constexpr float kButtonBDarken = 0.55f;
-constexpr float kButtonADarken = 0.70f;
-constexpr float kButtonCDarken = 0.85f;
+// tellable apart by brightness now that the vanilla blue/green/amber cue is gone. No separation
+// floor here: these need to differ from *each other*, which three distinct amounts already
+// guarantee, and a floor would perturb the tiers of the mid-tone sages for no benefit. The one base
+// too dark for this to work (Rauru) is hand-set instead - see ApplyHudButtons.
+constexpr float kButtonBShade = 0.45f;
+constexpr float kButtonAShade = 0.30f;
+constexpr float kButtonCShade = 0.15f;
+
+// A magic color this light has no headroom left, so lightening it again produces a near-identical
+// bar and the drain becomes invisible. Above this, derive MagicActive downward instead.
+constexpr uint8_t kMagicActiveFlipThreshold = 200;
 
 constexpr int32_t kTrailDurationMin = 2;
 constexpr int32_t kTrailDurationDefault = 4;
+
+// Named rather than written inline at the call sites: COSMETIC_SET is a macro, and a braced
+// initializer's commas would be parsed as extra macro arguments.
+constexpr Rgb kWhite = { 255, 255, 255 };
+constexpr Rgb kLightHeartBorder = { 235, 235, 235 };
+// The Kokiri in mourning for Link; the Gerudo in gold for Nabooru's ascension.
+constexpr Rgb kKokiriMourning = { 55, 55, 60 };
+constexpr Rgb kGerudoGold = { 200, 165, 45 };
+// Rauru's hand-set button tiers - see ApplyHudButtons for why they are not derived.
+constexpr Rgb kRauruButtonB = { 35, 35, 35 };
+constexpr Rgb kRauruButtonA = { 55, 55, 55 };
+constexpr Rgb kRauruButtonC = { 80, 80, 80 };
 
 // Zelda's rainbow cycle length is 360 * RainbowSpeed frames, so a LARGER value is SLOWER. The
 // editor's own slider caps at 1.0 (~6s); the runtime has no such limit, and the spec asks for
@@ -282,6 +348,21 @@ constexpr SagePalette kSagePalette[] = {
       false },
 };
 
+/**
+ * The color of the magic bar's draining half.
+ *
+ * Normally a lighter version of the sage's magic color. But Rauru's magic is white, and lightening
+ * white gets you white - his drain would have been invisible, which is worse than leaving it
+ * vanilla yellow. So for colors that are already near the top, this shades downward instead. The
+ * direction is what carries the "this is being spent" read; which direction doesn't matter.
+ */
+Rgb DeriveMagicActive(Rgb magic) {
+    if (MinChannel(magic) > kMagicActiveFlipThreshold) {
+        return TowardBlack(magic, kMagicActiveShade, kMinShadeSeparation);
+    }
+    return TowardWhite(magic, kMagicActiveShade, kMinShadeSeparation);
+}
+
 const SagePalette* FindSagePalette(uint8_t sage) {
     for (const SagePalette& palette : kSagePalette) {
         if (palette.sage == sage) {
@@ -301,8 +382,8 @@ const SagePalette* FindSagePalette(uint8_t sage) {
 // pass at the end rather than per-option.
 void ApplyTunics(const SagePalette& p) {
     COSMETIC_SET("Link.KokiriTunic", p.base);
-    COSMETIC_SET("Link.GoronTunic", Darker(p.base, kGoronTunicDarken));
-    COSMETIC_SET("Link.ZoraTunic", Lighter(p.base, kZoraTunicLighten));
+    COSMETIC_SET("Link.GoronTunic", TowardBlack(p.base, kGoronTunicShade, kMinShadeSeparation));
+    COSMETIC_SET("Link.ZoraTunic", TowardWhite(p.base, kZoraTunicShade, kMinShadeSeparation));
 }
 
 // Master Sword only - it stands in for each sage's own magic sword. Kokiri and Biggoron blades stay
@@ -333,12 +414,12 @@ void ApplySword(const SagePalette& p) {
 // since it represents the sage's power rather than their person.
 void ApplyHeartsAndMagic(const SagePalette& p) {
     COSMETIC_SET("Consumable.Hearts", p.base);
-    COSMETIC_SET("Consumable.DDHearts", Darker(p.base, kDoubleDefenseDarken));
+    COSMETIC_SET("Consumable.DDHearts", TowardBlack(p.base, kDoubleDefenseShade, kMinShadeSeparation));
 
     // Rauru's hearts are near-black and vanish against the HUD without an outline. Everyone else
     // gets the vanilla dark border back.
     if (p.darkHearts) {
-        COSMETIC_SET("Consumable.HeartBorder", Rgb{ 235, 235, 235 });
+        COSMETIC_SET("Consumable.HeartBorder", kLightHeartBorder);
     } else {
         COSMETIC_CLEAR("Consumable.HeartBorder");
     }
@@ -346,7 +427,7 @@ void ApplyHeartsAndMagic(const SagePalette& p) {
     // MagicActive is the portion of the bar draining *right now* - not a rare state, it fires on
     // every spin attack, Din's charge and spell cast. Left alone it would flash vanilla yellow
     // mid-cast on every sage, so it tracks the sage's magic color.
-    COSMETIC_SET("Consumable.MagicActive", Lighter(p.magic, kMagicActiveLighten));
+    COSMETIC_SET("Consumable.MagicActive", DeriveMagicActive(p.magic));
 
     if (p.magicRainbow) {
         // CosmeticsUpdateTick rewrites the value every frame while rainbow is on, so only the gate
@@ -380,25 +461,25 @@ void ApplySpells(const SagePalette& p) {
 // other. D-pad is set to white explicitly rather than left alone, so it stays white even if a
 // preset or a previous session moved it.
 void ApplyHudButtons(const SagePalette& p) {
-    Rgb b = Darker(p.base, kButtonBDarken);
-    Rgb a = Darker(p.base, kButtonADarken);
-    Rgb c = Darker(p.base, kButtonCDarken);
+    Rgb b = TowardBlack(p.base, kButtonBShade);
+    Rgb a = TowardBlack(p.base, kButtonAShade);
+    Rgb c = TowardBlack(p.base, kButtonCShade);
 
     // Rauru's base is already charcoal, so the three tiers land on 25/32/38 - indistinguishable
     // from each other and from the HUD behind them. Spread upward instead, preserving the
     // B-dark -> C-light ordering. No general per-channel floor, because flooring would wash the
     // blue out of Darunia's orange and Nabooru's gold.
     if (p.darkHearts) {
-        b = { 35, 35, 35 };
-        a = { 55, 55, 55 };
-        c = { 80, 80, 80 };
+        b = kRauruButtonB;
+        a = kRauruButtonA;
+        c = kRauruButtonC;
     }
 
     COSMETIC_SET("HUD.BButton", b);
     COSMETIC_SET("HUD.AButton", a);
     COSMETIC_SET("HUD.StartButton", a);
     COSMETIC_SET("HUD.CButtons", c);
-    COSMETIC_SET("HUD.Dpad", Rgb{ 255, 255, 255 });
+    COSMETIC_SET("HUD.Dpad", kWhite);
 
     // The four individual C-button *color* options stay cleared so they inherit HUD.CButtons.
     // Their *position* CVars are separate and read independently - that is what lets slice 3 split
@@ -414,8 +495,8 @@ void ApplyHudButtons(const SagePalette& p) {
 // suggested) because a preset only takes effect when the player explicitly applies it, whereas
 // this needs to be true in every run without ceremony.
 void ApplyWorldNpcColors() {
-    COSMETIC_SET("NPC.Kokiri", Rgb{ 55, 55, 60 });
-    COSMETIC_SET("NPC.Gerudo", Rgb{ 200, 165, 45 });
+    COSMETIC_SET("NPC.Kokiri", kKokiriMourning);
+    COSMETIC_SET("NPC.Gerudo", kGerudoGold);
 }
 
 } // namespace
@@ -426,17 +507,29 @@ extern "C" void GanonsCurse_ApplySageCosmetics() {
     }
 
     // -1 means no sage override applies to this file. Reusing the home-entrance accessor as the
-    // "is there a sage at all" probe keeps the sage definition table the single source of truth -
-    // there is deliberately no second copy of "which sages exist" in this file.
+    // "is there a sage at all" probe avoids a second copy of "which sages exist" gating the entry
+    // point, and it stays correct if the sage list ever changes.
     if (Randomizer_GetSageHomeEntrance() == -1) {
         return;
     }
 
-    ApplyTunicColors();
+    const SagePalette* palette = FindSagePalette(Randomizer_GetSettingValue(RSK_SELECTED_SAGE));
+    if (palette == nullptr) {
+        return;
+    }
+
+    ApplyTunics(*palette);
+    ApplySword(*palette);
+    ApplyHeartsAndMagic(*palette);
+    ApplySpells(*palette);
+    ApplyHudButtons(*palette);
+    ApplyWorldNpcColors();
 
     // Push display-list-patched options through in one pass. See the header comment for why this
     // cannot be left to CosmeticsUpdateTick: its per-frame call passes manualChange = false, which
-    // skips every patch whose rainbow CVar is unset - i.e. all of ours.
+    // skips every patch whose rainbow CVar is unset - i.e. all of ours. Several options set above
+    // are patch-based (Master Sword blade, Goron/Zora tunic, hearts, magic, Farore's, Gerudo), so
+    // without this they would silently not appear.
     ApplyOrResetCustomGfxPatches(true);
 }
 
