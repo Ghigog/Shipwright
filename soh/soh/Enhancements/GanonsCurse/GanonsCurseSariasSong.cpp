@@ -29,6 +29,15 @@
  * Replaying the song while already buffed refreshes the duration rather than re-snapshotting -
  * re-snapshotting on an already-active buff would capture "1" (our own forced value) as the
  * "prior" value instead of the real one, which would then fail to restore correctly.
+ *
+ * Bug found live 2026-08-01, testing Saria: setting the CVar alone did nothing - climbing never
+ * activated. ClimbEverything.cpp's VB hooks are (re)registered only when something calls
+ * ShipInit::Init(CVAR_CHEAT("ClimbEverything")), which is what the Enhancements-menu checkbox
+ * does after every toggle (UIWidgets.cpp's CVarCheckbox); a bare CVarSetInteger doesn't trigger
+ * that. Fixed by calling ShipInit::Init ourselves right after each CVarSetInteger, both turning
+ * the buff on and restoring the prior value when it ends - deliberately not also calling
+ * SaveConsoleVariablesNextFrame() the way the menu checkbox does, since this is a transient
+ * buff state that should never get written to the user's saved settings.
  */
 #include "soh/ShipInit.hpp"
 #include "functions.h"
@@ -48,6 +57,11 @@ constexpr s32 SARIAS_SONG_BUFF_FRAMES = 20 * 20;
 s32 sBuffFramesRemaining = 0;
 s32 sPriorClimbEverythingValue = 0;
 
+void SetClimbEverything(s32 value) {
+    CVarSetInteger(CVAR_CHEAT("ClimbEverything"), value);
+    ShipInit::Init(CVAR_CHEAT("ClimbEverything"));
+}
+
 void GanonsCurseSariasSongPlayed() {
     if (!GameInteractor::IsSaveLoaded(true)) {
         return;
@@ -59,7 +73,7 @@ void GanonsCurseSariasSongPlayed() {
     GanonsCurseRequestSongMagic(SARIAS_SONG_MAGIC_COST, []() {
         if (sBuffFramesRemaining <= 0) {
             sPriorClimbEverythingValue = CVarGetInteger(CVAR_CHEAT("ClimbEverything"), 0);
-            CVarSetInteger(CVAR_CHEAT("ClimbEverything"), 1);
+            SetClimbEverything(1);
         }
         sBuffFramesRemaining = SARIAS_SONG_BUFF_FRAMES;
     });
@@ -72,7 +86,7 @@ void GanonsCurseSariasSongFrameUpdate() {
 
     sBuffFramesRemaining--;
     if (sBuffFramesRemaining == 0) {
-        CVarSetInteger(CVAR_CHEAT("ClimbEverything"), sPriorClimbEverythingValue);
+        SetClimbEverything(sPriorClimbEverythingValue);
     }
 }
 
