@@ -5,8 +5,8 @@ extern "C" {
 #include "macros.h"
 }
 
-void GanonsCurseForEachEnemyInRoom(PlayState* play, const std::function<void(Actor*)>& fn) {
-    Actor* actor = play->actorCtx.actorLists[ACTORCAT_ENEMY].head;
+void GanonsCurseForEachActorInRoom(PlayState* play, int category, const std::function<void(Actor*)>& fn) {
+    Actor* actor = play->actorCtx.actorLists[category].head;
     while (actor != NULL) {
         fn(actor);
         actor = actor->next;

@@ -6,7 +6,7 @@
  * here since Sun's Song already incapacitates enemies via burning (the stun was redundant there).
  * "Sleep" is the theme for this song's version of the room-wide stun, not a second, separate
  * mechanic - there is one effect: every enemy currently loaded (i.e. in this room - see
- * GanonsCurseRoomAoe.h) stops acting for 15 seconds.
+ * GanonsCurseForEachActorInRoom in GanonsCurseRoomAoe.h) stops acting for 15 seconds.
  *
  * The stun itself needs no new engine mechanic: Actor::freezeTimer (z64actor.h) is already a
  * universal per-actor field the main actor-update loop checks before calling an actor's update
@@ -43,7 +43,8 @@ void GanonsCurseZeldasLullabyPlayed() {
     }
 
     GanonsCurseRequestSongMagic(ZELDAS_LULLABY_MAGIC_COST, []() {
-        GanonsCurseForEachEnemyInRoom(gPlayState, [](Actor* enemy) { enemy->freezeTimer = ZELDAS_LULLABY_STUN_FRAMES; });
+        GanonsCurseForEachActorInRoom(gPlayState, ACTORCAT_ENEMY,
+                                      [](Actor* enemy) { enemy->freezeTimer = ZELDAS_LULLABY_STUN_FRAMES; });
     });
 }
 
