@@ -6,6 +6,7 @@
 
 #include "z_bg_spot18_shutter.h"
 #include "objects/object_spot18_obj/object_spot18_obj.h"
+#include "soh/Enhancements/game-interactor/GameInteractor_Hooks.h"
 
 #define FLAGS (ACTOR_FLAG_UPDATE_CULLING_DISABLED | ACTOR_FLAG_DRAW_CULLING_DISABLED)
 
@@ -55,7 +56,8 @@ void BgSpot18Shutter_Init(Actor* thisx, PlayState* play) {
                 this->actionFunc = func_808B9618;
             }
         } else {
-            if (Flags_GetSwitch(play, this->dyna.actor.params & 0x3F)) {
+            if (GameInteractor_Should(VB_GORON_CITY_DARUNIA_FRONT_DOOR_BE_OPEN,
+                                      Flags_GetSwitch(play, this->dyna.actor.params & 0x3F))) {
                 this->actionFunc = func_808B95AC;
                 this->dyna.actor.world.pos.y += 180.0f;
             } else {
@@ -63,7 +65,7 @@ void BgSpot18Shutter_Init(Actor* thisx, PlayState* play) {
             }
         }
     } else {
-        if (Flags_GetInfTable(INFTABLE_GORON_CITY_DOORS_UNLOCKED)) {
+        if (GameInteractor_Should(VB_GORON_CITY_DOORS_UNLOCKED, Flags_GetInfTable(INFTABLE_GORON_CITY_DOORS_UNLOCKED))) {
             this->dyna.actor.world.pos.x += 125.0f * Math_CosS(this->dyna.actor.world.rot.y);
             this->dyna.actor.world.pos.z -= 125.0f * Math_SinS(this->dyna.actor.world.rot.y);
             this->actionFunc = func_808B95AC;
@@ -86,7 +88,8 @@ void func_808B95AC(BgSpot18Shutter* this, PlayState* play) {
 }
 
 void func_808B95B8(BgSpot18Shutter* this, PlayState* play) {
-    if (Flags_GetSwitch(play, this->dyna.actor.params & 0x3F)) {
+    if (GameInteractor_Should(VB_GORON_CITY_DARUNIA_FRONT_DOOR_BE_OPEN,
+                              Flags_GetSwitch(play, this->dyna.actor.params & 0x3F))) {
         Actor_SetFocus(&this->dyna.actor, 70.0f);
         OnePointCutscene_Attention(play, &this->dyna.actor);
         this->actionFunc = func_808B9698;
@@ -94,7 +97,7 @@ void func_808B95B8(BgSpot18Shutter* this, PlayState* play) {
 }
 
 void func_808B9618(BgSpot18Shutter* this, PlayState* play) {
-    if (Flags_GetInfTable(INFTABLE_GORON_CITY_DOORS_UNLOCKED)) {
+    if (GameInteractor_Should(VB_GORON_CITY_DOORS_UNLOCKED, Flags_GetInfTable(INFTABLE_GORON_CITY_DOORS_UNLOCKED))) {
         Actor_SetFocus(&this->dyna.actor, 70.0f);
         if (((this->dyna.actor.params >> 8) & 1) == 0) {
             this->actionFunc = func_808B9698;

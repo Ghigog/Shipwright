@@ -6,6 +6,7 @@
 
 #include "z_bg_spot12_gate.h"
 #include "objects/object_spot12_obj/object_spot12_obj.h"
+#include "soh/Enhancements/game-interactor/GameInteractor_Hooks.h"
 
 #define FLAGS 0
 
@@ -63,7 +64,7 @@ void BgSpot12Gate_Init(Actor* thisx, PlayState* play) {
     BgSpot12Gate_InitDynaPoly(this, play, &gGerudoFortressWastelandGateCol, DPM_UNK);
     Actor_ProcessInitChain(&this->dyna.actor, sInitChain);
 
-    if (Flags_GetSwitch(play, this->dyna.actor.params & 0x3F)) {
+    if (GameInteractor_Should(VB_GF_WEST_GATE_BE_OPEN, Flags_GetSwitch(play, this->dyna.actor.params & 0x3F))) {
         func_808B3274(this);
     } else {
         func_808B30C0(this);
@@ -82,7 +83,7 @@ void func_808B30C0(BgSpot12Gate* this) {
 }
 
 void func_808B30D8(BgSpot12Gate* this, PlayState* play) {
-    if (Flags_GetSwitch(play, this->dyna.actor.params & 0x3F)) {
+    if (GameInteractor_Should(VB_GF_WEST_GATE_BE_OPEN, Flags_GetSwitch(play, this->dyna.actor.params & 0x3F))) {
         func_808B3134(this);
         OnePointCutscene_Init(play, 4160, -99, &this->dyna.actor, CAM_ID_MAIN);
     }

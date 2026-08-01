@@ -1859,6 +1859,37 @@ void RandomizerOnVanillaBehaviorHandler(GIVanillaBehavior id, bool* should, va_l
             }
             break;
         }
+        // Ganon's Curse: the outer wall gate onto the Haunted Wasteland. Unconditionally open -
+        // there is no NPC reachable from the wasteland side capable of opening it (see
+        // GIVanillaBehavior.h), so leaving it closed by default would permanently strand Nabooru,
+        // whose home entrance is right there. Not gated on carpenters/card/anything else: the
+        // vanilla gatekeeping this replaces exists to pace a story quest Ganon's Curse doesn't run.
+        case VB_GF_WEST_GATE_BE_OPEN: {
+            *should = true;
+            break;
+        }
+        // Ganon's Curse: never let EnDu_Init's own first-meeting cutscene fire - it competes with
+        // GanonsCurseOpenings.cpp's re-fired gGoronCityIntroCs for the same csCtx.segment pointer,
+        // and it is dialogue written for a player named Link. Effectively dead code in real vanilla
+        // play already (cutsceneIndex >= 0xFFF0 only holds on the very first frame of a fresh save,
+        // and vanilla never spawns anywhere near Darunia's chamber that early), so this has no
+        // effect outside Ganon's Curse sage spawns.
+        case VB_PLAY_DARUNIA_FIRST_MEETING_CS: {
+            *should = false;
+            break;
+        }
+        // Ganon's Curse: Darunia's chamber, both doors. Neither door-opening condition (Zelda's
+        // Lullaby for the front shutter, the city-wide "doors unlocked" InfTable for the back one)
+        // is reachable for a sage who starts inside the room with no ocarina - force both open so
+        // he isn't sealed into his own chamber.
+        case VB_GORON_CITY_DARUNIA_FRONT_DOOR_BE_OPEN: {
+            *should = true;
+            break;
+        }
+        case VB_GORON_CITY_DOORS_UNLOCKED: {
+            *should = true;
+            break;
+        }
         case VB_GIVE_ITEM_GERUDO_MEMBERSHIP_CARD: {
             Flags_SetRandomizerInf(RAND_INF_TH_ITEM_FROM_LEADER_OF_FORTRESS);
             *should = false;

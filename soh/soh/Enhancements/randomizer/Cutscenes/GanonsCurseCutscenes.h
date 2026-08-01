@@ -15,6 +15,8 @@ extern "C" {
 // run tools/gen_cutscenes.py, don't hand-edit this.
 // >>> GANONS_CURSE_GENERATED: CUTSCENE_EXTERNS - edit data/cutscenes.json, not this
 extern CutsceneData gGanonsCurseSariaForestTempleOpening[];
+extern CutsceneData gGanonsCurseZeldaCastleCourtyardOpening[];
+extern CutsceneData gGanonsCurseDaruniaChamberOpening[];
 // <<< GANONS_CURSE_GENERATED: CUTSCENE_EXTERNS
 
 #endif // GANONS_CURSE_CUTSCENES_H

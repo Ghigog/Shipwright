@@ -577,17 +577,24 @@ static const SageDefinition sSageDefinitions[] = {
       0 },
     // The Lens of Truth drains magic continuously while active, so it's as inert without a meter as
     // Light Arrows are without a Bow - basic magic (level 1), not Zelda's double.
-    // Spawns in the middle of Kakariko, arriving from the graveyard, rather than at the front gate.
-    // Overworld pool, unshuffled. NOT the Bottom of the Well exit, which reads like the obvious
-    // "Impa's own place" pick but is an EntranceType::Dungeon connector and would be reassigned.
-    // The well is instead handed to her via EVENTCHKINF_DRAINED_WELL_IN_KAKARIKO below: her kit has
-    // no ocarina, so she can never play Song of Storms to drain it herself, and the well would
-    // otherwise be permanently shut to the one sage it belongs to. Draining it only widens what she
-    // can reach, which is the safe direction for a flag the generator can't see.
+    // Spawns in the Graveyard proper (2026-07-31, moved from mid-Kakariko) - Impa's actual home
+    // turf, behind Kakariko and right by Shadow Temple's door. `ENTR_GRAVEYARD_ENTRANCE` is
+    // EntranceType::Overworld, unshuffled, and carries its own vanilla entrance cutscene
+    // (gGraveyardIntroCs, EVENTCHKINF_ENTERED_GRAVEYARD) - a real establishing shot, not a re-fire
+    // of Kakariko's. NOT `ENTR_GRAVEYARD_OUTSIDE_TEMPLE`, which reads like the obvious "right at
+    // Shadow Temple's door" pick but is an EntranceType::Dungeon connector and would be reassigned
+    // under ShuffleDungeonsEntrances - the exact trap that already caught the Well and the Training
+    // Ground. The Graveyard<->Kakariko link itself is an unconditional Overworld connector (no
+    // logic gate in entrance.cpp), so she can walk back into the village freely either direction.
+    // NOT the Bottom of the Well exit either, for the same EntranceType::Dungeon reason. The well is
+    // instead handed to her via EVENTCHKINF_DRAINED_WELL_IN_KAKARIKO below: her kit has no ocarina,
+    // so she can never play Song of Storms to drain it herself, and the well would otherwise be
+    // permanently shut to the one sage it belongs to. Draining it only widens what she can reach,
+    // which is the safe direction for a flag the generator can't see.
     { RO_SAGE_IMPA,
       RO_AGE_ADULT,
-      ENTR_KAKARIKO_VILLAGE_SOUTHEAST_EXIT,
-      RR_KAKARIKO_VILLAGE,
+      ENTR_GRAVEYARD_ENTRANCE,
+      RR_THE_GRAVEYARD,
       { 130, 60, 170 }, // purple
       { { RSK_STARTING_BUNNY_HOOD, 1 },
         { RSK_STARTING_HOOKSHOT, 1 },
@@ -631,23 +638,27 @@ static const SageDefinition sSageDefinitions[] = {
       0 },
     // Magic meter 2 is double magic (SetStartingItems derives isDoubleMagicAcquired from >= 2),
     // which her three-spell kit needs to be usable at all.
-    // Zelda starts inside the castle proper - the guarded courtyard - and has to sneak her way out
-    // of her own home. TimeSavers.SkipChildStealth is already 0 in the enhancements preset, so the
-    // guards are live.
     //
-    // Two things about this spawn are knowingly irregular, both accepted deliberately:
+    // WRONG SCENE, CORRECTED 2026-07-31: this used to point at
+    // ENTR_CASTLE_COURTYARD_GUARDS_DAY_0/_1 in hairal_niwa (SCENE_CASTLE_COURTYARD_GUARDS_DAY) -
+    // the guard-patrolled CRAWLSPACE, not her own courtyard. Neither of that scene's two
+    // entrances actually lands in open space; both are in the corridor, confirmed by live
+    // testing across two attempts. The real garden - RR_HC_GARDEN, her homeRegion, and correct
+    // all along - lives in a DIFFERENT scene: SCENE_CASTLE_COURTYARD_ZELDA (nakaniwa), per
+    // castle_grounds.cpp's own region graph (RR_HC_DRAIN_LEDGE -crawl-> RR_HC_GARDEN, and
+    // RR_HC_GARDEN's areaTable entry is explicitly SCENE_CASTLE_COURTYARD_ZELDA, not
+    // SCENE_CASTLE_COURTYARD_GUARDS_DAY). ENTR_CASTLE_COURTYARD_ZELDA_0 is a normal registered
+    // entrance for that scene - no re-fire, no reposition hack, just spawns there directly like
+    // every other sage.
     //
-    //  - homeRegion is a best-effort fiction. SCENE_CASTLE_COURTYARD_GUARDS_DAY has NO region in
-    //    the rando graph at all: castle_grounds.cpp routes RR_HC_MOAT -> RR_HC_DRAIN_LEDGE ->
-    //    RR_HC_GARDEN through the crawlspace and models the stealth section not at all. RR_HC_GARDEN
-    //    is where sneaking forward actually lands her, and it is not a dead end for the solver
-    //    (-> RR_HC_DRAIN_LEDGE is unconditional, and RSK_SHUFFLE_CRAWL is off so she has Crawl), so
-    //    the seed stays connected either way. Getting caught throws her out to the castle grounds,
-    //    which is also connected. If the stealth courtyard ever gains a real region, use it.
-    //  - She gets no opening cutscene. Every other relocated sage kept theirs because the new spawn
-    //    is in the old spawn's scene; this one crosses from SCENE_HYRULE_CASTLE into
-    //    SCENE_CASTLE_COURTYARD_GUARDS_DAY, so gHyruleCastleIntroCs's absolute camera coordinates
-    //    would point at the wrong place entirely. 4c's premise text has to carry her opening alone.
+    // She has no opening cutscene right now. The old ZELDA_CASTLE_COURTYARD_OPENING
+    // (data/cutscenes.json) was built against hairal_niwa's coordinates and is stale in the new
+    // scene - dropped from GanonsCurseOpenings.cpp rather than left wired to the wrong place.
+    // nakaniwa has four of its own embedded cutscenes (gZeldasCourtyardGanonCs/WindowCs/MeetCs/
+    // LullabyCs, see nakaniwa_scene.h) worth investigating for a replacement, not yet done.
+    //
+    // TimeSavers.SkipChildStealth is already 0 in the enhancements preset, so the crawlspace
+    // guards on the way here are live - she genuinely has to sneak out of her own castle.
     //
     // NOT addressed here: opening the Great Fairy fountains. SoH has no setting for it - the
     // boulders are ordinary actors gated on BlastOrSmash() (explosives or Megaton Hammer), neither
@@ -656,7 +667,7 @@ static const SageDefinition sSageDefinitions[] = {
     // of a child sage.
     { RO_SAGE_ZELDA,
       RO_AGE_CHILD,
-      ENTR_CASTLE_COURTYARD_GUARDS_DAY_0,
+      ENTR_CASTLE_COURTYARD_ZELDA_0,
       RR_HC_GARDEN,
       { 235, 235, 235 }, // white
       { { RSK_STARTING_FARORES_WIND, 1 },

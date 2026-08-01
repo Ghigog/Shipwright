@@ -143,9 +143,16 @@ void applyPreset(std::string presetName, std::vector<PresetSection> includeSecti
 
                     Ship::Context::GetRawInstance()->GetConfig()->SetBlock(fmt::format("{}.{}", "CVars", item.key()),
                                                                            block);
-                    Ship::Context::GetRawInstance()->GetConsoleVariables()->Load();
                 }
             }
+            // Was inside the loop above (one full Config::GetNestedJson() copy + reparse per CVar
+            // key in the section) - crashed applying a preset with enough keys
+            // (soh-macos-2026-07-31-131056.ips: SIGSEGV/pointer-auth failure inside
+            // nlohmann::json's internal tree machinery, reached via
+            // ConsoleVariable::Load -> Config::GetNestedJson). Loading once after every SetBlock in
+            // the section is done is equivalent - Load() just re-reads whatever Config currently
+            // holds - and turns an O(section size) storm of full-tree copies into one.
+            Ship::Context::GetRawInstance()->GetConsoleVariables()->Load();
             if (i == PRESET_SECTION_RANDOMIZER) {
                 Rando::Settings::GetInstance()->UpdateAllOptions();
                 SohGui::UpdateMenuTricks();

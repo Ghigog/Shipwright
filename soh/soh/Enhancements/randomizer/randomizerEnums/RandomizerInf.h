@@ -2945,6 +2945,20 @@ RANDO_ENUM_ITEM(RAND_INF_HAS_FOUND_ZORA_TUNIC)
 // randomizerInf is sized from RAND_INF_MAX and serialised generically, so appending here is safe.
 RANDO_ENUM_ITEM(RAND_INF_GANONS_CURSE_SARIA_OPENING_PLAYED)
 
+// Ganon's Curse: Zelda's home-region establishing shot has played on this file. Not
+// EVENTCHKINF_OBTAINED_ZELDAS_LETTER - that flag has real gameplay meaning later (the actual
+// first-meeting cutscene, when a Zelda run legitimately reaches it), so borrowing it here would
+// make that later cutscene silently skip itself. Same reasoning as Saria's flag above: a mod-owned
+// RandomizerInf that means only "the opening shot has played," nothing else.
+RANDO_ENUM_ITEM(RAND_INF_GANONS_CURSE_ZELDA_OPENING_PLAYED)
+
+// Ganon's Curse: Darunia's home-region establishing shot has played on this file. Not
+// EVENTCHKINF_ENTERED_GORON_CITY (the vanilla entrance flag gGoronCityIntroCs used to own here) -
+// that shot was dropped (room-culling, see GanonsCurseOpenings.cpp), so this is a fresh
+// RandomizerInf for the replacement (DARUNIA_CHAMBER_OPENING), same reasoning as Saria's and
+// Zelda's flags above.
+RANDO_ENUM_ITEM(RAND_INF_GANONS_CURSE_DARUNIA_OPENING_PLAYED)
+
 RANDO_ENUM_ITEM(RAND_INF_MAX)
 
 RANDO_ENUM_END(RandomizerInf)

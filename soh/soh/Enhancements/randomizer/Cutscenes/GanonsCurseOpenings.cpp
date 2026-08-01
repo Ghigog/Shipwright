@@ -13,9 +13,7 @@
  * (Cutscene_SetSegment + cutsceneTrigger). That works precisely because every relocated spawn is
  * in the SAME SCENE as the entrance it replaced: CS_CAM_EYE/CS_CAM_AT carry absolute world
  * coordinates, so a vanilla shot reused inside its own scene is pixel-identical to the original,
- * regardless of where the player happens to be standing. Reusing one across scenes would not work,
- * which is exactly why Zelda has no entry here (her new spawn crosses into
- * SCENE_CASTLE_COURTYARD_GUARDS_DAY).
+ * regardless of where the player happens to be standing.
  *
  * WHY THE VANILLA EVENTCHKINF FLAG IS REUSED RATHER THAN A NEW ONE. Each entry carries the flag
  * sEntranceCutsceneTable uses for that same cutscene, and the gate here is the same
@@ -27,12 +25,17 @@
  *   - walking into the region's real entrance later doesn't replay the establishing shot, which is
  *     correct: the player has already been shown that region.
  *
- * There is no race to handle. GanonInteractor's OnSceneInit fires from OTRPlay_SpawnScene, which
- * Play_Init calls immediately before Cutscene_HandleEntranceTriggers (z_play.c:476/493) with
- * nothing in between that touches csCtx - and for every sage listed here the entrance table has no
- * matching row, so it will not overwrite what we set. Ruto is deliberately absent for the opposite
- * reason: her new spawn IS in the entrance table (gZorasFountainIntroCs, age-2 so a child
- * qualifies), so vanilla already plays her opening and an entry here would fight it.
+ * No race to handle with vanilla's own entrance-cutscene trigger: for every sage listed here (and
+ * Zelda, Saria, Darunia below) the entrance table has no matching sEntranceCutsceneTable row, so
+ * nothing else ever touches csCtx.segment for these entrances regardless of hook timing. Ruto and
+ * Impa are deliberately absent for the opposite reason: each one's new spawn IS in the entrance
+ * table in its own right (gZorasFountainIntroCs for Ruto, age-2 so a child qualifies;
+ * gGraveyardIntroCs for Impa, moved to ENTR_GRAVEYARD_ENTRANCE 2026-07-31), so vanilla already
+ * plays that opening and an entry here would fight it.
+ *
+ * Hooked on OnSceneSpawnActors, not OnSceneInit - see the comment above
+ * RegisterGanonsCurseSageOpenings for why (Player doesn't exist yet at OnSceneInit, which broke
+ * relativeToPlayer cutscenes specifically).
  */
 // Order matters - same include-ordering constraint as GanonsCurseCutscenes.cpp: these plain-C++
 // headers have to be parsed outside the extern "C" block that GanonsCurseCutscenes.h opens.
@@ -50,7 +53,6 @@ extern PlayState* gPlayState;
 
 #include <scenes/overworld/spot01/spot01_scene.h>
 #include <scenes/overworld/spot12/spot12_scene.h>
-#include <scenes/overworld/spot18/spot18_scene.h>
 #include <scenes/overworld/spot20/spot20_scene.h>
 
 namespace {
@@ -70,15 +72,20 @@ struct SageOpening {
 const SageOpening sSageOpenings[] = {
     // Rauru - Lon Lon Ranch tower. Was ENTR_LON_LON_RANCH_ENTRANCE.
     { ENTR_LON_LON_RANCH_OUTSIDE_TOWER, EVENTCHKINF_ENTERED_LON_LON_RANCH, gLonLonRanchIntroCs },
-    // Darunia - inside Darunia's chamber. Was ENTR_GORON_CITY_UPPER_EXIT.
-    { ENTR_GORON_CITY_DARUNIA_ROOM_EXIT, EVENTCHKINF_ENTERED_GORON_CITY, gGoronCityIntroCs },
-    // Impa - Kakariko, arriving from the graveyard. Was ENTR_KAKARIKO_VILLAGE_FRONT_GATE.
-    { ENTR_KAKARIKO_VILLAGE_SOUTHEAST_EXIT, EVENTCHKINF_ENTERED_KAKARIKO_VILLAGE, gKakarikoVillageIntroCs },
+    // Darunia is deliberately absent here (dropped 2026-07-31, was gGoronCityIntroCs). His chamber
+    // is a different ROOM (room 1) than the plaza gGoronCityIntroCs's camera was captured in
+    // (room 0) - this scene's rooms don't stay co-loaded, so the shot pointed at unrendered black
+    // space. No same-room vanilla shot to fall back on, and after Saria's custom-camera miss
+    // nothing here should be hand-authored blind either - see the relativeToPlayer note in
+    // data/cutscenes.json for the real fix to chase before reattempting this one. Chamber spawn
+    // kept (the doors are now open, see z_bg_spot18_shutter.c) - just no establishing shot.
+    // Impa is deliberately absent here now (moved to ENTR_GRAVEYARD_ENTRANCE, 2026-07-31) - same
+    // reasoning as Ruto: her spawn is itself a vanilla entrance-cutscene trigger (gGraveyardIntroCs),
+    // not a re-fire target, and needs no entry or code of any kind in this file.
     // Nabooru - the fortress west gate. Was ENTR_GERUDOS_FORTRESS_EAST_EXIT.
     { ENTR_GERUDOS_FORTRESS_GATE_EXIT, EVENTCHKINF_ENTERED_GERUDOS_FORTRESS, gGerudoFortressIntroCs },
-    // Zelda (castle courtyard) has no entry on purpose - her spawn changed scene, so no vanilla
-    // shot's absolute coordinates fit. She falls through to 4c's premise text with no
-    // establishing shot.
+    // Zelda is deliberately absent here - see kZeldaHomeEntrance below, handled the same way as
+    // Saria and Darunia because her shot is ours, not a whole vanilla cutscene.
 };
 
 // Saria is handled separately from the table above because her shot is ours, not a whole vanilla
@@ -96,13 +103,33 @@ const SageOpening sSageOpenings[] = {
 // which dungeon is behind the door.
 constexpr int32_t kSariaHomeEntrance = ENTR_SACRED_FOREST_MEADOW_WARP_PAD;
 
-void PlaySageOpening(int16_t sceneNum) {
+// Zelda's home scene was corrected 2026-07-31: nakaniwa (SCENE_CASTLE_COURTYARD_ZELDA), not
+// hairal_niwa (SCENE_CASTLE_COURTYARD_GUARDS_DAY, the guard-patrolled crawlspace) - see
+// savefile.cpp's SageDefinition for the full story. ZELDA_CASTLE_COURTYARD_OPENING
+// (data/cutscenes.json) was rebuilt for the new scene using camera.relativeToPlayer, since her
+// exact spawn coordinate within ENTR_CASTLE_COURTYARD_ZELDA_0 is binary scene data this file has
+// no way to read.
+constexpr int32_t kZeldaHomeEntrance = ENTR_CASTLE_COURTYARD_ZELDA_0;
+
+// Darunia is handled separately (added 2026-07-31, replacing his table entry above) because
+// gGoronCityIntroCs's own re-fire (via the table below) rendered almost entirely black at his
+// chamber spawn - his chamber is a different ROOM (room 1, ENTR_GORON_CITY_DARUNIA_ROOM_EXIT)
+// than the plaza that shot's camera was captured in (room 0). Four follow-up attempts in
+// DARUNIA_CHAMBER_OPENING (data/cutscenes.json) also came up black; attempt 5 reverted to
+// gGoronCityIntroCs's own coordinates unmodified, since that original re-fire was the only one
+// that ever showed ANYTHING (a small piece of the city, distant, in one corner) - a known-partial
+// baseline to iterate from rather than another fresh guess. See the cutscene's own description
+// for the full attempt history.
+constexpr int32_t kDaruniaHomeEntrance = ENTR_GORON_CITY_DARUNIA_ROOM_EXIT;
+
+void PlaySageOpening() {
     // Deliberately gated on the SELECTED sage's own home entrance, not merely on any entrance in
     // the table below. Matching the table alone would also fire Impa's Kakariko shot for, say, a
     // Rauru run that happens to walk in from the graveyard - defensible, but it would quietly
     // change establishing-shot behaviour across the whole game rather than doing the one job this
-    // file exists for. gSaveContext.entranceIndex is still the spawn entrance at this point in
-    // Play_Init.
+    // file exists for. gSaveContext.entranceIndex doesn't change again until the next transition,
+    // so it's still the spawn entrance here even though this now fires a frame later than
+    // Play_Init (see the OnSceneSpawnActors note above RegisterGanonsCurseSageOpenings).
     const int32_t sageEntrance = Randomizer_GetSageHomeEntrance();
     if (sageEntrance == -1 || gSaveContext.entranceIndex != sageEntrance) {
         return;
@@ -116,6 +143,24 @@ void PlaySageOpening(int16_t sceneNum) {
         if (!Flags_GetRandomizerInf(RAND_INF_GANONS_CURSE_SARIA_OPENING_PLAYED)) {
             Flags_SetRandomizerInf(RAND_INF_GANONS_CURSE_SARIA_OPENING_PLAYED);
             Cutscene_SetSegment(gPlayState, gGanonsCurseSariaForestTempleOpening);
+            gSaveContext.cutsceneTrigger = 1;
+        }
+        return;
+    }
+
+    if (sageEntrance == kZeldaHomeEntrance) {
+        if (!Flags_GetRandomizerInf(RAND_INF_GANONS_CURSE_ZELDA_OPENING_PLAYED)) {
+            Flags_SetRandomizerInf(RAND_INF_GANONS_CURSE_ZELDA_OPENING_PLAYED);
+            Cutscene_SetSegment(gPlayState, gGanonsCurseZeldaCastleCourtyardOpening);
+            gSaveContext.cutsceneTrigger = 1;
+        }
+        return;
+    }
+
+    if (sageEntrance == kDaruniaHomeEntrance) {
+        if (!Flags_GetRandomizerInf(RAND_INF_GANONS_CURSE_DARUNIA_OPENING_PLAYED)) {
+            Flags_SetRandomizerInf(RAND_INF_GANONS_CURSE_DARUNIA_OPENING_PLAYED);
+            Cutscene_SetSegment(gPlayState, gGanonsCurseDaruniaChamberOpening);
             gSaveContext.cutsceneTrigger = 1;
         }
         return;
@@ -135,8 +180,22 @@ void PlaySageOpening(int16_t sceneNum) {
     }
 }
 
+// OnSceneSpawnActors, not OnSceneInit (switched 2026-07-31). OnSceneInit fires from
+// OTRPlay_SpawnScene during Play_Init, before the scene's actor-spawn loop runs - Player doesn't
+// exist yet. relativeToPlayer cutscenes (ZELDA_CASTLE_COURTYARD_OPENING) need
+// Camera_Demo1/Camera_RotateAroundPoint (z_camera.c) to read a real, positioned player actor each
+// frame; triggering before Player exists gave three straight all-black results across two scenes
+// and three different offset scales - a positioning bug would vary with scale, this didn't, so
+// the actual cause was never the coordinates. OnSceneSpawnActors fires from Actor_UpdateAll
+// (z_actor.c) right after the room's actor-spawn loop, confirmed GET_PLAYER is valid there
+// (see the reposition code this file used to have, now removed). This is later than Play_Init
+// - specifically the first real game-loop frame after it - which matters only if a sage's home
+// entrance also has a vanilla auto-trigger row in sEntranceCutsceneTable; none of them do, so the
+// original race this file's header describes doesn't apply here. Absolute-coordinate openings
+// (Saria, Darunia) don't need this fix but aren't hurt by it either - moved along with the rest
+// rather than splitting the hook.
 void RegisterGanonsCurseSageOpenings() {
-    COND_HOOK(OnSceneInit, IS_RANDO, PlaySageOpening);
+    COND_HOOK(OnSceneSpawnActors, IS_RANDO, PlaySageOpening);
 }
 
 } // namespace
