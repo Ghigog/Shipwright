@@ -2253,6 +2253,16 @@ typedef enum {
     // true
     // ```
     // #### `args`
+    // - `*Player`
+    // - `s16*` cost - the magic cost about to be deducted for casting Din's Fire, Nayru's Love, or
+    //   Farore's Wind (func_8083AF44's sMagicSpellCosts[magicSpell] lookup). Modify in place.
+    VB_PLAYER_MODIFY_MAGIC_SPELL_COST,
+
+    // #### `result`
+    // ```c
+    // true
+    // ```
+    // #### `args`
     // - `s32` limbIndex
     // - `Gfx**` dList (write to *dList to replace the resolved display list)
     // - `void*` player (Player*)
@@ -2340,6 +2350,18 @@ typedef enum {
     // #### `args`
     // - None
     VB_PREVENT_STRENGTH,
+
+    // #### `result`
+    // ```c
+    // false
+    // ```
+    // #### `args`
+    // - None
+    // Fired from Health_ChangeBy the instant a hit would drop health to 0 or below, before the
+    // death path is taken. Returning true clamps health to 1 and treats the hit as survived
+    // instead of lethal - a fairy-style save, not blanket damage immunity (health still drops
+    // normally on every other hit).
+    VB_PREVENT_PLAYER_DEATH,
 
     // #### `result`
     // ```c

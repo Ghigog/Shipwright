@@ -2939,6 +2939,10 @@ s32 Health_ChangeBy(PlayState* play, s16 healthChange) {
     GameInteractor_ExecuteOnPlayerHealthChange(healthChange);
 
     if (gSaveContext.health <= 0) {
+        if (GameInteractor_Should(VB_PREVENT_PLAYER_DEATH, false)) {
+            gSaveContext.health = 1;
+            return 1;
+        }
         gSaveContext.health = 0;
         return 0;
     } else {

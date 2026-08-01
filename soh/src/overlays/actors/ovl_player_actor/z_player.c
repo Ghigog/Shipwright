@@ -5913,6 +5913,23 @@ void func_8083AE40(Player* this, s16 objectId) {
     }
 }
 
+// Ganon's Curse: "Faster Farore's Wind" extended to all three magic spells.
+//
+// The fast path skips the framed camera set up at the end of func_8083AF44 and lets
+// Player_Action_808507F4 exit as soon as the cast animation ends, rather than holding Link in
+// PLAYER_STATE1_IN_CUTSCENE until the magic meter finishes draining. Together those are what produce
+// the letterboxed camera-on-Link framing.
+//
+// Din's Fire is the spell that actually gets the letterbox - it is the `magicSpell == 5` branch
+// below, taking a OnePointCutscene. Farore's Wind and Nayru's Love take Player_SetTurnAroundCamera
+// instead, and Nayru's Love was already exempt from the drain wait. Extending the flag to all three
+// gives each of them the same treatment Farore's Wind already had.
+static u8 Player_IsFastMagicSpell(Player* this) {
+    return CVarGetInteger(CVAR_ENHANCEMENT("FastFarores"), 0) &&
+           ((this->itemAction == PLAYER_IA_FARORES_WIND) || (this->itemAction == PLAYER_IA_DINS_FIRE) ||
+            (this->itemAction == PLAYER_IA_NAYRUS_LOVE));
+}
+
 void func_8083AF44(PlayState* play, Player* this, s32 magicSpell) {
     Player_SetupActionPreserveItemAction(play, this, Player_Action_808507F4, 0);
 
@@ -5925,9 +5942,11 @@ void func_8083AF44(PlayState* play, Player* this, s32 magicSpell) {
     //! When `MAGIC_STATE_CONSUME_SETUP` is set in `Player_Action_808507F4`, magic will eventually be
     //! consumed to a stale target value. If that stale target value is higher than the current
     //! magic value, it will be consumed to zero.
-    Magic_RequestChange(play, sMagicSpellCosts[magicSpell], MAGIC_CONSUME_WAIT_PREVIEW);
+    s16 magicSpellCost = sMagicSpellCosts[magicSpell];
+    GameInteractor_Should(VB_PLAYER_MODIFY_MAGIC_SPELL_COST, true, this, &magicSpellCost);
+    Magic_RequestChange(play, magicSpellCost, MAGIC_CONSUME_WAIT_PREVIEW);
 
-    u8 isFastFarores = CVarGetInteger(CVAR_ENHANCEMENT("FastFarores"), 0) && this->itemAction == PLAYER_IA_FARORES_WIND;
+    u8 isFastFarores = Player_IsFastMagicSpell(this);
 
     if (isFastFarores) {
         LinkAnimation_PlayOnceSetSpeed(play, &this->skelAnime, &gPlayerAnim_link_magic_tame, 0.83f * 2);
