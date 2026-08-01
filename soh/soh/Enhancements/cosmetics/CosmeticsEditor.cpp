@@ -1478,7 +1478,16 @@ void ApplyOrResetCustomGfxPatches(bool manualChange) {
 
     if (gPlayState != nullptr) {
         if (CVarGetInteger(CVAR_COSMETIC("Link.BodySize.Changed"), 0)) {
-            static Player* player = GET_PLAYER(gPlayState);
+            // NOT static. The Player actor does not survive a scene change - Play_Destroy tears
+            // down the zelda arena and Play_Init's Actor_InitContext memsets the actor context and
+            // spawns a fresh Player - so caching this pointer across frames means writing through
+            // a freed allocation from the previous scene. It happened to work because the arena is
+            // rebuilt deterministically and Player is always allocated first, so the stale address
+            // kept being the right one; that is luck, not correctness.
+            Player* player = GET_PLAYER(gPlayState);
+            if (player == nullptr) {
+                return;
+            }
             float scale = CVarGetFloat(CVAR_COSMETIC("Link.BodySize.Value"), 0.01f);
             player->actor.scale.x = scale;
             player->actor.scale.y = scale;

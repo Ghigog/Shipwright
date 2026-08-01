@@ -5,6 +5,7 @@
 #include "soh/Enhancements/game-interactor/GameInteractor.h"
 #include "soh/Enhancements/game-interactor/GameInteractor_Hooks.h"
 #include "soh/Enhancements/randomizer/savefile.h"
+#include "soh/Enhancements/GanonsCurse/GanonsCurseSageCosmetics.h"
 #include "soh/OTRGlobals.h"
 #include "soh/SaveManager.h"
 #include "soh/ResourceManagerHelpers.h"
@@ -239,16 +240,6 @@ void Sram_OpenSave() {
     gSaveContext.magicLevel = 0;
 }
 
-// Ganon's Curse: recolor the Kokiri Tunic (what every sage actually starts wearing - none of the
-// kits equip Goron/Zora tunic directly, those are just carried for later) so each sage is visually
-// distinct at a glance. This is a global cosmetic cvar, not save-specific, so it just reflects
-// whichever sage was most recently generated - fine for a single-player curated experience.
-static void Sram_SetSageTunicColor(u8 r, u8 g, u8 b) {
-    Color_RGB8 color = { r, g, b };
-    CVarSetColor24(CVAR_COSMETIC("Link.KokiriTunic.Value"), color);
-    CVarSetInteger(CVAR_COSMETIC("Link.KokiriTunic.Changed"), 1);
-}
-
 void Sram_InitSave(FileChooseContext* fileChooseCtx) {
     u16 offset;
     u16 j;
@@ -306,14 +297,17 @@ void Sram_InitSave(FileChooseContext* fileChooseCtx) {
         {
             int32_t sageEntrance = Randomizer_GetSageHomeEntrance();
             if (sageEntrance != -1) {
-                uint8_t tunicR = 0, tunicG = 0, tunicB = 0;
-        
                 gSaveContext.entranceIndex = sageEntrance;
                 gSaveContext.linkAge =
                     Randomizer_GetSageStartingAge() == RO_AGE_ADULT ? LINK_AGE_ADULT : LINK_AGE_CHILD;
-        
-                Randomizer_GetSageTunicColor(&tunicR, &tunicG, &tunicB);
-                Sram_SetSageTunicColor(tunicR, tunicG, tunicB);
+
+                // Ganon's Curse: the sage's whole cosmetic identity (tunic now, plus HUD/voice/
+                // instrument as later slices land) lives in GanonsCurseSageCosmetics.cpp. It is
+                // applied again from an OnLoadGame hook there, which is the call that actually
+                // makes it correct - these are global CVars, not save data, so a file-creation
+                // write alone gets clobbered by the next file you create. See
+                // docs/sage-cosmetics.md.
+                GanonsCurse_ApplySageCosmetics();
 
                 // Ganon's Curse: mark Saria's Kokiri Forest greeting as already happened.
                 //
