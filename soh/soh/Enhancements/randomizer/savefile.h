@@ -31,10 +31,6 @@ uint8_t Randomizer_GetSageStartingAge(void);
 // when no sage override applies - callers should gate on IS_RANDO.
 uint16_t Randomizer_GetSageHomeRegion(void);
 
-// Writes the selected sage's Kokiri Tunic recolor into r/g/b. Leaves them untouched when no sage
-// override applies.
-void Randomizer_GetSageTunicColor(uint8_t* r, uint8_t* g, uint8_t* b);
-
 #ifdef __cplusplus
 }
 #endif

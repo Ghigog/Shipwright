@@ -290,10 +290,10 @@ void Sram_InitSave(FileChooseContext* fileChooseCtx) {
         // Age is set to whichever vanilla equip-slot restrictions the sage's kit actually needs
         // (e.g. Hookshot/Hover Boots/Mirror Shield/Megaton Hammer are adult-only equipment in
         // vanilla), not a narrative choice.
-        // Ganon's Curse: age/entrance/tunic all come from the single sage definition table in
+        // Ganon's Curse: age and entrance both come from the single sage definition table in
         // savefile.cpp, which generation-time code reads too. These used to be hardcoded here in a
         // parallel switch; the duplication is what let the generator and the runtime disagree about a
-        // sage's starting age.
+        // sage's starting age. Appearance is separate - see GanonsCurseSageCosmetics.cpp.
         {
             int32_t sageEntrance = Randomizer_GetSageHomeEntrance();
             if (sageEntrance != -1) {

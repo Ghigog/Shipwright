@@ -437,9 +437,15 @@ void SetStartingItems() {
 //
 // Read by generation-time code (Randomizer_ApplySageGenerationSettings, called from
 // Context::FinalizeSettings) and by runtime file creation (z_sram.c's Sram_InitSave, for
-// age/entrance/tunic). Keeping all of it in one table is deliberate - age in particular used to be
+// age/entrance). Keeping all of it in one table is deliberate - age in particular used to be
 // duplicated between this file and z_sram.c, and drift between those two copies is exactly what
 // left the generator computing reachability from the wrong starting age.
+//
+// Starting state only. Everything about how a sage *looks and sounds* - tunic colors included,
+// which this table used to carry - lives in GanonsCurseSageCosmetics.cpp instead. The split is
+// deliberate: this struct is what the generator and file creation read, and the presentation set
+// has since grown to HUD layout, proportions, voice mappings and an instrument, none of which the
+// generator has any business knowing about.
 //
 // Known follow-up, still unimplemented: Saria's "random mask" has no RSK_STARTING_* equivalent
 // (see characters.md).
@@ -457,7 +463,6 @@ struct SageDefinition {
     uint8_t age;             // RO_AGE_CHILD / RO_AGE_ADULT
     int32_t homeEntrance;    // ENTR_* - the runtime spawn point
     uint16_t homeRegion;     // RandomizerRegion - the solver's starting position
-    uint8_t tunic[3];        // Kokiri Tunic recolor; doubles as an at-a-glance "sage select took" signal
     SageStartingOption kit[SAGE_MAX_KIT_OPTIONS];
     uint8_t kitCount;
     // World-state options, kept separate from `kit` on purpose even though both are applied by the
@@ -508,7 +513,6 @@ static const SageDefinition sSageDefinitions[] = {
       RO_AGE_ADULT,
       ENTR_LON_LON_RANCH_OUTSIDE_TOWER,
       RR_LON_LON_RANCH,
-      { 25, 25, 25 }, // black
       { { RSK_STARTING_MEGATON_HAMMER, 1 },
         { RSK_STARTING_BOW, 1 },
         { RSK_STARTING_LIGHT_ARROWS, 1 },
@@ -526,7 +530,6 @@ static const SageDefinition sSageDefinitions[] = {
       RO_AGE_CHILD,
       ENTR_SACRED_FOREST_MEADOW_WARP_PAD,
       RR_SACRED_FOREST_MEADOW,
-      { 110, 225, 70 }, // light green, matching her hair
       { { RSK_STARTING_STICKS, 1 }, { RSK_STARTING_NUTS, 1 } },
       2,
       {},
@@ -543,7 +546,6 @@ static const SageDefinition sSageDefinitions[] = {
       RO_AGE_CHILD,
       ENTR_GORON_CITY_DARUNIA_ROOM_EXIT,
       RR_GC_DARUNIAS_CHAMBER,
-      { 190, 30, 30 }, // red
       { { RSK_STARTING_BOMB_BAG, 1 },
         { RSK_STARTING_BOMBCHU_BAG, 1 },
         { RSK_STARTING_STRENGTH, 1 }, // Goron's Bracelet
@@ -566,7 +568,6 @@ static const SageDefinition sSageDefinitions[] = {
       RO_AGE_CHILD,
       ENTR_ZORAS_FOUNTAIN_TUNNEL_EXIT,
       RR_ZORAS_FOUNTAIN,
-      { 40, 130, 220 }, // blue
       { { RSK_STARTING_SCALE, 2 }, // golden scale - the max tier, i.e. "all diving scales"
         { RSK_STARTING_IRON_BOOTS, 1 },
         { RSK_STARTING_ZORA_TUNIC, 1 } },
@@ -595,7 +596,6 @@ static const SageDefinition sSageDefinitions[] = {
       RO_AGE_ADULT,
       ENTR_GRAVEYARD_ENTRANCE,
       RR_THE_GRAVEYARD,
-      { 130, 60, 170 }, // purple
       { { RSK_STARTING_BUNNY_HOOD, 1 },
         { RSK_STARTING_HOOKSHOT, 1 },
         { RSK_STARTING_LENS_OF_TRUTH, 1 },
@@ -627,7 +627,6 @@ static const SageDefinition sSageDefinitions[] = {
       RO_AGE_ADULT,
       ENTR_GERUDOS_FORTRESS_GATE_EXIT,
       RR_GF_OUTSIDE_GATE,
-      { 235, 190, 20 }, // yellow
       { { RSK_STARTING_HOVER_BOOTS, 1 },
         { RSK_STARTING_GERUDO_CARD, 1 },
         { RSK_STARTING_MIRROR_SHIELD, 1 } },
@@ -669,7 +668,6 @@ static const SageDefinition sSageDefinitions[] = {
       RO_AGE_CHILD,
       ENTR_CASTLE_COURTYARD_ZELDA_0,
       RR_HC_GARDEN,
-      { 235, 235, 235 }, // white
       { { RSK_STARTING_FARORES_WIND, 1 },
         { RSK_STARTING_NAYRUS_LOVE, 1 },
         { RSK_STARTING_DINS_FIRE, 1 },
@@ -756,16 +754,6 @@ extern "C" uint8_t Randomizer_GetSageStartingAge() {
 extern "C" uint16_t Randomizer_GetSageHomeRegion() {
     const SageDefinition* def = GetSelectedSageDefinition();
     return def == nullptr ? 0 : def->homeRegion;
-}
-
-extern "C" void Randomizer_GetSageTunicColor(uint8_t* r, uint8_t* g, uint8_t* b) {
-    const SageDefinition* def = GetSelectedSageDefinition();
-    if (def == nullptr) {
-        return;
-    }
-    *r = def->tunic[0];
-    *g = def->tunic[1];
-    *b = def->tunic[2];
 }
 
 // Ganon's Curse: see savefile.h - the single source of truth for each sage's fixed home-base
