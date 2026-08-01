@@ -32,6 +32,7 @@
 #include "variables.h"
 #include "soh/Enhancements/GanonsCurse/GanonsCurseSongMagic.h"
 #include "soh/Enhancements/GanonsCurse/GanonsCurseRoomAoe.h"
+#include "soh/Enhancements/game-interactor/GameInteractor.h"
 #include "soh/Enhancements/game-interactor/GameInteractor_Hooks.h"
 #include "overlays/actors/ovl_Obj_Syokudai/z_obj_syokudai.h"
 
@@ -46,6 +47,26 @@ constexpr s32 STORMS_RAIN_FRAMES = 20 * 60 * 3;
 
 s32 sRainFramesRemaining = 0;
 s32 sRefillAccumulator = 0;
+bool sStormActive = false;
+s8 sRainRoomNum = -1;
+
+// Vanilla's own Song of Storms rain is a brief flourish that fades long before three minutes are
+// up, which left the refill running with no sign it was happening. Hold the storm on for the whole
+// duration instead, so the rain IS the buff's indicator. Only ever turned off if this turned it on.
+void SetStorm(bool active) {
+    if (sStormActive == active) {
+        return;
+    }
+    sStormActive = active;
+    GameInteractor::RawAction::SetWeatherStorm(active);
+}
+
+void StopRain() {
+    sRainFramesRemaining = 0;
+    sRefillAccumulator = 0;
+    sRainRoomNum = -1;
+    SetStorm(false);
+}
 
 void DouseTorch(Actor* actor) {
     if (actor->id != ACTOR_OBJ_SYOKUDAI) {
@@ -78,6 +99,8 @@ void GanonsCurseSongOfStormsPlayed() {
         // second refill on top, matching how Epona's Song refreshes rather than compounds.
         sRainFramesRemaining = STORMS_RAIN_FRAMES;
         sRefillAccumulator = 0;
+        sRainRoomNum = gPlayState->roomCtx.curRoom.num;
+        SetStorm(true);
     });
 }
 
@@ -86,11 +109,23 @@ void GanonsCurseSongOfStormsFrameUpdate() {
         return;
     }
     if (!GameInteractor::IsSaveLoaded(true)) {
-        sRainFramesRemaining = 0;
+        StopRain();
+        return;
+    }
+
+    // Doors between rooms of the same dungeon are NOT scene transitions - the scene stays loaded and
+    // only roomCtx swaps - so OnSceneInit alone let the rain follow the player through them. There
+    // is no room-change hook, so the room number is polled instead.
+    if (gPlayState->roomCtx.curRoom.num != sRainRoomNum) {
+        StopRain();
         return;
     }
 
     sRainFramesRemaining--;
+    if (sRainFramesRemaining <= 0) {
+        StopRain();
+        return;
+    }
 
     // Don't fight the magic meter's own state machine - only top up from a settled idle state.
     if (gSaveContext.magicState != MAGIC_STATE_IDLE) {
@@ -112,10 +147,15 @@ void GanonsCurseSongOfStormsFrameUpdate() {
 
 // The rain is a room-scoped effect, so it ends at the room's edge - walking through any loading
 // door or zone stops it. This is the deliberate opposite of Epona's Song, whose buff was built to
-// survive transitions.
+// survive transitions. Scene changes are caught here; room changes within one scene are caught by
+// the room-number poll in the frame update, since they never reach this hook.
 void GanonsCurseSongOfStormsOnSceneInit(int16_t sceneNum) {
+    // The storm belongs to the scene being left, which is already gone - just drop the state rather
+    // than calling into envCtx for a PlayState that is mid-reload.
     sRainFramesRemaining = 0;
     sRefillAccumulator = 0;
+    sRainRoomNum = -1;
+    sStormActive = false;
 }
 
 } // namespace
