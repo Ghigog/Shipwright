@@ -1,6 +1,10 @@
 /**
  * Ganon's Curse - Phase 6: Sun's Song lights every unlit torch in the room.
  *
+ * Two effects. The torch half is here; the temporary-heart half lives in GanonsCurseTempHearts.cpp
+ * (its health bookkeeping runs every frame and has to be reachable from SaveManager and
+ * z_lifemeter.c, neither of which has any business knowing about a song).
+ *
  * docs/item-ability-overhaul.md: "lights all unlit torches in the room, burns anything
  * flammable." This file covers the torch half. The "burns anything flammable" half is not built
  * yet - there's no generic flammable-obstacle actor in this codebase to hook into (checked: no
@@ -31,6 +35,7 @@
 #include "variables.h"
 #include "soh/Enhancements/GanonsCurse/GanonsCurseSongMagic.h"
 #include "soh/Enhancements/GanonsCurse/GanonsCurseRoomAoe.h"
+#include "soh/Enhancements/GanonsCurse/GanonsCurseTempHearts.h"
 #include "soh/Enhancements/game-interactor/GameInteractor_Hooks.h"
 #include "overlays/actors/ovl_Obj_Syokudai/z_obj_syokudai.h"
 
@@ -60,8 +65,10 @@ void GanonsCurseSunsSongPlayed() {
         return;
     }
 
-    GanonsCurseRequestSongMagic(SUNS_SONG_MAGIC_COST,
-                               []() { GanonsCurseForEachActorInRoom(gPlayState, ACTORCAT_PROP, LightTorch); });
+    GanonsCurseRequestSongMagic(SUNS_SONG_MAGIC_COST, []() {
+        GanonsCurseForEachActorInRoom(gPlayState, ACTORCAT_PROP, LightTorch);
+        GanonsCurseGrantTempHearts();
+    });
 }
 
 } // namespace

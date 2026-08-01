@@ -9,6 +9,7 @@
 #include "Enhancements/randomizer/hint.h"
 #include "Enhancements/randomizer/item.h"
 #include "soh/Enhancements/randomizer/settings.h"
+#include "soh/Enhancements/GanonsCurse/GanonsCurseTempHearts.h"
 #include "ResourceManagerHelpers.h"
 
 #include "z64.h"
@@ -1241,6 +1242,9 @@ void SaveManager::SaveSection(int fileNum, int sectionID, bool threaded) {
 }
 
 void SaveManager::SaveFile(int fileNum) {
+    // Ganon's Curse: Sun's Song's temporary hearts must never reach the save file, so they are
+    // dropped here - before SaveSection snapshots gSaveContext. Saving genuinely ends that buff.
+    GanonsCurseStripTempHearts();
     SaveSection(fileNum, SECTION_ID_BASE, true);
 }
 

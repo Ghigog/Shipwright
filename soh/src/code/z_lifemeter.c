@@ -4,6 +4,7 @@
 #include "soh/OTRGlobals.h"
 #include "soh/Enhancements/cosmetics/cosmeticsTypes.h"
 #include "soh/Enhancements/game-interactor/GameInteractor_Hooks.h"
+#include "soh/Enhancements/GanonsCurse/GanonsCurseTempHearts.h"
 
 s16 Top_LM_Margin = 0;
 s16 Left_LM_Margin = 0;
@@ -401,6 +402,10 @@ void HealthMeter_Draw(PlayState* play) {
     s32 curCombineModeSet = 0;
     u8* curBgImgLoaded = NULL;
     s32 ddHeartCountMinusOne = gSaveContext.isDoubleDefenseAcquired ? totalHeartCount - 1 : -1;
+    // Ganon's Curse: Sun's Song's temporary hearts are the topmost filled hearts, drawn in the
+    // magic meter's colour so they read as magic-bought rather than earned. -1 when none are held.
+    s32 tempHeartStart = GanonsCurseTempHeartStartIndex();
+    Color_RGB8 tempHeartColor = CVarGetColor24(CVAR_COSMETIC("Consumable.Magic"), (Color_RGB8){ 0, 200, 0 });
     f32 HeartsScale = 0.7f;
     if (CVarGetInteger(CVAR_COSMETIC("HUD.HeartsCount.PosType"), 0) != ORIGINAL_LOCATION) {
         HeartsScale = CVarGetFloat(CVAR_COSMETIC("HUD.HeartsCount.Scale"), 0.7f);
@@ -487,6 +492,20 @@ void HealthMeter_Draw(PlayState* play) {
                                     interfaceCtx->heartsPrimB[1], interfaceCtx->healthAlpha);
                     gDPSetEnvColor(OVERLAY_DISP++, interfaceCtx->heartsEnvR[1], interfaceCtx->heartsEnvG[1],
                                    interfaceCtx->heartsEnvB[1], 255);
+                }
+            }
+
+            // Ganon's Curse: recolour the temporary hearts, overriding whichever set was chosen
+            // above. Keyed off filled position rather than a fixed index, so the green hearts are
+            // always the ones about to be lost - which is also the order damage consumes them in.
+            if ((tempHeartStart >= 0) && (i >= tempHeartStart) && (i <= fullHeartCount)) {
+                if (curColorSet != 8) {
+                    curColorSet = 8;
+                    gDPPipeSync(OVERLAY_DISP++);
+                    gDPSetPrimColor(OVERLAY_DISP++, 0, 0, tempHeartColor.r, tempHeartColor.g, tempHeartColor.b,
+                                    interfaceCtx->healthAlpha);
+                    gDPSetEnvColor(OVERLAY_DISP++, tempHeartColor.r / 3, tempHeartColor.g / 3, tempHeartColor.b / 3,
+                                   255);
                 }
             }
 
