@@ -526,12 +526,27 @@ static const SageDefinition sSageDefinitions[] = {
     // where the Sage of Forest belongs, rather than at the maze entrance. WarpSong pool, and warp
     // songs aren't shuffled under this preset. The meadow itself needs no unlocking: ClosedForest
     // is already RO_CLOSED_FOREST_OFF in the seed preset, so Mido never blocks the way in.
+    // Fairy Ocarina, not Ocarina of Time (RO_STARTING_OCARINA_FAIRY vs _TIME - no mechanical
+    // difference, either lets you play any known song, see savefile.cpp's INV_CONTENT(ITEM_OCARINA_FAIRY)
+    // assignment above) - vanilla has Saria giving Link the Fairy Ocarina specifically, and Zelda's
+    // kit already uses Ocarina of Time (her family's), so this keeps the two distinct rather than
+    // duplicating Zelda's choice. She now also starts knowing her own song, matching Zelda's kit
+    // pattern of "signature-song sage carries the ocarina and the song together" - added 2026-08-01
+    // once Saria's Song got a real gameplay effect worth having from the start. Magic meter 1
+    // added alongside it - without one, casting the song (24 magic under the Phase 6 system-wide
+    // song cost) would be dead in the water from minute one, same class of gap as Rauru's Light
+    // Arrows and Impa's Lens of Truth before their kits got the same fix (see "Magic is part of a
+    // kit, not an extra" in characters.md).
     { RO_SAGE_SARIA,
       RO_AGE_CHILD,
       ENTR_SACRED_FOREST_MEADOW_WARP_PAD,
       RR_SACRED_FOREST_MEADOW,
-      { { RSK_STARTING_STICKS, 1 }, { RSK_STARTING_NUTS, 1 } },
-      2,
+      { { RSK_STARTING_STICKS, 1 },
+        { RSK_STARTING_NUTS, 1 },
+        { RSK_STARTING_OCARINA, RO_STARTING_OCARINA_FAIRY },
+        { RSK_STARTING_SARIAS_SONG, 1 },
+        { RSK_STARTING_MAGIC_METER, 1 } },
+      5,
       {},
       0,
       {},
