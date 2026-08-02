@@ -2292,6 +2292,25 @@ typedef enum {
     // true
     // ```
     // #### `args`
+    // - `Actor*` (the guard doing the looking)
+    // Whether a guard should spot the player. Fired from every guard-alert check in the game:
+    // En_Heishi1 (castle courtyard hedge guards, both the searchlight catch and the night guard),
+    // En_Heishi3 (courtyard and castle-front sentries), En_Ge1 and En_Ge2 (Gerudo Fortress, the
+    // latter being the one that actually captures and jails). Returning false means "not seen".
+    //
+    // Placed on the vision checks only, never inside the capture routines themselves, so that
+    // attacking a guard still gets you caught however invisible you are, and a capture already
+    // under way still plays out. There is no shared detection code in vanilla - every guard inlines
+    // its own cone-and-distance test - so this hook is the choke point that does not otherwise
+    // exist. Note En_Heishi2 and En_Heishi4 are NOT guards in this sense despite the name: their
+    // distance checks are Actor_OfferTalk* conversation ranges, not alerts.
+    VB_GUARD_DETECT_PLAYER,
+
+    // #### `result`
+    // ```c
+    // true
+    // ```
+    // #### `args`
     // - `int32_t` (magicArrowType)
     // Whether firing a magic arrow should cost magic, asked from ArrowCycle.cpp - which defers the
     // deduction from draw time (VB_PLAYER_ARROW_MAGIC_CONSUMPTION, which it answers itself) to the

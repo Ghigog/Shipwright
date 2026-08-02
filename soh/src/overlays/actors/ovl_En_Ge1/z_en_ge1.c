@@ -265,7 +265,10 @@ void EnGe1_SpotPlayer(EnGe1* this, PlayState* play) {
 void EnGe1_WatchForPlayerFrontOnly(EnGe1* this, PlayState* play) {
     s16 angleDiff = this->actor.yawTowardsPlayer - this->actor.shape.rot.y;
 
-    if ((ABS(angleDiff) <= 0x4300) && (this->actor.xzDistToPlayer < 100.0f)) {
+    // The AC_HIT branch below is deliberately left ungated - attacking a guard gets you caught
+    // however unseen you are.
+    if ((ABS(angleDiff) <= 0x4300) && (this->actor.xzDistToPlayer < 100.0f) &&
+        GameInteractor_Should(VB_GUARD_DETECT_PLAYER, true, &this->actor)) {
         EnGe1_SpotPlayer(this, play);
     }
 
@@ -308,7 +311,10 @@ void EnGe1_SetNormalText(EnGe1* this, PlayState* play) {
 void EnGe1_WatchForAndSensePlayer(EnGe1* this, PlayState* play) {
     s16 angleDiff = this->actor.yawTowardsPlayer - this->actor.shape.rot.y;
 
-    if ((this->actor.xzDistToPlayer < 50.0f) || ((ABS(angleDiff) <= 0x4300) && (this->actor.xzDistToPlayer < 400.0f))) {
+    // AC_HIT below stays ungated on purpose, same as EnGe1_WatchForPlayerFrontOnly.
+    if (((this->actor.xzDistToPlayer < 50.0f) ||
+         ((ABS(angleDiff) <= 0x4300) && (this->actor.xzDistToPlayer < 400.0f))) &&
+        GameInteractor_Should(VB_GUARD_DETECT_PLAYER, true, &this->actor)) {
         EnGe1_SpotPlayer(this, play);
     }
 

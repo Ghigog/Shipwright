@@ -186,6 +186,13 @@ void EnGe2_Destroy(Actor* thisx, PlayState* play) {
 s32 Ge2_DetectPlayerInAction(PlayState* play, EnGe2* this) {
     f32 visionScale;
 
+    // Ganon's Curse: both of this actor's detection routines answer here and in
+    // Ge2_DetectPlayerInUpdate, which together are every way a Gerudo Fortress guard notices the
+    // player. The capture routine itself is untouched, so being hit still gives you away.
+    if (!GameInteractor_Should(VB_GUARD_DETECT_PLAYER, true, &this->actor)) {
+        return 0;
+    }
+
     visionScale = (!IS_DAY ? 0.75f : 1.5f);
 
     if ((250.0f * visionScale) < this->actor.xzDistToPlayer) {
@@ -207,6 +214,10 @@ s32 Ge2_DetectPlayerInUpdate(PlayState* play, EnGe2* this, Vec3f* pos, s16 yRot,
     Vec3f posResult;
     CollisionPoly* outPoly;
     f32 visionScale;
+
+    if (!GameInteractor_Should(VB_GUARD_DETECT_PLAYER, true, &this->actor)) {
+        return 0;
+    }
 
     visionScale = (!IS_DAY ? 0.75f : 1.5f);
 

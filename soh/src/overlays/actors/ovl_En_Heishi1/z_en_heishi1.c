@@ -398,7 +398,7 @@ void EnHeishi1_SetupWaitNight(EnHeishi1* this, PlayState* play) {
 void EnHeishi1_WaitNight(EnHeishi1* this, PlayState* play) {
     SkelAnime_Update(&this->skelAnime);
 
-    if (this->actor.xzDistToPlayer < 100.0f) {
+    if ((this->actor.xzDistToPlayer < 100.0f) && GameInteractor_Should(VB_GUARD_DETECT_PLAYER, true, &this->actor)) {
         Message_StartTextbox(play, 0x702D, &this->actor);
         Sfx_PlaySfxCentered(NA_SE_SY_FOUND);
         osSyncPrintf(VT_FGCOL(GREEN) "☆☆☆☆☆ 発見！ ☆☆☆☆☆ \n" VT_RST); // "Discovered!"
@@ -469,6 +469,13 @@ void EnHeishi1_Update(Actor* thisx, PlayState* play) {
                             if (player->actor.velocity.y > -4.0f) {
                                 this->linkDetected = true;
                             }
+                        }
+
+                        // Ganon's Curse: clear the latched detection rather than only skipping the
+                        // catch below - the search-ball effect writes this flag by pointer, so
+                        // leaving it set would have the guard pounce the instant the buff expires.
+                        if (this->linkDetected && !GameInteractor_Should(VB_GUARD_DETECT_PLAYER, true, &this->actor)) {
+                            this->linkDetected = false;
                         }
 
                         if (this->linkDetected) {

@@ -8,6 +8,7 @@
 #include "objects/object_sd/object_sd.h"
 #include "vt.h"
 #include "soh/ResourceManagerHelpers.h"
+#include "soh/Enhancements/game-interactor/GameInteractor_Hooks.h"
 
 #define FLAGS 0
 
@@ -132,7 +133,8 @@ void EnHeishi3_StandSentinelInGrounds(EnHeishi3* this, PlayState* play) {
         }
     }
     if ((this->actor.xzDistToPlayer < sightRange) &&
-        (fabsf(player->actor.world.pos.y - this->actor.world.pos.y) < 100.0f) && (sPlayerCaught == 0)) {
+        (fabsf(player->actor.world.pos.y - this->actor.world.pos.y) < 100.0f) && (sPlayerCaught == 0) &&
+        GameInteractor_Should(VB_GUARD_DETECT_PLAYER, true, &this->actor)) {
         sPlayerCaught = 1;
         Message_StartTextbox(play, 0x702D, &this->actor);
         Sfx_PlaySfxCentered(NA_SE_SY_FOUND);
@@ -151,7 +153,8 @@ void EnHeishi3_StandSentinelInCastle(EnHeishi3* this, PlayState* play) {
     SkelAnime_Update(&this->skelAnime);
     if ((player->actor.world.pos.x < -190.0f) && (player->actor.world.pos.x > -380.0f) &&
         (fabsf(player->actor.world.pos.y - this->actor.world.pos.y) < 100.0f) &&
-        (player->actor.world.pos.z < 1020.0f) && (player->actor.world.pos.z > 700.0f) && (sPlayerCaught == 0)) {
+        (player->actor.world.pos.z < 1020.0f) && (player->actor.world.pos.z > 700.0f) && (sPlayerCaught == 0) &&
+        GameInteractor_Should(VB_GUARD_DETECT_PLAYER, true, &this->actor)) {
         if (this->unk_278 == 1) {
             if ((player->actor.world.pos.x < -290.0f)) {
                 return;
