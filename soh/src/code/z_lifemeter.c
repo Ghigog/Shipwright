@@ -363,6 +363,10 @@ s16 getHealthMeterXOffset() {
     }
 }
 
+// Returns the Y coordinate *below* the hearts row, for other elements (the magic bar's
+// ANCHOR_TO_LIFE_METER mode) to anchor beneath. The `+ HeartsScale * 15` clears one row's height and
+// belongs only to that use - it is not part of the hearts' own position. See getHealthMeterOwnYOffset
+// for that.
 s16 getHealthMeterYOffset() {
     s16 Y_Margins;
     if (CVarGetInteger(CVAR_COSMETIC("HUD.Hearts.UseMargins"), 0) != 0)
@@ -374,6 +378,24 @@ s16 getHealthMeterYOffset() {
     if (CVarGetInteger(CVAR_COSMETIC("HUD.HeartsCount.PosType"), 0) != ORIGINAL_LOCATION) {
         HeartsScale = CVarGetFloat(CVAR_COSMETIC("HUD.HeartsCount.Scale"), 0.7f);
         return CVarGetInteger(CVAR_COSMETIC("HUD.HeartsCount.PosY"), 0) + Y_Margins + (HeartsScale * 15);
+    } else {
+        return 0.0f + Y_Margins;
+    }
+}
+
+// The hearts' own draw Y. HealthMeter_Draw used to call getHealthMeterYOffset() for this, which
+// silently added a heart-row's height (~10.5px at the default scale) meant for elements anchored
+// below the hearts, not the hearts themselves - every custom hearts position rendered that much
+// lower than its configured PosY.
+s16 getHealthMeterOwnYOffset() {
+    s16 Y_Margins;
+    if (CVarGetInteger(CVAR_COSMETIC("HUD.Hearts.UseMargins"), 0) != 0)
+        Y_Margins = (Top_LM_Margin * -1);
+    else
+        Y_Margins = 0;
+
+    if (CVarGetInteger(CVAR_COSMETIC("HUD.HeartsCount.PosType"), 0) != ORIGINAL_LOCATION) {
+        return CVarGetInteger(CVAR_COSMETIC("HUD.HeartsCount.PosY"), 0) + Y_Margins;
     } else {
         return 0.0f + Y_Margins;
     }
@@ -450,7 +472,7 @@ void HealthMeter_Draw(PlayState* play) {
         }
     */
     offsetX = PosX_anchor = getHealthMeterXOffset();
-    offsetY = getHealthMeterYOffset();
+    offsetY = getHealthMeterOwnYOffset();
 
     for (i = 0; i < totalHeartCount; i++) {
         FrameInterpolation_RecordOpenChild("HealthMeter Heart", i);

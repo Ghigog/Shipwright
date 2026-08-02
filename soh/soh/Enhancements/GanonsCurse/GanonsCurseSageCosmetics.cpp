@@ -57,6 +57,9 @@
 #include "soh/cvar_prefixes.h"
 #include "soh/Enhancements/game-interactor/GameInteractor.h"
 #include "soh/Enhancements/cosmetics/CosmeticsEditor.h"
+// PosType (ORIGINAL_LOCATION / ANCHOR_LEFT / ... / ANCHOR_TO_LIFE_METER), used by the HUD layout
+// table below. Not pulled in by CosmeticsEditor.h.
+#include "soh/Enhancements/cosmetics/cosmeticsTypes.h"
 #include "soh/Enhancements/randomizer/savefile.h"
 #include "soh/Enhancements/GanonsCurse/GanonsCurseSageCosmetics.h"
 
@@ -70,6 +73,7 @@
 #include <libultraship/bridge.h>
 #include <algorithm>
 #include <cmath>
+#include <string>
 
 extern "C" uint8_t Randomizer_GetSettingValue(RandomizerSettingKey randoSettingKey);
 
@@ -490,6 +494,531 @@ void ApplyHudButtons(const SagePalette& p) {
     COSMETIC_CLEAR("HUD.CRightButton");
 }
 
+// ── HUD layout ──────────────────────────────────────────────────────────────────────────────
+/**
+ * Each sage rearranges the HUD. All of it goes through SoH's existing anchor system - PosType
+ * picks an edge to measure from, PosX/PosY give the offset - so there is no new drawing code here,
+ * only CVars.
+ *
+ * Three things about that system are not obvious and all three cost a wrong guess:
+ *
+ *  1. **The life meter is driven by `HUD.HeartsCount`, not `HUD.Hearts`.** The latter is color and
+ *     row length only. Worse, the two are mixed within one element: position reads
+ *     `HUD.HeartsCount.PosType/PosX/PosY` while the margin toggle reads `HUD.Hearts.UseMargins`
+ *     (z_lifemeter.c:340-378).
+ *
+ *  2. **Hearts have a +70 baked into their X.** `getHealthMeterXOffset` returns `PosX + 70` under
+ *     every anchor mode, so PosX = -70 is flush against the left edge, not 0. The editor's own
+ *     slider bottoms out at -125, which is how you can tell negative values are the intended
+ *     domain rather than a hack.
+ *
+ *  3. **`ANCHOR_TO_LIFE_METER` (5) is magic-bar-only.** `getHealthMeterXOffset` handles PosTypes
+ *     0-4 and falls off the end of the function with no return for 5. The editor never offers it
+ *     for hearts so nobody has hit it, but we write these CVars directly and could. Never set 5 on
+ *     anything but the magic bar.
+ *
+ * X values below are in the 320x240 virtual HUD space. Under ANCHOR_LEFT/ANCHOR_RIGHT they are
+ * measured from that edge and stay put as the window widens; under ANCHOR_NONE they are absolute,
+ * and because the projection is centred, X = 160 is the true horizontal centre at *every* aspect
+ * ratio - which is what makes the centred layouts below work in widescreen. Y is always absolute.
+ *
+ * These are starting values. They are meant to be tuned by eye in game, which is exactly why they
+ * are a flat table rather than something clever.
+ */
+struct HudPos {
+    int32_t type;
+    int32_t x;
+    int32_t y;
+};
+
+// The vanilla item-button cluster's X positions, measured from the right edge. Reused verbatim
+// wherever a sage keeps the buttons on the right, so "same order" costs nothing to preserve.
+constexpr int32_t kRightB = 160;
+constexpr int32_t kRightA = 186;
+constexpr int32_t kRightCLeft = 227;
+constexpr int32_t kRightCDown = 249;
+constexpr int32_t kRightCUp = 254;
+constexpr int32_t kRightCRight = 271;
+constexpr int32_t kRightDpad = 271;
+
+// The same cluster translated to hug the left edge, preserving the internal left-to-right order so
+// C-left stays left of C-right. Mirroring instead would have swapped them, which reads as a bug
+// when the labels imply direction.
+constexpr int32_t kLeftB = 10;
+constexpr int32_t kLeftA = 36;
+constexpr int32_t kLeftCLeft = 77;
+constexpr int32_t kLeftCDown = 99;
+constexpr int32_t kLeftCUp = 104;
+constexpr int32_t kLeftCRight = 121;
+constexpr int32_t kLeftDpad = 121;
+
+// Ruto's D-pad, moved off kLeftDpad (2026-08-01, requested): kLeftDpad shares C-right's X, which is
+// the same "D-pad stacked onto the C-buttons" look Rauru's flip fixed. This gives Ruto's D-pad its
+// own column near the A/B buttons on the far left instead. Not folded into kLeftDpad itself because
+// Nabooru still used that constant at the time.
+constexpr int32_t kRutoDpadX = 8;
+
+// Ruto's buttons needed to move up to clear the rupee counter (2026-08-01, requested), but the Y
+// values (kBottomB etc.) are shared with Saria, who didn't ask for this and was reported as "nearly
+// there" the same round - moving the shared constant would have re-broken her. Applied as a
+// per-element offset in Ruto's row instead of a new set of six constants.
+constexpr int32_t kRutoButtonLift = 15;
+
+// Nabooru's D-pad, same fix as Ruto's above but a round later - her post-redesign D-pad reused
+// kLeftDpad (=kLeftCRight) again, same "stacked with C-buttons" bug, reported as "put the dpad on
+// the left side" (it was technically ANCHOR_LEFT already, just visually glued to the C-cluster
+// rather than reading as its own far-left column).
+constexpr int32_t kNabooruDpadX = 8;
+
+// Rauru's own arrangement: Impa's top-right cluster reflected about the screen's vertical centre,
+// so the vanilla left-to-right reading order reverses (D-pad and C-buttons at the far left, A/B
+// nearest the hearts instead of nearest the edge).
+//
+// Fourth playtest (2026-08-01): the previous derivation used `u = 320 - v` (v = Impa's ANCHOR_RIGHT
+// value) and rendered wrong - A and B drew as two overlapping circles and the whole cluster sat ~30
+// units right of where it should, leaving a gap between it and the D-pad. That formula mirrors each
+// element's *anchor point*, but an anchor point is not the element: what has to be reflected is the
+// on-screen box, and no two of these elements place their box at the anchor the same way. From the
+// draw code, each renders at [P + a, P + a + w] where P is the resolved position:
+//
+//   B        a=0   w=30   plain rect, gButtonBackgroundTex at 32 * 0.95 (z_parameter.c:4164)
+//   A        a=8   w=29   matrix draw: Matrix_Translate(-137 + P), quad -15..+14 (z_parameter.c:4965,
+//                         Interface_InitVertices) - model x maps to virtual x + 160, hence the +8
+//   C-l/d/r  a=0   w=27   plain rects, R_ITEM_BTN_WIDTH(1..3) (z_construct.c:569-572)
+//   C-up     a=-7  w=32   the Navi *label* is the widest part, drawn at P - LabelX_Navi(7) and 32
+//                         wide; the button icon itself is only P..P+16 (z_parameter.c:4248-4263)
+//   D-pad    a=0   w=32   plain rect, gDPadTex (z_parameter.c:5632)
+//
+// Reflecting the box rather than the anchor gives `u = 320 - v - 2a - w`, which reproduces every
+// one of Impa's spans exactly, measured from the opposite edge:
+//   B    160 ->130 (130..160)   A     186 ->89 (97..126)   C-up   254 ->48 (41..73)
+//   C-l  227 ->66  (66..93)     C-d   249 ->44 (44..71)    C-r    271 ->22 (22..49)
+//   Dpad 271 ->17  (17..49)
+// The old A(142..171)/B(160..190) overlap disappears because A's a=8 is now accounted for on both
+// sides of the reflection instead of shifting A 16 units into B.
+//
+// A literal reflection swaps left and right, though, which would put C-right left of C-left - the
+// same bug fixed two rounds ago. So C-left and C-right's *derived* values are swapped back once
+// more, same reasoning as before: their names carry direction, so their relative order must survive
+// even though every other element's does get mirrored.
+constexpr int32_t kRauruDpadX = 17;
+constexpr int32_t kRauruCLeftX = 22;
+constexpr int32_t kRauruCDownX = 44;
+constexpr int32_t kRauruCUpX = 48;
+constexpr int32_t kRauruCRightX = 66;
+constexpr int32_t kRauruAX = 89;
+constexpr int32_t kRauruBX = 130;
+
+// Vanilla cluster Y, and the same shifted to the bottom of the screen.
+constexpr int32_t kTopB = 17, kTopA = 9, kTopCLeft = 18, kTopCDown = 34, kTopCUp = 16, kTopCRight = 18;
+// Shifted down another 15 (2026-08-01, requested for Saria - "plenty of unused space" below them).
+// Shared with Ruto, which wasn't the one asked about, but the request was about empty space
+// specifically at the bottom of the screen, which applies equally to both.
+constexpr int32_t kBottomB = 187, kBottomA = 179, kBottomCLeft = 188, kBottomCDown = 204, kBottomCUp = 186,
+                  kBottomCRight = 188;
+// Impa and Rauru stack hearts, magic, buttons and D-pad in one corner, so their buttons drop below
+// the meters rather than sitting on top of them.
+//
+// Found in playtest (2026-08-01): the old values (B=62, A=54, CUp=61, CLeft=63, CRight=63, CDown=79)
+// didn't actually clear the magic bar. ANCHOR_TO_LIFE_METER only knows about the hearts' own row
+// height (getHealthMeterYOffset), not where any button is placed, so nothing kept them apart. Pushed
+// down once to clear it, then pushed back up once more on request ("bunch everything up").
+//
+// Reverted (2026-08-01): a further push-up round and the HUD scale halving that went with it were
+// both rolled back on request ("it was better before" / "undo the 50% size reduction") - back to
+// the values from the bunch-up round, computed against the *default* HUD.HeartsCount.Scale (0.7),
+// not the halved 0.35 the third round assumed.
+//
+// Pushed up again (2026-08-01, "again I think we can push everything up") - both sages asked for
+// this in the same round they asked for the D-pad to come back down, so the two moved apart
+// slightly rather than staying locked together like the earlier rounds.
+constexpr int32_t kStackedA = 56, kStackedCUp = 63, kStackedB = 64, kStackedCLeft = 65, kStackedCRight = 65,
+                  kStackedCDown = 81;
+
+// Rauru and Impa's magic PosY, and their shared D-pad Y.
+// Magic PosY -16: R_MAGIC_BAR_SMALL_Y(34) - 2 - 16 + getHealthMeterYOffset(8 + 0.7*15 = 18.5) = 34.5,
+// bottom edge ~50.5, clear of kStackedA(56) above.
+//
+// D-pad Y unified (2026-08-01, requested): Rauru previously had its own separate D-pad Y; Impa's
+// was reported as "in the right place" at the time, so Rauru took Impa's value instead of tracking
+// its own. Both then asked for the D-pad to come down again this round (80 -> 100) - kept shared.
+constexpr int32_t kStackedMagicPosY = -16;
+constexpr int32_t kImpaRauruDpadY = 100;
+
+// Impa and Rauru's hearts, pushed up from 8 (2026-08-01, requested: "the hearts are a bit too far
+// down... maybe there's a margin in the way"). It wasn't a margin - UseMargins is explicitly 0 for
+// this element in ApplyHudLayout. It's that the hearts carry a baked-in vertical offset of their
+// own, the mirror of the +70 baked into their X: HealthMeter_Draw positions each heart with
+// `(-94 + offsetY) * -1` against a frame whose centre is 120 (z_lifemeter.c:626), so the drawn
+// centre lands at PosY + 26, not PosY. PosY = 8 therefore drew them at 34 with the row's top edge
+// at ~26 - a quarter of the way down the HUD's 240-unit height before the first pixel of heart.
+// -10 puts the centre at 16 and the top edge at ~8.5, a real top margin instead of a hidden one.
+//
+// The magic bar follows automatically (ANCHOR_TO_LIFE_METER reads getHealthMeterYOffset, which is
+// this value + one row's height), so the meter pair moves as a block and their spacing is unchanged.
+// The buttons below deliberately do NOT follow - only the hearts were reported as sitting too low.
+constexpr int32_t kStackedHeartsY = -10;
+
+// Hearts: -62 sits just off the left edge once the +70 is applied; 130 hugs the right, allowing
+// ~110px for a ten-heart row.
+constexpr int32_t kHeartsLeftX = -62;
+constexpr int32_t kHeartsRightX = 130;
+// Zelda only. Changed from 35 (2026-08-01, requested): rather than centre the *current* few hearts
+// (which drifts as the row grows toward its 10-heart max), align the row's left edge with the magic
+// bar's left edge instead - a fixed reference that doesn't get "better" or "worse" centred as hearts
+// are gained. The +70 baked into getHealthMeterXOffset means the hearts' actual drawn start is
+// kHeartsCentreX+70, so to match kMagicCentreX(96): 96-70 = 26.
+constexpr int32_t kHeartsCentreX = 26;
+
+// The bar is a start cap + a magicCapacity-wide fill + an end cap (z_parameter.c:3554-3564), so its
+// on-screen width is `magicCapacity + 16`, not a fixed size. Single magic (capacity 48) is 64px wide
+// and centres at X=128; double magic (capacity 96) is 112px wide and centres at X=104. One static
+// PosX can't be exact for both. Nudged further left after the first in-game look (2026-08-01) - still
+// live-tunable, see docs/sage-cosmetics.md section 9.
+constexpr int32_t kMagicCentreX = 96;
+
+// ANCHOR_LEFT only. Bug found in playtest (2026-08-01): ANCHOR_LEFT and ANCHOR_RIGHT are NOT mirror
+// images of each other the way every other sage's kLeft*/kRight* pairs (which use vanilla-derived
+// values) made it look. OTRGlobals.cpp:2198-2204 -
+//   ANCHOR_LEFT:  screenX = PosX + (160 - 120*aspect)   - PosX grows RIGHTWARD from the left edge.
+//   ANCHOR_RIGHT: screenX = PosX + (120*aspect - 160)   - PosX ALSO grows rightward, just from a
+//                                                          different (rightward-shifted) baseline.
+// A small PosX under ANCHOR_RIGHT does NOT hug the right edge - it lands near screen centre (worked
+// out from the formula: 26 + 120*aspect - 160 is ~146 at a 16:9-ish aspect, i.e. just left of centre
+// X=160). Only a *large* PosX (matching the vanilla-derived kRightB/kRightA/kRightCRight values used
+// elsewhere) actually sits near the right edge. This constant is correct for the three ANCHOR_LEFT
+// elements below (C-up, C-left were reported fine); the three ANCHOR_RIGHT elements need
+// kZeldaRightCornerX instead.
+constexpr int32_t kZeldaCornerX = 26;
+
+// The ANCHOR_RIGHT counterpart - reuses the same value already proven to hug the right edge
+// elsewhere (kRightCRight/kRightDpad).
+constexpr int32_t kZeldaRightCornerX = 271;
+
+// Darunia's magic bar is centred at the *top*, which is also where the vanilla B button lives
+// (X 160). True top-centre and an untouched B button cannot both have that space, so the bar drops
+// below the button row instead of beside it. This is a softer version of the fallback the spec
+// anticipated ("if magic can't go in top centre... anchor beneath it") - it stays centred and
+// clearly top-of-screen, rather than being demoted to hanging off the hearts like everyone else's.
+constexpr int32_t kMagicTopCentreY = 50;
+
+// D-pad above the bottom button cluster rather than below it: below would put its lower two icons
+// past the bottom edge, since the D-pad's own icon offsets spread -8..+24 from this value. Nudged
+// down from 120 (2026-08-01, requested for Ruto). Only Ruto uses this now - Nabooru's redesign
+// (mirror of Darunia) dropped its use of it.
+constexpr int32_t kBottomDpadAbove = 135;
+
+// Ruto's minimap, lifted off vanilla (2026-08-01, requested): with Ruto's hearts moved to Y=195
+// (custom, lower than vanilla's own hearts position), the still-vanilla-positioned overworld map
+// (base Y 164, tall enough to reach into the Y 195+ band) started overlapping them. PosY=-40 lifts
+// it clear without needing the full -140 push Saria's top-right placement uses.
+constexpr HudPos kMinimapRutoLift = { ANCHOR_RIGHT, 0, -40 };
+
+struct SageHudLayout {
+    uint8_t sage;
+    HudPos hearts;
+    HudPos magic;
+    HudPos bButton;
+    HudPos aButton;
+    HudPos cUp;
+    HudPos cDown;
+    HudPos cLeft;
+    HudPos cRight;
+    HudPos dpad;
+    // The map overlay (HUD.Minimap) - two separate draw paths read it: the dungeon room-map
+    // (z_map_exp.c:779-888) AND a full overworld map covering nearly every outdoor scene
+    // (z_map_exp.c:890-1030, missed on first read - it's not dungeon-only the way the first pass
+    // through this file suggested). Left at ORIGINAL_LOCATION for every sage except where requested.
+    HudPos minimap;
+    // Added 2026-08-01 (requested): no sage set HUD.StartButton at all before this, so it sat
+    // wherever the last-loaded config left it. Every row below points it at that sage's own cUp
+    // position - Start (the pause menu) is never on screen at the same time as gameplay HUD/Navi,
+    // so reusing C-up's slot can't collide with anything.
+    HudPos startButton;
+};
+
+// Bug found in playtest (2026-08-01): {ANCHOR_RIGHT, 0, 0} reproduced the vanilla position exactly,
+// which read as "the map hasn't moved." Both draw paths ADD PosX/PosY to a hardcoded vanilla base
+// (R_DGN_MINIMAP_X/Y = 204/140, R_OW_MINIMAP_X/Y = 238/164 - z_construct.c:439-479) instead of
+// treating them as an absolute/edge-relative position the way every other HUD element does, so
+// PosY=0 leaves it at Y=140-164 (still low), not Y=0. PosY=-140 cancels most of that (dungeon lands
+// at Y=0, overworld at Y=24, close enough given the two bases are only 24 apart). Left PosX at 0 -
+// both bases already put it right-of-centre once ANCHOR_RIGHT's real formula is worked through (see
+// kZeldaRightCornerX's comment for that derivation), so X didn't look like the broken half of this.
+// -140 confirmed correct in direction (playtest 2026-08-01) but too far - it now sits flush against
+// the very top with no margin at all. Eased back to -110 (map now sits ~30 lower, i.e. with room
+// above it) per request.
+constexpr HudPos kMinimapTopRight = { ANCHOR_RIGHT, 0, -110 };
+constexpr HudPos kMinimapOriginal = { ORIGINAL_LOCATION, 0, 0 };
+
+// Bug found in playtest (2026-08-01): giving Start the exact same PosX/PosY as C-up still rendered
+// it visibly off, for every sage that had it set explicitly. Root cause found in
+// z_parameter.c:3946-3960 - unlike every other button, the Start button's own draw code subtracts
+// `(Start_BTN_Scale * 13)` from BOTH PosX and PosY before positioning it, with no equivalent
+// subtraction on the C-up side. At the default Start_BTN_Scale (0.75, since ApplyHudScale's halving
+// is reverted - see section 12), that's 0.75*13 = 9.75, rounded to 10. The offsets below carry that
+// +10 as their baseline, so Start lands on C-up rather than ~10px short on both axes.
+//
+// Also fixed: Darunia and Zelda had Start at ORIGINAL_LOCATION to "match" their own ORIGINAL_LOCATION
+// C-up - but ORIGINAL_LOCATION means "this element's own hardcoded vanilla spot", which is NOT the
+// same screen position as another element's ORIGINAL_LOCATION spot. Start's vanilla spot is
+// nowhere near C-up's (confirmed in playtest - "the start menu is all the way over here"). Both now
+// get C-up's real vanilla coordinates (kRightCUp/kTopCUp) explicitly, plus the offset above.
+//
+// Split into separate X and Y offsets (2026-08-01, requested: "a smidge to the left and pushed up...
+// I guess aligning it with C-up is not as easy as I thought"). Landing Start *on* C-up turned out to
+// be the wrong target: the two elements are not the same size. The button icon is 24 wide
+// (32 * 0.75) and does line up with C-up's 16-wide icon under the old symmetric +10, but Start also
+// draws a "Return"/"Save" action label - 49 x 16, centred on the icon (z_parameter.c:4218-4228 with
+// actionVtx[4..7]) - and that label is what the eye actually reads. It is three times C-up's width,
+// so aligning the icons buries the label in the middle of the C-button row, which is what showed up
+// in game.
+//
+// So the offsets below are aimed at the label, not the icon: 10 units left and 16 up from the old
+// value. For a vanilla-position C-cluster that puts the label's box at y ~3.5-19.5, clearing the
+// C-button row (which starts at y 18) instead of sitting across it, and shifts it off C-right's
+// column.
+//
+// One offset serves all seven sages because the cluster's internal geometry is identical for all
+// seven: kStackedA/CUp/B/CLeft/CRight/CDown are exactly kTop* + 47, so Rauru and Impa's cluster is
+// the vanilla cluster translated bodily down the screen, not a tighter one. Start lands the same
+// distance from its C-up everywhere, and the residual overlap (2.75 units into the A button, 3.75
+// into C-up) is the same for every sage. If that ever stops being true, this offset stops being
+// one-size-fits-all - it is only safe while the kStacked*/kTop* delta stays uniform.
+constexpr int32_t kStartOffsetX = 0;
+constexpr int32_t kStartOffsetY = -6;
+constexpr HudPos kRauruStartButton = { ANCHOR_LEFT, kRauruCUpX + kStartOffsetX, kStackedCUp + kStartOffsetY };
+constexpr HudPos kSariaStartButton = { ANCHOR_RIGHT, kRightCUp + kStartOffsetX, kBottomCUp + kStartOffsetY };
+constexpr HudPos kDaruniaStartButton = { ANCHOR_RIGHT, kRightCUp + kStartOffsetX, kTopCUp + kStartOffsetY };
+// Ruto's own Start value is computed inline in its row instead of here, since it has to account
+// for kRutoButtonLift (C-up's Y there is kBottomCUp - kRutoButtonLift, not kBottomCUp itself).
+constexpr HudPos kImpaStartButton = { ANCHOR_RIGHT, kRightCUp + kStartOffsetX, kStackedCUp + kStartOffsetY };
+
+constexpr SageHudLayout kSageHudLayouts[] = {
+    // Rauru - everything top-left, horizontally reversed (2026-08-01): D-pad alone at the far edge,
+    // then the C-buttons, then A/B closest to the hearts - see kRauru* above for why.
+    { RO_SAGE_RAURU,
+      { ANCHOR_LEFT, kHeartsLeftX, kStackedHeartsY },
+      { ANCHOR_TO_LIFE_METER, 0, kStackedMagicPosY },
+      { ANCHOR_LEFT, kRauruBX, kStackedB },
+      { ANCHOR_LEFT, kRauruAX, kStackedA },
+      { ANCHOR_LEFT, kRauruCUpX, kStackedCUp },
+      { ANCHOR_LEFT, kRauruCDownX, kStackedCDown },
+      { ANCHOR_LEFT, kRauruCLeftX, kStackedCLeft },
+      { ANCHOR_LEFT, kRauruCRightX, kStackedCRight },
+      { ANCHOR_LEFT, kRauruDpadX, kImpaRauruDpadY },
+      kMinimapOriginal,
+      kRauruStartButton },
+    // Saria - hearts bottom-left with the magic bar hung off them, buttons bottom-right, D-pad
+    // sitting just above the buttons rather than below as in vanilla. Minimap moved to top-right
+    // (2026-08-01, requested) - nothing else in this layout occupies that corner.
+    //
+    // Magic PosY fixed (2026-08-01) - was rendering off-screen. ANCHOR_TO_LIFE_METER only knows how
+    // to add PosY *below* the hearts; with hearts bottom-anchored at Y=200, the old PosY=14 computed
+    // to Y=256.5 (with HeartsScale halved to 0.35 - see ApplyHudScale), past the 240-tall screen
+    // entirely. A large negative PosY is needed to put the bar above the hearts instead: target
+    // ~Y170, so PosY = 170 - (32 + 200 + 0.35*15) = 170 - 237.25 = -67.
+    { RO_SAGE_SARIA,
+      { ANCHOR_LEFT, kHeartsLeftX, 200 },
+      // Magic and D-pad both nudged down a bit (2026-08-01, requested) - magic PosY -67 -> -50
+      // (bar Y ~175.5 -> ~192.5, still ~7.5px clear of the hearts at 200), D-pad 130 -> 145.
+      { ANCHOR_TO_LIFE_METER, 0, -50 },
+      { ANCHOR_RIGHT, kRightB, kBottomB },
+      { ANCHOR_RIGHT, kRightA, kBottomA },
+      { ANCHOR_RIGHT, kRightCUp, kBottomCUp },
+      { ANCHOR_RIGHT, kRightCDown, kBottomCDown },
+      { ANCHOR_RIGHT, kRightCLeft, kBottomCLeft },
+      { ANCHOR_RIGHT, kRightCRight, kBottomCRight },
+      { ANCHOR_RIGHT, kRightDpad, 145 },
+      kMinimapTopRight,
+      kSariaStartButton },
+    // Darunia - hearts top-left, magic centred at the top, buttons and D-pad left alone.
+    { RO_SAGE_DARUNIA,
+      { ANCHOR_LEFT, kHeartsLeftX, 8 },
+      { ANCHOR_NONE, kMagicCentreX, kMagicTopCentreY },
+      { ORIGINAL_LOCATION, 0, 0 },
+      { ORIGINAL_LOCATION, 0, 0 },
+      { ORIGINAL_LOCATION, 0, 0 },
+      { ORIGINAL_LOCATION, 0, 0 },
+      { ORIGINAL_LOCATION, 0, 0 },
+      { ORIGINAL_LOCATION, 0, 0 },
+      { ORIGINAL_LOCATION, 0, 0 },
+      kMinimapOriginal,
+      kDaruniaStartButton },
+    // Ruto - meters bottom-right, buttons and D-pad bottom-left. D-pad pulled further left
+    // (2026-08-01, requested) - see kRutoDpadX above for why it's not just kLeftDpad. D-pad Y also
+    // nudged down (kBottomDpadAbove), and minimap lifted off vanilla to clear the hearts (both
+    // requested 2026-08-01, see kMinimapRutoLift above).
+    //
+    // Magic PosY fixed for the same off-screen bug as Saria's, worked out separately since Ruto's
+    // hearts sit at a slightly different Y (195, not 200): target ~Y165,
+    // PosY = 165 - (32 + 195 + 0.35*15) = 165 - 232.25 = -67.
+    { RO_SAGE_RUTO,
+      { ANCHOR_RIGHT, kHeartsRightX, 195 },
+      { ANCHOR_TO_LIFE_METER, 0, -67 },
+      { ANCHOR_LEFT, kLeftB, kBottomB - kRutoButtonLift },
+      { ANCHOR_LEFT, kLeftA, kBottomA - kRutoButtonLift },
+      { ANCHOR_LEFT, kLeftCUp, kBottomCUp - kRutoButtonLift },
+      { ANCHOR_LEFT, kLeftCDown, kBottomCDown - kRutoButtonLift },
+      { ANCHOR_LEFT, kLeftCLeft, kBottomCLeft - kRutoButtonLift },
+      { ANCHOR_LEFT, kLeftCRight, kBottomCRight - kRutoButtonLift },
+      { ANCHOR_LEFT, kRutoDpadX, kBottomDpadAbove },
+      kMinimapRutoLift,
+      { ANCHOR_LEFT, kLeftCUp + kStartOffsetX, kBottomCUp - kRutoButtonLift + kStartOffsetY } },
+    // Impa - everything top-right. The most crowded layout of the seven; expect this one to need
+    // the most tuning.
+    { RO_SAGE_IMPA,
+      { ANCHOR_RIGHT, kHeartsRightX, kStackedHeartsY },
+      { ANCHOR_TO_LIFE_METER, 0, kStackedMagicPosY },
+      { ANCHOR_RIGHT, kRightB, kStackedB },
+      { ANCHOR_RIGHT, kRightA, kStackedA },
+      { ANCHOR_RIGHT, kRightCUp, kStackedCUp },
+      { ANCHOR_RIGHT, kRightCDown, kStackedCDown },
+      { ANCHOR_RIGHT, kRightCLeft, kStackedCLeft },
+      { ANCHOR_RIGHT, kRightCRight, kStackedCRight },
+      // Reported as "in the right place" - Rauru's D-pad now shares this same value instead of
+      // tracking its own (kImpaRauruDpadY).
+      { ANCHOR_RIGHT, kRightDpad, kImpaRauruDpadY },
+      kMinimapOriginal,
+      kImpaStartButton },
+    // Nabooru - rebuilt as a mirror of Darunia (2026-08-01), replacing the old bottom-right/
+    // bottom-left layout that turned out to be an accidental duplicate of Ruto's. Darunia is
+    // hearts-left/magic-top-centre/buttons-vanilla-right, so mirroring it means hearts-right (custom
+    // X, same Y as Darunia), magic stays centred (mirroring a centred X doesn't move it), and the
+    // vanilla-right buttons flip to vanilla-left - kLeft* for X (preserves internal L-R order, same
+    // fix as Rauru's C-buttons above) paired with kTop* for Y (the vanilla Y values themselves,
+    // matching Darunia's untouched ORIGINAL_LOCATION Y instead of the bottom-of-screen kBottom* set).
+    { RO_SAGE_NABOORU,
+      { ANCHOR_RIGHT, kHeartsRightX, 8 },
+      { ANCHOR_NONE, kMagicCentreX, kMagicTopCentreY },
+      { ANCHOR_LEFT, kLeftB, kTopB },
+      { ANCHOR_LEFT, kLeftA, kTopA },
+      { ANCHOR_LEFT, kLeftCUp, kTopCUp },
+      { ANCHOR_LEFT, kLeftCDown, kTopCDown },
+      { ANCHOR_LEFT, kLeftCLeft, kTopCLeft },
+      { ANCHOR_LEFT, kLeftCRight, kTopCRight },
+      // Darunia's D-pad is ORIGINAL_LOCATION with no tracked X/Y of its own, so there's no exact
+      // vanilla Y to mirror here - 55 is the vanilla D-pad Y quoted in section 9 of the docs.
+      // Reported as fine, so only the X changed (kLeftDpad -> kNabooruDpadX, see that constant).
+      { ANCHOR_LEFT, kNabooruDpadX, 55 },
+      kMinimapOriginal,
+      { ANCHOR_LEFT, kLeftCUp + kStartOffsetX, kTopCUp + kStartOffsetY } },
+    // Zelda - the most scattered layout: meters centred top and bottom, A and B in the lower
+    // corners.
+    //
+    // C-buttons and D-pad reverted to ORIGINAL_LOCATION (2026-08-01, requested) - the split-corners
+    // design (C-up/C-left top-left, C-down/C-right top-right) was reported as still messy even after
+    // the ANCHOR_RIGHT fix below, so this drops back to vanilla's own default C-button/D-pad
+    // placement rather than continuing to hand-tune four more positions.
+    //
+    // (Kept for history: B, C-down and C-right - the three ANCHOR_RIGHT elements - were using
+    // kZeldaCornerX, which is only correct for ANCHOR_LEFT; under ANCHOR_RIGHT that value put them
+    // near screen *centre*, not the right edge. See kZeldaRightCornerX's comment above for the
+    // formula. Still relevant for B, which keeps its custom position below.)
+    //
+    // A/B: Y 200 -> 175 -> 150 -> 165 - 150 turned out to be too high, 165 is the new middle ground.
+    // Hearts: kHeartsCentreX changed to align the heart row's left edge with the magic bar's, so the
+    // "heart block" is anchored to something that doesn't shift as the row grows - see that
+    // constant's comment above.
+    { RO_SAGE_ZELDA,
+      { ANCHOR_NONE, kHeartsCentreX, 10 },
+      { ANCHOR_NONE, kMagicCentreX, 220 },
+      { ANCHOR_RIGHT, kZeldaRightCornerX, 165 },
+      { ANCHOR_LEFT, kZeldaCornerX, 165 },
+      { ORIGINAL_LOCATION, 0, 0 },
+      { ORIGINAL_LOCATION, 0, 0 },
+      { ORIGINAL_LOCATION, 0, 0 },
+      { ORIGINAL_LOCATION, 0, 0 },
+      { ORIGINAL_LOCATION, 0, 0 },
+      kMinimapOriginal,
+      { ANCHOR_RIGHT, kRightCUp + kStartOffsetX, kTopCUp + kStartOffsetY } },
+};
+
+const SageHudLayout* FindSageHudLayout(uint8_t sage) {
+    for (const SageHudLayout& layout : kSageHudLayouts) {
+        if (layout.sage == sage) {
+            return &layout;
+        }
+    }
+    return nullptr;
+}
+
+void SetHudPos(const char* baseCvar, const HudPos& pos) {
+    std::string posType = std::string(baseCvar) + ".PosType";
+    std::string posX = std::string(baseCvar) + ".PosX";
+    std::string posY = std::string(baseCvar) + ".PosY";
+
+    CVarSetInteger(posType.c_str(), pos.type);
+    if (pos.type == ORIGINAL_LOCATION) {
+        // Offsets are ignored in this mode, but a stale value left behind by the previously loaded
+        // sage would resurface the moment anything switched the mode back.
+        CVarClear(posX.c_str());
+        CVarClear(posY.c_str());
+    } else {
+        CVarSetInteger(posX.c_str(), pos.x);
+        CVarSetInteger(posY.c_str(), pos.y);
+    }
+}
+
+void ApplyHudLayout(const SageHudLayout& layout) {
+    // Position and margins are split across two different CVar roots for the life meter:
+    // HUD.HeartsCount for position, HUD.Hearts for margins. Not a typo.
+    SetHudPos(CVAR_COSMETIC("HUD.HeartsCount"), layout.hearts);
+    CVarSetInteger(CVAR_COSMETIC("HUD.Hearts.UseMargins"), 0);
+
+    SetHudPos(CVAR_COSMETIC("HUD.MagicBar"), layout.magic);
+    SetHudPos(CVAR_COSMETIC("HUD.BButton"), layout.bButton);
+    SetHudPos(CVAR_COSMETIC("HUD.AButton"), layout.aButton);
+    SetHudPos(CVAR_COSMETIC("HUD.CUpButton"), layout.cUp);
+    SetHudPos(CVAR_COSMETIC("HUD.CDownButton"), layout.cDown);
+    SetHudPos(CVAR_COSMETIC("HUD.CLeftButton"), layout.cLeft);
+    SetHudPos(CVAR_COSMETIC("HUD.CRightButton"), layout.cRight);
+    SetHudPos(CVAR_COSMETIC("HUD.Dpad"), layout.dpad);
+    SetHudPos(CVAR_COSMETIC("HUD.Minimap"), layout.minimap);
+    SetHudPos(CVAR_COSMETIC("HUD.StartButton"), layout.startButton);
+
+    // Every element above is positioned explicitly, so the global margin offsets must not also be
+    // applied on top - they would drag everything off by the margin amount.
+    for (const char* cvar : { CVAR_COSMETIC("HUD.MagicBar"), CVAR_COSMETIC("HUD.BButton"),
+                              CVAR_COSMETIC("HUD.AButton"), CVAR_COSMETIC("HUD.CUpButton"),
+                              CVAR_COSMETIC("HUD.CDownButton"), CVAR_COSMETIC("HUD.CLeftButton"),
+                              CVAR_COSMETIC("HUD.CRightButton"), CVAR_COSMETIC("HUD.Dpad"),
+                              CVAR_COSMETIC("HUD.Minimap"), CVAR_COSMETIC("HUD.StartButton") }) {
+        CVarSetInteger((std::string(cvar) + ".UseMargins").c_str(), 0);
+    }
+}
+
+// Halves every HUD button/hearts element that has a Scale CVar (requested 2026-08-01). Applied
+// unconditionally, not per-sage - it's a global "everything smaller" preference, not part of any
+// sage's identity. Two elements have NO Scale CVar anywhere in this codebase and can't be resized
+// this way: HUD.AButton and HUD.Dpad. That's an engine gap, not something fixable from cosmetics -
+// flagging it rather than silently leaving them full-size with no explanation.
+// Reverted (2026-08-01, requested: "undo the 50% size reduction until we figure out all the
+// layouts"). This still runs every load so any 0.475/0.435/etc value already written to a save's
+// shipofharkinian.json from testing gets explicitly cleared back to the engine's own default rather
+// than silently left stale - a plain CVarClear is what actually undoes a persisted CVar; simply
+// removing the call site would not have.
+//
+// Left disabled rather than deleted: the halved values are commented out below so re-enabling this
+// is a one-line uncomment once the layouts themselves are settled, not a re-derivation.
+void ApplyHudScale() {
+    CVarClear(CVAR_COSMETIC("HUD.BButton.Scale"));
+    CVarClear(CVAR_COSMETIC("HUD.StartButton.Scale"));
+    CVarClear(CVAR_COSMETIC("HUD.CLeftButton.Scale"));
+    CVarClear(CVAR_COSMETIC("HUD.CRightButton.Scale"));
+    CVarClear(CVAR_COSMETIC("HUD.CUpButton.Scale"));
+    CVarClear(CVAR_COSMETIC("HUD.CDownButton.Scale"));
+    CVarClear(CVAR_COSMETIC("HUD.HeartsCount.Scale"));
+
+    // CVarSetFloat(CVAR_COSMETIC("HUD.BButton.Scale"), 0.475f);       // default 0.95
+    // CVarSetFloat(CVAR_COSMETIC("HUD.StartButton.Scale"), 0.375f);   // default 0.75
+    // CVarSetFloat(CVAR_COSMETIC("HUD.CLeftButton.Scale"), 0.435f);   // default 0.87
+    // CVarSetFloat(CVAR_COSMETIC("HUD.CRightButton.Scale"), 0.435f);  // default 0.87
+    // CVarSetFloat(CVAR_COSMETIC("HUD.CUpButton.Scale"), 0.25f);      // default 0.5
+    // CVarSetFloat(CVAR_COSMETIC("HUD.CDownButton.Scale"), 0.435f);   // default 0.87
+    // CVarSetFloat(CVAR_COSMETIC("HUD.HeartsCount.Scale"), 0.35f);    // default 0.7
+}
+
 // World state, identical for every sage: the Kokiri mourn Link, the Gerudo honour Nabooru's
 // ascension. Applied here rather than in the preset's cosmetics block (as docs originally
 // suggested) because a preset only takes effect when the player explicitly applies it, whereas
@@ -524,6 +1053,16 @@ extern "C" void GanonsCurse_ApplySageCosmetics() {
     ApplySpells(*palette);
     ApplyHudButtons(*palette);
     ApplyWorldNpcColors();
+
+    // Layout is a separate table from the palette: it is pure geometry, has no relationship to the
+    // sage's colors, and is the part most likely to be retuned by eye.
+    const SageHudLayout* layout = FindSageHudLayout(palette->sage);
+    if (layout != nullptr) {
+        ApplyHudLayout(*layout);
+    }
+
+    // Global, not per-sage: applies regardless of which layout was found above.
+    ApplyHudScale();
 
     // Push display-list-patched options through in one pass. See the header comment for why this
     // cannot be left to CosmeticsUpdateTick: its per-frame call passes manualChange = false, which
