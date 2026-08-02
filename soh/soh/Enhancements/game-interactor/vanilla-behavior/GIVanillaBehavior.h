@@ -2255,8 +2255,25 @@ typedef enum {
     // #### `args`
     // - `*Player`
     // - `s16*` cost - the magic cost about to be deducted for casting Din's Fire, Nayru's Love, or
-    //   Farore's Wind (func_8083AF44's sMagicSpellCosts[magicSpell] lookup). Modify in place.
+    //   Farore's Wind. Modify in place. Fired from both places vanilla consults that cost:
+    //   func_8083AF44's sMagicSpellCosts[magicSpell] lookup, and the "can I afford to start this
+    //   cast at all" check in Player_ProcessItemButtons.
     VB_PLAYER_MODIFY_MAGIC_SPELL_COST,
+
+    // #### `result`
+    // ```c
+    // true
+    // ```
+    // #### `args`
+    // - `*Player`
+    // Fired where a successfully cast spell arms the magic drain (MAGIC_STATE_CONSUME_SETUP).
+    // Returning false casts the spell without consuming anything, reusing the same path vanilla
+    // already takes for Farore's Wind's free return - the drain state is skipped entirely and the
+    // spell actor's Destroy resets the meter. Note that zeroing VB_PLAYER_MODIFY_MAGIC_SPELL_COST
+    // alone does NOT make a spell free: MAGIC_STATE_CONSUME drains 2/frame until magic reaches
+    // magicTarget, and a zero cost leaves magicTarget equal to the magic the player had when the
+    // cast began - a value the countdown can never hit, so it drains to empty instead.
+    VB_PLAYER_CONSUME_MAGIC_SPELL_COST,
 
     // #### `result`
     // ```c

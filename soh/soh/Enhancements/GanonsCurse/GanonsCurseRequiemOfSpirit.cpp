@@ -9,6 +9,19 @@
  * per-spell wiring. VB_PLAYER_MODIFY_MAGIC_SPELL_COST (new, see GIVanillaBehavior.h) exposes the
  * about-to-be-deducted cost by pointer, same shape as Epona's Song's VB_PLAYER_MODIFY_RUN_SPEED.
  *
+ * Zeroing that cost is necessary but NOT sufficient, and getting this wrong is worse than doing
+ * nothing: Magic_RequestChange only arms the drain (magicTarget = magic - cost), and
+ * MAGIC_STATE_CONSUME then subtracts 2/frame until magic *equals* magicTarget. With cost 0 the
+ * target is the magic the player already has, which a countdown starting from that same value can
+ * never hit, so it drains to empty instead - the whole bar, not zero. So the cast also has to skip
+ * the drain state entirely, via VB_PLAYER_CONSUME_MAGIC_SPELL_COST at the one place a successful
+ * cast arms it. That is not a new code path: it is exactly what vanilla already does for Farore's
+ * Wind's free return, where the spell actor's Destroy resets the meter with nothing consumed.
+ *
+ * The same waived cost is also asked for at Player_ProcessItemButtons' "can I afford this?" gate,
+ * so a buffed player can cast below the spell's nominal cost - otherwise "spells cost no magic"
+ * would still refuse to cast at low magic.
+ *
  * Deliberately does not touch arrow magic costs (Fire/Ice/Light) or song costs (including this
  * song's own) - those are separate call sites this hook was placed to not cover, since "spells" in
  * the spec means the three C-button magic spells specifically.
@@ -56,6 +69,12 @@ static void RegisterGanonsCurseRequiemOfSpirit() {
         s16* cost = va_arg(args, s16*);
         if (sBuffFramesRemaining > 0) {
             *cost = 0;
+        }
+    });
+    COND_VB_SHOULD(VB_PLAYER_CONSUME_MAGIC_SPELL_COST, IS_RANDO, {
+        [[maybe_unused]] Player* player = va_arg(args, Player*);
+        if (sBuffFramesRemaining > 0) {
+            *should = false;
         }
     });
 }

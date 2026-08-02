@@ -3457,9 +3457,14 @@ void Player_UseItem(PlayState* play, Player* this, s32 item) {
                 }
             } else if ((temp = Player_ActionToMagicSpell(this, itemAction)) >= 0) {
                 // Handle magic spells
+                // Same hook func_8083AF44 uses for the actual deduction - asked here too so that a
+                // waived cost also waives the "do I have enough to start?" gate, rather than the
+                // player being blocked from a free cast for lack of magic they aren't spending.
+                s16 magicSpellCost = sMagicSpellCosts[temp];
+                GameInteractor_Should(VB_PLAYER_MODIFY_MAGIC_SPELL_COST, true, this, &magicSpellCost);
                 if (((itemAction == PLAYER_IA_FARORES_WIND) && (gSaveContext.respawn[RESPAWN_MODE_TOP].data > 0)) ||
                     ((gSaveContext.magicCapacity != 0) && (gSaveContext.magicState == MAGIC_STATE_IDLE) &&
-                     (gSaveContext.magic >= sMagicSpellCosts[temp]))) {
+                     (gSaveContext.magic >= magicSpellCost))) {
                     this->itemAction = itemAction;
                     this->unk_6AD = 4;
                 } else {
@@ -15268,7 +15273,8 @@ void Player_Action_808507F4(Player* this, PlayState* play) {
 
                 if (Player_SpawnMagicSpell(play, this, this->av1.actionVar1) != NULL) {
                     this->stateFlags1 |= PLAYER_STATE1_IN_ITEM_CS | PLAYER_STATE1_IN_CUTSCENE;
-                    if ((this->av1.actionVar1 != 0) || (gSaveContext.respawn[RESPAWN_MODE_TOP].data <= 0)) {
+                    if (((this->av1.actionVar1 != 0) || (gSaveContext.respawn[RESPAWN_MODE_TOP].data <= 0)) &&
+                        GameInteractor_Should(VB_PLAYER_CONSUME_MAGIC_SPELL_COST, true, this)) {
                         gSaveContext.magicState = MAGIC_STATE_CONSUME_SETUP;
                     }
                 } else {
