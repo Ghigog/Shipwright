@@ -3358,7 +3358,9 @@ void Interface_UpdateMagicBar(PlayState* play) {
 
                 interfaceCtx->unk_230--;
                 if (interfaceCtx->unk_230 == 0) {
-                    gSaveContext.magic--;
+                    if (GameInteractor_Should(VB_PLAYER_CONSUME_LENS_MAGIC, true)) {
+                        gSaveContext.magic--;
+                    }
                     interfaceCtx->unk_230 = 80;
                 }
             }

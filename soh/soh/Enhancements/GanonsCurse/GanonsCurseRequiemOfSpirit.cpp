@@ -22,9 +22,28 @@
  * so a buffed player can cast below the spell's nominal cost - otherwise "spells cost no magic"
  * would still refuse to cast at low magic.
  *
- * Deliberately does not touch arrow magic costs (Fire/Ice/Light) or song costs (including this
- * song's own) - those are separate call sites this hook was placed to not cover, since "spells" in
- * the spec means the three C-button magic spells specifically.
+ * **Scope, corrected 2026-08-01.** The first build read "spells" narrowly as the three C-button
+ * spells and deliberately left magic arrows out. That was never what the spec asked for - it says
+ * "Spells cost no magic" - so the waiver now covers every way Link spends magic except one:
+ *
+ *   - the three C-button spells (the two hooks above)
+ *   - Fire/Ice/Light Arrows, through SoH's existing VB_PLAYER_ARROW_MAGIC_CONSUMPTION, which skips
+ *     the Magic_RequestChange call outright rather than zeroing a cost, so the drain trap above
+ *     doesn't apply and the arrow keeps its element instead of degrading to ARROW_NORMAL
+ *   - the Lens of Truth's periodic drain, through the new VB_PLAYER_CONSUME_LENS_MAGIC
+ *
+ * Song costs are the deliberate exception, this song's own 24 included: Requiem is paid for with
+ * magic, and a buff that pays for the songs that grant buffs is a different (and much larger)
+ * design decision than "spells are free."
+ *
+ * SoH's "arrow cycle" enhancement defers arrow magic from draw time to arrow-spawn time, which
+ * would have bypassed the waiver whenever it is enabled. ArrowCycle.cpp now asks
+ * VB_PLAYER_CONSUME_ARROW_MAGIC at that deferred point, so both paths honour this song.
+ *
+ * One known edge, left alone on purpose: the Lens still needs a non-empty meter to switch on and
+ * still shuts off when the meter hits 0 - those are availability checks rather than consumption,
+ * living in two further places, so a player at exactly 0 magic can cast a free spell but cannot
+ * start a free Lens.
  */
 #include "soh/ShipInit.hpp"
 #include "functions.h"
@@ -73,6 +92,25 @@ static void RegisterGanonsCurseRequiemOfSpirit() {
     });
     COND_VB_SHOULD(VB_PLAYER_CONSUME_MAGIC_SPELL_COST, IS_RANDO, {
         [[maybe_unused]] Player* player = va_arg(args, Player*);
+        if (sBuffFramesRemaining > 0) {
+            *should = false;
+        }
+    });
+    COND_VB_SHOULD(VB_PLAYER_ARROW_MAGIC_CONSUMPTION, IS_RANDO, {
+        [[maybe_unused]] Player* player = va_arg(args, Player*);
+        [[maybe_unused]] int32_t magicArrowType = va_arg(args, int32_t);
+        [[maybe_unused]] int32_t* arrowType = va_arg(args, int32_t*);
+        if (sBuffFramesRemaining > 0) {
+            *should = false;
+        }
+    });
+    COND_VB_SHOULD(VB_PLAYER_CONSUME_ARROW_MAGIC, IS_RANDO, {
+        [[maybe_unused]] int32_t magicArrowType = va_arg(args, int32_t);
+        if (sBuffFramesRemaining > 0) {
+            *should = false;
+        }
+    });
+    COND_VB_SHOULD(VB_PLAYER_CONSUME_LENS_MAGIC, IS_RANDO, {
         if (sBuffFramesRemaining > 0) {
             *should = false;
         }

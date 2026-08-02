@@ -2280,6 +2280,31 @@ typedef enum {
     // true
     // ```
     // #### `args`
+    // - None
+    // Fired from Magic_Update's MAGIC_STATE_CONSUME_LENS tick, at the one point the Lens of Truth
+    // takes its periodic 1 magic (every 80 ticks). Returning false keeps the Lens running without
+    // draining. Only the drain is gated here - needing a non-empty meter to switch the Lens on, and
+    // it shutting off when the meter empties, are availability checks elsewhere and still apply.
+    VB_PLAYER_CONSUME_LENS_MAGIC,
+
+    // #### `result`
+    // ```c
+    // true
+    // ```
+    // #### `args`
+    // - `int32_t` (magicArrowType)
+    // Whether firing a magic arrow should cost magic, asked from ArrowCycle.cpp - which defers the
+    // deduction from draw time (VB_PLAYER_ARROW_MAGIC_CONSUMPTION, which it answers itself) to the
+    // moment the arrow spawns. Exists so a waiver applied at the vanilla draw-time site is not
+    // silently bypassed by that enhancement; returning false also skips its low-magic degrade to
+    // ARROW_NORMAL, since a waived cost is not a cost the player has to afford.
+    VB_PLAYER_CONSUME_ARROW_MAGIC,
+
+    // #### `result`
+    // ```c
+    // true
+    // ```
+    // #### `args`
     // - `s32` limbIndex
     // - `Gfx**` dList (write to *dList to replace the resolved display list)
     // - `void*` player (Player*)

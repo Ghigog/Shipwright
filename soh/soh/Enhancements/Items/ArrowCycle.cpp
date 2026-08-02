@@ -188,7 +188,10 @@ void RegisterArrowCycle() {
         int32_t magicArrowType = va_arg(args, int32_t);
         int32_t* arrowType = va_arg(args, int32_t*);
 
-        if (gSaveContext.magic < sMagicArrowCosts[magicArrowType]) {
+        // The affordability check is skipped when something is waiving the cost entirely - there is
+        // nothing to afford, so degrading the arrow to ARROW_NORMAL for lack of magic would be wrong.
+        if (gSaveContext.magic < sMagicArrowCosts[magicArrowType] &&
+            GameInteractor_Should(VB_PLAYER_CONSUME_ARROW_MAGIC, true, magicArrowType)) {
             *arrowType = ARROW_NORMAL;
         } else {
             *should = false;
@@ -203,7 +206,13 @@ void RegisterArrowCycle() {
         }
 
         int32_t magicArrowType = arrow->actor.params - ARROW_FIRE;
-        Magic_RequestChange(gPlayState, sMagicArrowCosts[magicArrowType], MAGIC_CONSUME_NOW);
+        // This is the deferred half of the draw-time decision above, so anything waiving arrow magic
+        // has to be asked again here - otherwise turning this enhancement on silently bypasses the
+        // waiver and the arrow costs magic after all. Asked through its own hook rather than
+        // re-asking VB_PLAYER_ARROW_MAGIC_CONSUMPTION, which this file answers itself.
+        if (GameInteractor_Should(VB_PLAYER_CONSUME_ARROW_MAGIC, true, magicArrowType)) {
+            Magic_RequestChange(gPlayState, sMagicArrowCosts[magicArrowType], MAGIC_CONSUME_NOW);
+        }
     });
 }
 
