@@ -3727,6 +3727,32 @@ typedef enum {
     // #### `args`
     // - `*Actor` (the door)
     VB_BOSS_DOOR_REQUIRE_BOSS_KEY,
+
+    // #### `result`
+    // ```c
+    // true
+    // ```
+    // Seven Sages: whether an ordinary locked door the player has no small keys for still refuses
+    // to open. Same shape and same caveat as VB_BOSS_DOOR_REQUIRE_BOSS_KEY above - only consulted
+    // when the player is actually out of keys, and side-effect free, because the check it guards
+    // re-runs every frame the player stands near the door.
+    // #### `args`
+    // - `*Actor` (the door)
+    VB_DOOR_SHUTTER_REQUIRE_SMALL_KEY,
+
+    // #### `result`
+    // ```c
+    // gSaveContext.inventory.dungeonKeys[gSaveContext.mapIndex] > 0
+    // ```
+    // Seven Sages: whether opening this locked door should spend a small key. Unlike the boss
+    // door, an ordinary locked door *does* decrement a count, so anything that lets the player
+    // through without a key has to suppress that or the count underflows to -1. The default
+    // already encodes the safe answer - vanilla only ever reaches here with a key in hand - so a
+    // bypass needs no handler to avoid the underflow, only to charge whatever it charges.
+    // Runs exactly once per opening, so it is the correct place to take a cost.
+    // #### `args`
+    // - `*Actor` (the door)
+    VB_DOOR_SHUTTER_CONSUME_SMALL_KEY,
 } GIVanillaBehavior;
 
 #endif

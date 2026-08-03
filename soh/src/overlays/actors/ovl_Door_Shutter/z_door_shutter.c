@@ -392,9 +392,16 @@ void DoorShutter_Idle(DoorShutter* this, PlayState* play) {
         if (this->unlockTimer != 0) {
             Flags_SetSwitch(play, this->dyna.actor.params & 0x3F);
             if (this->doorType != SHUTTER_BOSS) {
-                gSaveContext.inventory.dungeonKeys[gSaveContext.mapIndex]--;
+                // Default is `keys > 0`, which is always true in vanilla - the approach check
+                // guarantees it - so this is behaviour-preserving. It matters for anything that
+                // opens this door without a key: decrementing then would underflow the count.
+                if (GameInteractor_Should(VB_DOOR_SHUTTER_CONSUME_SMALL_KEY,
+                                          gSaveContext.inventory.dungeonKeys[gSaveContext.mapIndex] > 0,
+                                          &this->dyna.actor)) {
+                    gSaveContext.inventory.dungeonKeys[gSaveContext.mapIndex]--;
+                    GameInteractor_ExecuteOnDungeonKeyUsedHooks(gSaveContext.mapIndex);
+                }
                 Audio_PlayActorSound2(&this->dyna.actor, NA_SE_EV_CHAIN_KEY_UNLOCK);
-                GameInteractor_ExecuteOnDungeonKeyUsedHooks(gSaveContext.mapIndex);
             } else {
                 Audio_PlayActorSound2(&this->dyna.actor, NA_SE_EV_CHAIN_KEY_UNLOCK_B);
                 GameInteractor_ExecuteOnBossDoorOpenedHooks(gSaveContext.mapIndex);
@@ -413,7 +420,9 @@ void DoorShutter_Idle(DoorShutter* this, PlayState* play) {
                             player->naviTextId = -0x204;
                             return;
                         }
-                    } else if (gSaveContext.inventory.dungeonKeys[gSaveContext.mapIndex] <= 0) {
+                    } else if (gSaveContext.inventory.dungeonKeys[gSaveContext.mapIndex] <= 0 &&
+                               GameInteractor_Should(VB_DOOR_SHUTTER_REQUIRE_SMALL_KEY, true,
+                                                     &this->dyna.actor)) {
                         player->naviTextId = -0x203;
                         return;
                     }
