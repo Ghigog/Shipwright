@@ -19,7 +19,18 @@
  * trick-tier requirement with no signposting. `Logic::CanUse(RG_MAGIC_SINGLE)` stays the stub it
  * has always been; it was only ever a blocker under the old, now-reversed requirement.
  *
- * Three hooks, and the decide/charge split between them is the whole design:
+ * **Locked doors live in three unrelated actors**, which is the trap this feature fell into: the
+ * first build hooked only Door_Shutter (sliding doors, and every boss door), so boss locks worked
+ * and ordinary ones did not. The three are:
+ *   - Door_Shutter - boss doors and sliding shutters. Needed new hooks; it had none.
+ *   - En_Door - ordinary hinged locked doors, which is what most dungeon "silver locks" are.
+ *     Upstream already provides VB_NOT_HAVE_SMALL_KEY and VB_CONSUME_SMALL_KEY here, so this only
+ *     had to register for them.
+ *   - Door_Gerudo - the Gerudo Fortress cell doors. **Deliberately not covered**: it has no hooks
+ *     at all, its keys are `Gerudo Fortress Keys: Vanilla` in our preset, and it is a handful of
+ *     doors in one area rather than a dungeon-wide lock type.
+ *
+ * The decide/charge split below is the whole design:
  *
  *   - VB_BOSS_DOOR_REQUIRE_BOSS_KEY and VB_DOOR_SHUTTER_REQUIRE_SMALL_KEY *decide*. Both sit in
  *     DoorShutter_Idle's approach path, which re-runs **every frame** the player stands near the
@@ -120,6 +131,38 @@ static void RegisterSevenSagesGoldenGauntlets() {
         // decrement is the default's job; ours is to take the magic instead.
         if (!*should && HasStrengthAtLeast(STRENGTH_SILVER_GAUNTLETS)) {
             ChargeForBypass();
+        }
+    });
+
+    // En_Door - ordinary hinged locked doors, and the actor most dungeon "silver locks" actually
+    // are. Missing this is why the first build opened boss doors but no normal ones: locked doors
+    // are spread across three unrelated actors, and Door_Shutter (hooked above) is the sliding
+    // kind. Upstream already provides both hooks here, so nothing new was needed in the actor -
+    // they just had to be registered for.
+    COND_VB_SHOULD(VB_NOT_HAVE_SMALL_KEY, IS_RANDO, {
+        [[maybe_unused]] Actor* door = va_arg(args, Actor*);
+        // Only flip a refusal, never manufacture one. *should already encodes "the player is out
+        // of keys", and LockOverworldDoors registers for this same hook with its own meaning.
+        if (*should && CanForceDoor(STRENGTH_SILVER_GAUNTLETS)) {
+            *should = false;
+        }
+    });
+
+    COND_VB_SHOULD(VB_CONSUME_SMALL_KEY, IS_RANDO, {
+        Actor* door = va_arg(args, Actor*);
+        // Reaching the consume with no keys means the gate above let the player through, since
+        // vanilla would otherwise have refused - so this is a bypass, and the decrement has to be
+        // suppressed or the count underflows to -1. Unlike Door_Shutter, this hook's default is a
+        // plain `true`, so suppressing is our job here rather than the default's.
+        if (gSaveContext.inventory.dungeonKeys[gSaveContext.mapIndex] <= 0 &&
+            HasStrengthAtLeast(STRENGTH_SILVER_GAUNTLETS)) {
+            ChargeForBypass();
+            // Set the unlock flag ourselves rather than moving vanilla's Flags_SetSwitch outside
+            // its guard - that call sits inside the same `if`, and LockOverworldDoors relies on it
+            // *not* firing for the overworld doors it suppresses. Without this the lock would
+            // re-form and charge again on every pass, which is not what "break the lock" means.
+            Flags_SetSwitch(gPlayState, door->params & 0x3F);
+            *should = false;
         }
     });
 }
