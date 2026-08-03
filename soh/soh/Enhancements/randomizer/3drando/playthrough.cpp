@@ -101,8 +101,17 @@ int Playthrough_Repeat(std::set<RandomizerCheck> excludedLocations, std::set<Ran
         ctx->SetSeedString(std::string(seedString));
         repeatedSeed = SohUtils::Hash(ctx->GetSeedString());
         ctx->SetSeed(repeatedSeed);
-        SPDLOG_DEBUG("testing seed: %d", repeatedSeed);
+        SPDLOG_DEBUG("testing seed: {}", repeatedSeed);
         ClearProgress();
+        // Seven Sages: batch generation aborted on the second seed - assert in GenerateItemPool
+        // (item_pool.cpp, itemPool.size() vs locCount). Nothing here resets placement between
+        // iterations: ClearProgress() is an empty function, and ctx->ClearItemLocations() lives
+        // in GenerateRandomizer *after* the branch that calls into here, so it never runs for a
+        // batch. Seed 1's placements therefore survive into seed 2, the empty-location count no
+        // longer matches the freshly built pool, and the assert fires. Matches upstream's own
+        // "I don't think we support this functionality yet anyway" note on the batch trigger.
+        // Reset exactly what the single-seed path resets, per iteration.
+        ctx->ClearItemLocations();
         Playthrough_Init(ctx->GetSeed(), excludedLocations, enabledTricks);
         SPDLOG_INFO("Seeds Generated: {}", i + 1);
     }
