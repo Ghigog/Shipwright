@@ -75,14 +75,23 @@ s16 DoorMagicCost() {
     return (gSaveContext.magicLevel * MAGIC_NORMAL_METER) / 2;
 }
 
-bool HasStrengthAtLeast(u8 tier) {
-    return CUR_UPG_VALUE(UPG_STRENGTH) >= tier;
+// Child Link cannot use either pair of gauntlets. CUR_UPG_VALUE(UPG_STRENGTH) is a save value, not
+// an equip state, so it stays set across an age change - without the age test a child who had been
+// adult (or was handed the upgrade by the debug console) forces doors barehanded.
+bool CanUseGauntlets(u8 tier) {
+    return LINK_IS_ADULT && CUR_UPG_VALUE(UPG_STRENGTH) >= tier;
 }
 
 // Affordability only - no state touched. See the header comment for why these must stay pure.
 bool CanForceDoor(u8 requiredTier) {
-    return GameInteractor::IsSaveLoaded(true) && HasStrengthAtLeast(requiredTier) &&
-           gSaveContext.magic >= DoorMagicCost();
+    const s16 cost = DoorMagicCost();
+    // `cost > 0` is load-bearing, not defensive. With no magic meter at all magicLevel is 0, so
+    // the cost computes to 0 and `magic >= cost` is 0 >= 0 - true. That made the bypass FREE for
+    // anyone without a meter, which is every child sage and any adult before their first Great
+    // Fairy. Having a meter and no magic in it was always refused correctly; having no meter was
+    // the hole.
+    return GameInteractor::IsSaveLoaded(true) && CanUseGauntlets(requiredTier) && cost > 0 &&
+           gSaveContext.magic >= cost;
 }
 
 void ChargeForBypass() {
@@ -99,7 +108,7 @@ void SevenSagesGauntletsBossDoorOpened(uint16_t mapIndex) {
     if (CHECK_DUNGEON_ITEM(DUNGEON_KEY_BOSS, mapIndex)) {
         return;
     }
-    if (!HasStrengthAtLeast(STRENGTH_GOLDEN_GAUNTLETS)) {
+    if (!CanUseGauntlets(STRENGTH_GOLDEN_GAUNTLETS)) {
         return;
     }
     ChargeForBypass();
@@ -129,7 +138,7 @@ static void RegisterSevenSagesGoldenGauntlets() {
         // *should is already false when the player has no key, which is only reachable via the
         // bypass above - the approach check would otherwise have refused. Suppressing the
         // decrement is the default's job; ours is to take the magic instead.
-        if (!*should && HasStrengthAtLeast(STRENGTH_SILVER_GAUNTLETS)) {
+        if (!*should && CanUseGauntlets(STRENGTH_SILVER_GAUNTLETS)) {
             ChargeForBypass();
         }
     });
@@ -155,7 +164,7 @@ static void RegisterSevenSagesGoldenGauntlets() {
         // suppressed or the count underflows to -1. Unlike Door_Shutter, this hook's default is a
         // plain `true`, so suppressing is our job here rather than the default's.
         if (gSaveContext.inventory.dungeonKeys[gSaveContext.mapIndex] <= 0 &&
-            HasStrengthAtLeast(STRENGTH_SILVER_GAUNTLETS)) {
+            CanUseGauntlets(STRENGTH_SILVER_GAUNTLETS)) {
             ChargeForBypass();
             // Set the unlock flag ourselves rather than moving vanilla's Flags_SetSwitch outside
             // its guard - that call sits inside the same `if`, and LockOverworldDoors relies on it
