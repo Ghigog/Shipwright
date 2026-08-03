@@ -25,13 +25,24 @@ bool GenerateRandomizer(std::set<RandomizerCheck> excludedLocations, std::set<Ra
         }
         seedString[10] = '\0';
         seedInput = std::string(seedString);
-    } else if (seedInput.rfind("seed_testing_count", 0) == 0 && seedInput.length() > 18) {
+    } else if (const std::string batchPrefix =
+                   seedInput.rfind("seed_testing_count", 0) == 0   ? "seed_testing_count"
+                   : seedInput.rfind("seedtestingcount", 0) == 0   ? "seedtestingcount"
+                                                                   : "";
+               !batchPrefix.empty() && seedInput.length() > batchPrefix.length()) {
+        // Seven Sages: upstream only accepts "seed_testing_count<N>", which is unreachable in
+        // practice - the seed arrives here with the underscores gone (typed as
+        // "seed_testing_count50", recorded in the spoiler as "seedtestingcount50"), so it never
+        // matches and is silently treated as an ordinary seed string. You get one seed and no
+        // indication why. Accept the underscore-free spelling too, and take the count from past
+        // whichever prefix actually matched rather than a hardcoded offset.
         int count;
         try {
-            count = std::stoi(seedInput.substr(18), nullptr);
+            count = std::stoi(seedInput.substr(batchPrefix.length()), nullptr);
         } catch (std::invalid_argument&) { count = 1; } catch (std::out_of_range&) {
             count = 1;
         }
+        SPDLOG_INFO("Batch seed generation requested: {} seeds", count);
         Playthrough::Playthrough_Repeat(excludedLocations, enabledTricks, count);
         return false; // TODO: Not sure if this is correct but I don't think we support this functionality yet anyway.
     }
