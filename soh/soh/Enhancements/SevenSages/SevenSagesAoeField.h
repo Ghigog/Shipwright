@@ -1,0 +1,36 @@
+#pragma once
+
+#include <cstdint>
+
+struct PlayState;
+
+// Point-source area-of-effect fields (docs/item-ability-overhaul.md, "Foundational: AOE mechanic").
+// The companion to SevenSagesRoomAoe.h: that one hits everything loaded in the room with no
+// distance test, this one is a lingering volume at a world position.
+//
+// Modelled on the bomb explosion and Din's Fire rather than on distance maths, because vanilla has
+// no distance-based damage anywhere. A field is a real ColliderCylinder submitted through
+// CollisionCheck_SetAT every frame it is alive, so it goes through the normal damage pipeline:
+// per-enemy DMG_ENTRY tables, immunities, invulnerability windows and hit reactions all apply for
+// free. Applying damage directly by distance would bypass every one of those and would look
+// correct on whichever enemy you happened to test first.
+//
+// The field IS the damage-over-time. Vanilla has no ignite status for enemies - an enemy's
+// "on fire" is a ~40 frame cosmetic flame (EffectSsEnFire) plus the single hit that caused it, and
+// only about eight actors implement even that. A field that lingers re-hits whatever stays inside
+// it and stops hurting anything that walks out, which is both closer to vanilla and easier to read
+// in play than an invisible per-enemy status would be.
+//
+// Cadence is deliberately vanilla's: the collider is submitted every frame and each enemy's own
+// invulnerability decides how often that turns into damage, exactly as it does for Din's Fire.
+// Nothing here rate-limits on its own.
+
+// Damage flags for a field, matching the toucher dmgFlags vanilla actors use.
+constexpr uint32_t SEVEN_SAGES_AOE_DMG_FIRE = 0x00020000; // same flag Din's Fire attacks with
+
+// Spawn a field at pos. It expands from nothing to maxRadius over a few frames like a bomb blast,
+// then holds at that size until lifetimeFrames runs out. Fields are pooled; if the pool is full the
+// call is a no-op rather than displacing a live field. Passing a lifetime of 1 gives the
+// instantaneous case (a hammer swing) through the same mechanism.
+void SevenSagesSpawnAoeField(PlayState* play, float x, float y, float z, float maxRadius, float height,
+                             int32_t lifetimeFrames, uint32_t damageFlags);
