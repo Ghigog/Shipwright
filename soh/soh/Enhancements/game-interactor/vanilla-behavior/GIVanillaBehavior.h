@@ -3713,6 +3713,20 @@ typedef enum {
     // a textbox can be rendered instead. Pause screen only, Game Over version left
     // intact.
     VB_DRAW_SAVE_MENU,
+
+    // #### `result`
+    // ```c
+    // true
+    // ```
+    // Seven Sages: whether a boss door the player lacks the boss key for still refuses to open.
+    // Only consulted when the key is actually missing, so granting a bypass here cannot charge or
+    // affect a player who holds the key. Set `false` to let the player through - the caller then
+    // fires OnBossDoorOpened when the door actually opens, which is where any cost should be
+    // taken. Do NOT spend anything from this hook: the check it guards sits in DoorShutter_Idle's
+    // approach path and re-runs every frame the player stands near the door.
+    // #### `args`
+    // - `*Actor` (the door)
+    VB_BOSS_DOOR_REQUIRE_BOSS_KEY,
 } GIVanillaBehavior;
 
 #endif

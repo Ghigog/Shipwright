@@ -33,6 +33,12 @@ DEFINE_HOOK(OnWarpSongDeclined, ());
 DEFINE_HOOK(OnOcarinaNote, (uint8_t note, float modulator, int8_t bend));
 DEFINE_HOOK(OnShopSlotChange, (uint8_t cursorIndex, int16_t price));
 DEFINE_HOOK(OnDungeonKeyUsed, (uint16_t mapIndex));
+// Seven Sages: the boss-door counterpart to OnDungeonKeyUsed above. Vanilla fires nothing when a
+// boss door opens because it never spends anything - boss doors check the key but don't consume
+// it. Fired at the moment the door actually opens, which is the only place that runs exactly
+// once; the approach check in DoorShutter_Idle re-runs every frame the player stands there, so
+// it is not a safe place to charge anything.
+DEFINE_HOOK(OnBossDoorOpened, (uint16_t mapIndex));
 DEFINE_HOOK(ShouldActorInit, (void* actor, bool* result));
 DEFINE_HOOK(OnActorInit, (void* actor));
 DEFINE_HOOK(OnActorSpawn, (void* actor));

@@ -397,6 +397,7 @@ void DoorShutter_Idle(DoorShutter* this, PlayState* play) {
                 GameInteractor_ExecuteOnDungeonKeyUsedHooks(gSaveContext.mapIndex);
             } else {
                 Audio_PlayActorSound2(&this->dyna.actor, NA_SE_EV_CHAIN_KEY_UNLOCK_B);
+                GameInteractor_ExecuteOnBossDoorOpenedHooks(gSaveContext.mapIndex);
             }
         }
     } else {
@@ -407,7 +408,8 @@ void DoorShutter_Idle(DoorShutter* this, PlayState* play) {
             if (GameInteractor_Should(VB_JABU_PREVENT_RUTO_REENTER_BIGOCTO, true, player, &this->dyna.actor)) {
                 if (this->unlockTimer != 0) {
                     if (this->doorType == SHUTTER_BOSS) {
-                        if (!CHECK_DUNGEON_ITEM(DUNGEON_KEY_BOSS, gSaveContext.mapIndex)) {
+                        if (!CHECK_DUNGEON_ITEM(DUNGEON_KEY_BOSS, gSaveContext.mapIndex) &&
+                            GameInteractor_Should(VB_BOSS_DOOR_REQUIRE_BOSS_KEY, true, &this->dyna.actor)) {
                             player->naviTextId = -0x204;
                             return;
                         }

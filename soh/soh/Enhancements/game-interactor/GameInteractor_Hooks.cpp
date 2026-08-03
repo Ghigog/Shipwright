@@ -130,6 +130,10 @@ void GameInteractor_ExecuteOnDungeonKeyUsedHooks(uint16_t mapIndex) {
     GameInteractor::Instance->ExecuteHooks<GameInteractor::OnDungeonKeyUsed>(mapIndex);
 }
 
+void GameInteractor_ExecuteOnBossDoorOpenedHooks(uint16_t mapIndex) {
+    GameInteractor::Instance->ExecuteHooks<GameInteractor::OnBossDoorOpened>(mapIndex);
+}
+
 bool GameInteractor_ShouldActorInit(void* actor) {
     bool result = true;
     GameInteractor::Instance->ExecuteHooks<GameInteractor::ShouldActorInit>(actor, &result);

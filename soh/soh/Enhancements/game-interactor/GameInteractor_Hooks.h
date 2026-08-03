@@ -53,6 +53,7 @@ void GameInteractor_ExecuteOnPlayerShieldControl(float* sp50, float* sp54);
 void GameInteractor_ExecuteOnPlayerProcessStick();
 void GameInteractor_ExecuteOnShopSlotChangeHooks(uint8_t cursorIndex, int16_t price);
 void GameInteractor_ExecuteOnDungeonKeyUsedHooks(uint16_t mapIndex);
+void GameInteractor_ExecuteOnBossDoorOpenedHooks(uint16_t mapIndex);
 void GameInteractor_ExecuteOnPlayDestroy();
 void GameInteractor_ExecuteOnPlayDrawBegin();
 void GameInteractor_ExecuteOnPlayDrawEnd();
