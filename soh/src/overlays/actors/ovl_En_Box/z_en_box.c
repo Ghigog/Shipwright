@@ -197,7 +197,7 @@ void EnBox_Init(Actor* thisx, PlayState* play2) {
             this->getItemEntry = Randomizer_GetItemFromKnownCheck(rc, this->dyna.actor.params >> 5 & 0x7F);
         }
     }
-    // Ganon's Curse: snapshot once here, see the field comment in z_en_box.h for why.
+    // Seven Sages: snapshot once here, see the field comment in z_en_box.h for why.
     this->cachedItemCategory = Randomizer_AdjustItemCategory(this->getItemEntry);
 
     EnBox_UpdateTexture(this, play);
@@ -575,7 +575,7 @@ void EnBox_Update(Actor* thisx, PlayState* play) {
 void EnBox_UpdateTexture(EnBox* this, PlayState* play) {
     bool csmc = CVarGetInteger(CVAR_ENHANCEMENT("ChestSizeAndTextureMatchContents"), 0);
     int requiresStoneAgony = CVarGetInteger(CVAR_ENHANCEMENT("ChestSizeDependsStoneOfAgony"), 0);
-    // Ganon's Curse: read the snapshot taken once in EnBox_Init, not a live recompute - see the
+    // Seven Sages: read the snapshot taken once in EnBox_Init, not a live recompute - see the
     // field comment in z_en_box.h. Randomizer_AdjustItemCategory() reacts to current inventory
     // (e.g. "already have bombchus" -> lesser), which would otherwise let collecting THIS
     // chest's own item flip its own size/skin the instant the reward lands in inventory.
@@ -585,7 +585,7 @@ void EnBox_UpdateTexture(EnBox* this, PlayState* play) {
                     (play->sceneNum == SCENE_TREASURE_BOX_SHOP &&
                      this->dyna.actor.room != 6); // Exclude treasure game chests except for the final room
 
-    // Ganon's Curse: chest SIZE (not just skin) now follows contents when the cosmetic
+    // Seven Sages: chest SIZE (not just skin) now follows contents when the cosmetic
     // feature is on - a major item always renders as a big chest regardless of which size
     // the location originally had, and vice versa. Despite the cvar's name
     // ("ChestSizeAndTextureMatchContents"), vanilla SoH only ever changed the skin/DL below -

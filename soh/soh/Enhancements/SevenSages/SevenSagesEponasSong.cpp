@@ -1,9 +1,9 @@
 /**
- * Ganon's Curse - Phase 6: Epona's Song as a temporary speed boost.
+ * Seven Sages - Phase 6: Epona's Song as a temporary speed boost.
  *
  * docs/item-ability-overhaul.md: "boosts speed 1.5x for 60 seconds." Costs 24 magic (the
  * system-wide "songs cost magic" rule) via the shared deferred-request helper
- * (GanonsCurseSongMagic.h) built for Song of Time. No proximity guard needed here, unlike Song of
+ * (SevenSagesSongMagic.h) built for Song of Time. No proximity guard needed here, unlike Song of
  * Time - playing Epona's Song has no vanilla puzzle interaction this could hijack, only "try to
  * call Epona if she's nearby," which this doesn't touch.
  *
@@ -28,7 +28,7 @@
 #include "functions.h"
 #include "macros.h"
 #include "variables.h"
-#include "soh/Enhancements/GanonsCurse/GanonsCurseSongMagic.h"
+#include "soh/Enhancements/SevenSages/SevenSagesSongMagic.h"
 #include "soh/Enhancements/game-interactor/GameInteractor_Hooks.h"
 
 extern "C" PlayState* gPlayState;
@@ -41,7 +41,7 @@ constexpr f32 EPONAS_SONG_SPEED_MULTIPLIER = 1.5f;
 
 s32 sBuffFramesRemaining = 0;
 
-void GanonsCurseEponasSongPlayed() {
+void SevenSagesEponasSongPlayed() {
     if (!GameInteractor::IsSaveLoaded(true)) {
         return;
     }
@@ -49,10 +49,10 @@ void GanonsCurseEponasSongPlayed() {
         return;
     }
 
-    GanonsCurseRequestSongMagic(EPONAS_SONG_MAGIC_COST, []() { sBuffFramesRemaining = EPONAS_SONG_BUFF_FRAMES; });
+    SevenSagesRequestSongMagic(EPONAS_SONG_MAGIC_COST, []() { sBuffFramesRemaining = EPONAS_SONG_BUFF_FRAMES; });
 }
 
-void GanonsCurseEponasSongFrameUpdate() {
+void SevenSagesEponasSongFrameUpdate() {
     if (sBuffFramesRemaining > 0) {
         sBuffFramesRemaining--;
     }
@@ -60,9 +60,9 @@ void GanonsCurseEponasSongFrameUpdate() {
 
 } // namespace
 
-static void RegisterGanonsCurseEponasSong() {
-    COND_HOOK(OnOcarinaSongAction, IS_RANDO, GanonsCurseEponasSongPlayed);
-    COND_HOOK(OnGameFrameUpdate, IS_RANDO, GanonsCurseEponasSongFrameUpdate);
+static void RegisterSevenSagesEponasSong() {
+    COND_HOOK(OnOcarinaSongAction, IS_RANDO, SevenSagesEponasSongPlayed);
+    COND_HOOK(OnGameFrameUpdate, IS_RANDO, SevenSagesEponasSongFrameUpdate);
     COND_VB_SHOULD(VB_PLAYER_MODIFY_RUN_SPEED, IS_RANDO, {
         [[maybe_unused]] Player* player = va_arg(args, Player*);
         f32* speedTarget = va_arg(args, f32*);
@@ -72,4 +72,4 @@ static void RegisterGanonsCurseEponasSong() {
     });
 }
 
-static RegisterShipInitFunc ganonsCurseEponasSongInitFunc(RegisterGanonsCurseEponasSong, { "IS_RANDO" });
+static RegisterShipInitFunc sevenSagesEponasSongInitFunc(RegisterSevenSagesEponasSong, { "IS_RANDO" });

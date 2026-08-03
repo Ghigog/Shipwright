@@ -2339,7 +2339,7 @@ void StaticData::HintTable_Init() {
 													    /*french*/ "Si je me souviens bien, il me&semble que je l'ai perdue&quelque part dans&#[[1]]#...^Fais-moi signe si jamais&tu la trouves!",
                                                                    {QM_RED}));
 
-// >>> GANONS_CURSE_GENERATED: HINT_TEXT - edit data/npc-hints.json, not this
+// >>> SEVEN_SAGES_GENERATED: HINT_TEXT - edit data/npc-hints.json, not this
     // Hyrule Castle Guard - Castle Grounds
     hintTextTable[RHT_NPC_HC_GUARD] = HintText(CustomMessage(
         "You shouldn't be here, child.^...The royal lullaby isn't even in the castle any more. It's in "
@@ -3009,7 +3009,7 @@ void StaticData::HintTable_Init() {
         "taken it.",
         { QM_RED }));
 
-// <<< GANONS_CURSE_GENERATED: HINT_TEXT
+// <<< SEVEN_SAGES_GENERATED: HINT_TEXT
     /*--------------------------
     |    Static Entrance Hint   |
     ---------------------------*/

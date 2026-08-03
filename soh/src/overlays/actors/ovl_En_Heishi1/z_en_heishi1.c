@@ -471,7 +471,7 @@ void EnHeishi1_Update(Actor* thisx, PlayState* play) {
                             }
                         }
 
-                        // Ganon's Curse: clear the latched detection rather than only skipping the
+                        // Seven Sages: clear the latched detection rather than only skipping the
                         // catch below - the search-ball effect writes this flag by pointer, so
                         // leaving it set would have the guard pounce the instant the buff expires.
                         if (this->linkDetected && !GameInteractor_Should(VB_GUARD_DETECT_PLAYER, true, &this->actor)) {

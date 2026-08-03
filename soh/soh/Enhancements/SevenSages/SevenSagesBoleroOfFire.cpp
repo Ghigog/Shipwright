@@ -1,7 +1,7 @@
 /**
- * Ganon's Curse - Phase 6: Bolero of Fire, declined, restocks explosives.
+ * Seven Sages - Phase 6: Bolero of Fire, declined, restocks explosives.
  *
- * See GanonsCurseMinuetOfForest.cpp's header for the shared "No" mechanism (OnWarpSongDeclined,
+ * See SevenSagesMinuetOfForest.cpp's header for the shared "No" mechanism (OnWarpSongDeclined,
  * fired from z_message_PAL.c) and the Inventory_ChangeAmmo restock pattern - this is the same idea
  * applied to Bombs and Bombchus instead of child ammo. Costs 24 magic via the shared helper.
  */
@@ -9,7 +9,7 @@
 #include "functions.h"
 #include "macros.h"
 #include "variables.h"
-#include "soh/Enhancements/GanonsCurse/GanonsCurseSongMagic.h"
+#include "soh/Enhancements/SevenSages/SevenSagesSongMagic.h"
 #include "soh/Enhancements/game-interactor/GameInteractor_Hooks.h"
 
 extern "C" PlayState* gPlayState;
@@ -19,7 +19,7 @@ namespace {
 constexpr s16 BOLERO_MAGIC_COST = 24;
 constexpr s16 RESTOCK_AMOUNT = 99;
 
-void GanonsCurseBoleroOfFireDeclined() {
+void SevenSagesBoleroOfFireDeclined() {
     if (!GameInteractor::IsSaveLoaded(true)) {
         return;
     }
@@ -27,7 +27,7 @@ void GanonsCurseBoleroOfFireDeclined() {
         return;
     }
 
-    GanonsCurseRequestSongMagic(BOLERO_MAGIC_COST, []() {
+    SevenSagesRequestSongMagic(BOLERO_MAGIC_COST, []() {
         // Bombs need no ownership check - CUR_CAPACITY(UPG_BOMB_BAG) is 0 without a bag, so
         // Inventory_ChangeAmmo's clamp already makes this a no-op. Bombchus have no capacity
         // upgrade in vanilla (flat 50), so the same call would hand 50 chus to a player who has
@@ -44,8 +44,8 @@ void GanonsCurseBoleroOfFireDeclined() {
 
 } // namespace
 
-static void RegisterGanonsCurseBoleroOfFire() {
-    COND_HOOK(OnWarpSongDeclined, IS_RANDO, GanonsCurseBoleroOfFireDeclined);
+static void RegisterSevenSagesBoleroOfFire() {
+    COND_HOOK(OnWarpSongDeclined, IS_RANDO, SevenSagesBoleroOfFireDeclined);
 }
 
-static RegisterShipInitFunc ganonsCurseBoleroOfFireInitFunc(RegisterGanonsCurseBoleroOfFire, { "IS_RANDO" });
+static RegisterShipInitFunc sevenSagesBoleroOfFireInitFunc(RegisterSevenSagesBoleroOfFire, { "IS_RANDO" });

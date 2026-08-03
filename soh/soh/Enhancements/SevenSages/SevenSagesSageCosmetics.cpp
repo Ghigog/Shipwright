@@ -1,5 +1,5 @@
 /**
- * Ganon's Curse - per-sage cosmetic identity.
+ * Seven Sages - per-sage cosmetic identity.
  *
  * Full spec and the reasoning behind every value: docs/sage-cosmetics.md.
  *
@@ -61,7 +61,7 @@
 // table below. Not pulled in by CosmeticsEditor.h.
 #include "soh/Enhancements/cosmetics/cosmeticsTypes.h"
 #include "soh/Enhancements/randomizer/savefile.h"
-#include "soh/Enhancements/GanonsCurse/GanonsCurseSageCosmetics.h"
+#include "soh/Enhancements/SevenSages/SevenSagesSageCosmetics.h"
 
 // randomizerTypes.h pulls in randomizerEnums.h, which is an X-macro header with no include guard
 // of its own - including both here re-expands every enum and fails to compile. One is enough.
@@ -83,7 +83,7 @@ namespace {
 // select but the vanilla look/HUD/voice turns this off and gets exactly stock SoH behavior.
 // Deliberately a single gate rather than one per category: the categories are a coherent identity,
 // and seven half-applied sages is a worse state than either extreme.
-constexpr const char* CVAR_SAGE_COSMETICS = CVAR_ENHANCEMENT("GanonsCurse.SageCosmetics");
+constexpr const char* CVAR_SAGE_COSMETICS = CVAR_ENHANCEMENT("SevenSages.SageCosmetics");
 
 bool SageCosmeticsEnabled() {
     return CVarGetInteger(CVAR_SAGE_COSMETICS, 1) != 0;
@@ -1066,7 +1066,7 @@ void ApplyWorldNpcColors() {
 
 } // namespace
 
-extern "C" void GanonsCurse_ApplySageCosmetics() {
+extern "C" void SevenSages_ApplySageCosmetics() {
     if (!IS_RANDO || !SageCosmeticsEnabled()) {
         return;
     }
@@ -1110,7 +1110,7 @@ extern "C" void GanonsCurse_ApplySageCosmetics() {
 
 /**
  * Registered unconditionally at boot, and deliberately NOT gated on IS_RANDO the way every other
- * GanonsCurse module is. That difference is load-bearing, not an oversight.
+ * SevenSages module is. That difference is load-bearing, not an oversight.
  *
  * `ShipInit::Init("IS_RANDO")` - the thing that re-runs IS_RANDO-gated registration - is itself
  * called from inside an OnLoadGame hook (hook_handlers.cpp). So an IS_RANDO-gated OnLoadGame hook
@@ -1126,8 +1126,8 @@ extern "C" void GanonsCurse_ApplySageCosmetics() {
  * exists before any load can happen, and IS_RANDO / the randomizer options are both valid by the
  * time the body runs.
  */
-static void RegisterGanonsCurseSageCosmetics() {
-    COND_HOOK(OnLoadGame, true, [](int32_t fileNum) { GanonsCurse_ApplySageCosmetics(); });
+static void RegisterSevenSagesSageCosmetics() {
+    COND_HOOK(OnLoadGame, true, [](int32_t fileNum) { SevenSages_ApplySageCosmetics(); });
 }
 
-static RegisterShipInitFunc ganonsCurseSageCosmeticsInitFunc(RegisterGanonsCurseSageCosmetics);
+static RegisterShipInitFunc sevenSagesSageCosmeticsInitFunc(RegisterSevenSagesSageCosmetics);

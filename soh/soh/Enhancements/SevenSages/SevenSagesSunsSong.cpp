@@ -1,7 +1,7 @@
 /**
- * Ganon's Curse - Phase 6: Sun's Song lights every unlit torch in the room.
+ * Seven Sages - Phase 6: Sun's Song lights every unlit torch in the room.
  *
- * Two effects. The torch half is here; the temporary-heart half lives in GanonsCurseTempHearts.cpp
+ * Two effects. The torch half is here; the temporary-heart half lives in SevenSagesTempHearts.cpp
  * (its health bookkeeping runs every frame and has to be reachable from SaveManager and
  * z_lifemeter.c, neither of which has any business knowing about a song).
  *
@@ -33,9 +33,9 @@
 #include "functions.h"
 #include "macros.h"
 #include "variables.h"
-#include "soh/Enhancements/GanonsCurse/GanonsCurseSongMagic.h"
-#include "soh/Enhancements/GanonsCurse/GanonsCurseRoomAoe.h"
-#include "soh/Enhancements/GanonsCurse/GanonsCurseTempHearts.h"
+#include "soh/Enhancements/SevenSages/SevenSagesSongMagic.h"
+#include "soh/Enhancements/SevenSages/SevenSagesRoomAoe.h"
+#include "soh/Enhancements/SevenSages/SevenSagesTempHearts.h"
 #include "soh/Enhancements/game-interactor/GameInteractor_Hooks.h"
 #include "overlays/actors/ovl_Obj_Syokudai/z_obj_syokudai.h"
 
@@ -57,7 +57,7 @@ void LightTorch(Actor* actor) {
     }
 }
 
-void GanonsCurseSunsSongPlayed() {
+void SevenSagesSunsSongPlayed() {
     if (!GameInteractor::IsSaveLoaded(true)) {
         return;
     }
@@ -65,16 +65,16 @@ void GanonsCurseSunsSongPlayed() {
         return;
     }
 
-    GanonsCurseRequestSongMagic(SUNS_SONG_MAGIC_COST, []() {
-        GanonsCurseForEachActorInRoom(gPlayState, ACTORCAT_PROP, LightTorch);
-        GanonsCurseGrantTempHearts();
+    SevenSagesRequestSongMagic(SUNS_SONG_MAGIC_COST, []() {
+        SevenSagesForEachActorInRoom(gPlayState, ACTORCAT_PROP, LightTorch);
+        SevenSagesGrantTempHearts();
     });
 }
 
 } // namespace
 
-static void RegisterGanonsCurseSunsSong() {
-    COND_HOOK(OnOcarinaSongAction, IS_RANDO, GanonsCurseSunsSongPlayed);
+static void RegisterSevenSagesSunsSong() {
+    COND_HOOK(OnOcarinaSongAction, IS_RANDO, SevenSagesSunsSongPlayed);
 }
 
-static RegisterShipInitFunc ganonsCurseSunsSongInitFunc(RegisterGanonsCurseSunsSong, { "IS_RANDO" });
+static RegisterShipInitFunc sevenSagesSunsSongInitFunc(RegisterSevenSagesSunsSong, { "IS_RANDO" });

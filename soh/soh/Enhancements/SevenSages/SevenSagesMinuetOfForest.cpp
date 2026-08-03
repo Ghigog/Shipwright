@@ -1,8 +1,8 @@
 /**
- * Ganon's Curse - Phase 6: Minuet of Forest, declined, restocks child ammo.
+ * Seven Sages - Phase 6: Minuet of Forest, declined, restocks child ammo.
  *
  * docs/item-ability-overhaul.md's Warp Songs section: the vanilla "Warp to X?" yes/no prompt is
- * kept as-is (see GanonsCurseSariasSong.cpp's sibling files for the shared design note) - "Yes" is
+ * kept as-is (see SevenSagesSariasSong.cpp's sibling files for the shared design note) - "Yes" is
  * untouched, free vanilla travel; "No" triggers this instead of just closing the dialogue, via the
  * new OnWarpSongDeclined hook fired from z_message_PAL.c at the exact point the player's choice
  * resolves. Costs 24 magic through the same shared helper every other song uses.
@@ -17,7 +17,7 @@
 #include "functions.h"
 #include "macros.h"
 #include "variables.h"
-#include "soh/Enhancements/GanonsCurse/GanonsCurseSongMagic.h"
+#include "soh/Enhancements/SevenSages/SevenSagesSongMagic.h"
 #include "soh/Enhancements/game-interactor/GameInteractor_Hooks.h"
 
 extern "C" PlayState* gPlayState;
@@ -27,7 +27,7 @@ namespace {
 constexpr s16 MINUET_MAGIC_COST = 24;
 constexpr s16 RESTOCK_AMOUNT = 99;
 
-void GanonsCurseMinuetOfForestDeclined() {
+void SevenSagesMinuetOfForestDeclined() {
     if (!GameInteractor::IsSaveLoaded(true)) {
         return;
     }
@@ -35,7 +35,7 @@ void GanonsCurseMinuetOfForestDeclined() {
         return;
     }
 
-    GanonsCurseRequestSongMagic(MINUET_MAGIC_COST, []() {
+    SevenSagesRequestSongMagic(MINUET_MAGIC_COST, []() {
         Inventory_ChangeAmmo(ITEM_STICK, RESTOCK_AMOUNT);
         Inventory_ChangeAmmo(ITEM_NUT, RESTOCK_AMOUNT);
         Inventory_ChangeAmmo(ITEM_SLINGSHOT, RESTOCK_AMOUNT);
@@ -45,8 +45,8 @@ void GanonsCurseMinuetOfForestDeclined() {
 
 } // namespace
 
-static void RegisterGanonsCurseMinuetOfForest() {
-    COND_HOOK(OnWarpSongDeclined, IS_RANDO, GanonsCurseMinuetOfForestDeclined);
+static void RegisterSevenSagesMinuetOfForest() {
+    COND_HOOK(OnWarpSongDeclined, IS_RANDO, SevenSagesMinuetOfForestDeclined);
 }
 
-static RegisterShipInitFunc ganonsCurseMinuetOfForestInitFunc(RegisterGanonsCurseMinuetOfForest, { "IS_RANDO" });
+static RegisterShipInitFunc sevenSagesMinuetOfForestInitFunc(RegisterSevenSagesMinuetOfForest, { "IS_RANDO" });

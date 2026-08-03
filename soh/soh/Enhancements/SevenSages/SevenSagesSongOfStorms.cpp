@@ -1,5 +1,5 @@
 /**
- * Ganon's Curse - Phase 6: Song of Storms douses the room's torches and slowly restores magic.
+ * Seven Sages - Phase 6: Song of Storms douses the room's torches and slowly restores magic.
  *
  * docs/item-ability-overhaul.md. Two of the three effects the spec lists for this song; the third,
  * water-raising, is deferred - it is Water Temple-specific (Bg_Mizu_Water, scene-flag driven)
@@ -30,8 +30,8 @@
 #include "functions.h"
 #include "macros.h"
 #include "variables.h"
-#include "soh/Enhancements/GanonsCurse/GanonsCurseSongMagic.h"
-#include "soh/Enhancements/GanonsCurse/GanonsCurseRoomAoe.h"
+#include "soh/Enhancements/SevenSages/SevenSagesSongMagic.h"
+#include "soh/Enhancements/SevenSages/SevenSagesRoomAoe.h"
 #include "soh/Enhancements/game-interactor/GameInteractor.h"
 #include "soh/Enhancements/game-interactor/GameInteractor_Hooks.h"
 #include "overlays/actors/ovl_Obj_Syokudai/z_obj_syokudai.h"
@@ -73,7 +73,7 @@ void SetVanillaStormTimer(u16 timer) {
         return;
     }
 
-    GanonsCurseForEachActorInRoom(gPlayState, ACTORCAT_ITEMACTION, [timer](Actor* actor) {
+    SevenSagesForEachActorInRoom(gPlayState, ACTORCAT_ITEMACTION, [timer](Actor* actor) {
         if (actor->id != ACTOR_EN_OKARINA_EFFECT) {
             return;
         }
@@ -110,7 +110,7 @@ s16 MagicMeterCapacity() {
     return (s16)((gSaveContext.isDoubleMagicAcquired + 1) * MAGIC_NORMAL_METER);
 }
 
-void GanonsCurseSongOfStormsPlayed() {
+void SevenSagesSongOfStormsPlayed() {
     if (!GameInteractor::IsSaveLoaded(true)) {
         return;
     }
@@ -118,8 +118,8 @@ void GanonsCurseSongOfStormsPlayed() {
         return;
     }
 
-    GanonsCurseRequestSongMagic(STORMS_SONG_MAGIC_COST, []() {
-        GanonsCurseForEachActorInRoom(gPlayState, ACTORCAT_PROP, DouseTorch);
+    SevenSagesRequestSongMagic(STORMS_SONG_MAGIC_COST, []() {
+        SevenSagesForEachActorInRoom(gPlayState, ACTORCAT_PROP, DouseTorch);
         // Replaying while it is already raining restarts the three minutes rather than stacking a
         // second refill on top, matching how Epona's Song refreshes rather than compounds.
         sRainFramesRemaining = STORMS_RAIN_FRAMES;
@@ -128,7 +128,7 @@ void GanonsCurseSongOfStormsPlayed() {
     });
 }
 
-void GanonsCurseSongOfStormsFrameUpdate() {
+void SevenSagesSongOfStormsFrameUpdate() {
     if (sRainFramesRemaining <= 0) {
         return;
     }
@@ -176,7 +176,7 @@ void GanonsCurseSongOfStormsFrameUpdate() {
 // door or zone stops it. This is the deliberate opposite of Epona's Song, whose buff was built to
 // survive transitions. Scene changes are caught here; room changes within one scene are caught by
 // the room-number poll in the frame update, since they never reach this hook.
-void GanonsCurseSongOfStormsOnSceneInit(int16_t sceneNum) {
+void SevenSagesSongOfStormsOnSceneInit(int16_t sceneNum) {
     // Only the state is dropped here, deliberately - the vanilla storm actor belonged to the scene
     // being left and went with it, so there is nothing to reach into. Touching the actor list of a
     // PlayState that is mid-reload would be the actual risk.
@@ -187,10 +187,10 @@ void GanonsCurseSongOfStormsOnSceneInit(int16_t sceneNum) {
 
 } // namespace
 
-static void RegisterGanonsCurseSongOfStorms() {
-    COND_HOOK(OnOcarinaSongAction, IS_RANDO, GanonsCurseSongOfStormsPlayed);
-    COND_HOOK(OnGameFrameUpdate, IS_RANDO, GanonsCurseSongOfStormsFrameUpdate);
-    COND_HOOK(OnSceneInit, IS_RANDO, GanonsCurseSongOfStormsOnSceneInit);
+static void RegisterSevenSagesSongOfStorms() {
+    COND_HOOK(OnOcarinaSongAction, IS_RANDO, SevenSagesSongOfStormsPlayed);
+    COND_HOOK(OnGameFrameUpdate, IS_RANDO, SevenSagesSongOfStormsFrameUpdate);
+    COND_HOOK(OnSceneInit, IS_RANDO, SevenSagesSongOfStormsOnSceneInit);
 }
 
-static RegisterShipInitFunc ganonsCurseSongOfStormsInitFunc(RegisterGanonsCurseSongOfStorms, { "IS_RANDO" });
+static RegisterShipInitFunc sevenSagesSongOfStormsInitFunc(RegisterSevenSagesSongOfStorms, { "IS_RANDO" });

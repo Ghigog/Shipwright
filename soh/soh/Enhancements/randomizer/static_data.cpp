@@ -213,7 +213,7 @@ std::unordered_map<RandomizerHint, StaticHintInfo> StaticData::staticHintInfoMap
   {RH_OOT_HINT,             StaticHintInfo(HINT_TYPE_ITEM,     {RHT_OOT_HINT},                      RSK_OOT_HINT,            true, {RC_HF_OCARINA_OF_TIME_ITEM, RC_SONG_FROM_OCARINA_OF_TIME},  {}, {RC_TOT_SHEIK_HINT})},
   {RH_MASK_SHOP_HINT,       StaticHintInfo(HINT_TYPE_ITEM,     {RHT_MASK_SHOP_HINT},                RSK_MASK_SHOP_HINT,      true, {RC_DEKU_THEATER_SKULL_MASK, RC_DEKU_THEATER_MASK_OF_TRUTH}, {}, {RC_MASK_SHOP_HINT})},
 
-// >>> GANONS_CURSE_GENERATED: STATIC_HINT_MAP - edit data/npc-hints.json, not this
+// >>> SEVEN_SAGES_GENERATED: STATIC_HINT_MAP - edit data/npc-hints.json, not this
   {RH_NPC_HC_GUARD, StaticHintInfo(HINT_TYPE_AREA, {RHT_NPC_HC_GUARD}, RSK_NPC_HINTS, true, {}, {RG_ZELDAS_LULLABY})},
   {RH_NPC_HC_MALON, StaticHintInfo(HINT_TYPE_ITEM, {RHT_NPC_HC_MALON}, RSK_NPC_HINTS, true, {RC_HC_MALON_EGG})},
   {RH_NPC_DMT_GORON_BOMB_FLOWER, StaticHintInfo(HINT_TYPE_ITEM, {RHT_NPC_DMT_GORON_BOMB_FLOWER}, RSK_NPC_HINTS, true, {RC_DMT_CHEST})},
@@ -329,7 +329,7 @@ std::unordered_map<RandomizerHint, StaticHintInfo> StaticData::staticHintInfoMap
   {RH_NPC_ZF_ZORA_6, StaticHintInfo(HINT_TYPE_ITEM, {RHT_NPC_ZF_ZORA_6}, RSK_NPC_HINTS, true, {RC_ZF_ICEBERG_FREESTANDING_POH})},
   {RH_NPC_ZF_ZORA_7, StaticHintInfo(HINT_TYPE_ITEM, {RHT_NPC_ZF_ZORA_7}, RSK_NPC_HINTS, true, {RC_ZF_BOTTOM_FREESTANDING_POH})},
   {RH_NPC_ZR_ZORA_8, StaticHintInfo(HINT_TYPE_ITEM, {RHT_NPC_ZR_ZORA_8}, RSK_NPC_HINTS, true, {RC_ZR_OPEN_GROTTO_CHEST})},
-// <<< GANONS_CURSE_GENERATED: STATIC_HINT_MAP
+// <<< SEVEN_SAGES_GENERATED: STATIC_HINT_MAP
     // clang-format on
 };
 

@@ -1437,9 +1437,9 @@ void Rando_Inventory_SwapAgeEquipment(void) {
                 gSaveContext.equips.buttonItems[1] = gSaveContext.equips.cButtonSlots[0] = ITEM_NONE;
             }
 
-            // Ganon's Curse: mirror the Nut check above - vanilla assumed a first-time-adult save
+            // Seven Sages: mirror the Nut check above - vanilla assumed a first-time-adult save
             // always already owns Bombs by this point, which no longer holds once Song of Time
-            // (see GanonsCurseSongOfTime.cpp) can trigger this "first time ever adult" branch
+            // (see SevenSagesSongOfTime.cpp) can trigger this "first time ever adult" branch
             // arbitrarily early. Without this check, an unowned Bomb got force-equipped to C-Down
             // (unusable, and rendered as a black icon since ownership was never actually granted).
             if (gSaveContext.inventory.items[SLOT_BOMB] != ITEM_NONE) {

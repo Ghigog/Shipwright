@@ -4601,7 +4601,7 @@ void Message_Update(PlayState* play) {
                         osSyncPrintf("OCARINA_MODE=%d -> ", play->msgCtx.ocarinaMode);
                         play->msgCtx.ocarinaMode = (msgCtx->choiceIndex == 0) ? OCARINA_MODE_02 : OCARINA_MODE_04;
                         if (msgCtx->choiceIndex != 0) {
-                            // Ganon's Curse: declined a warp-song's "Warp to X?" prompt - this is the
+                            // Seven Sages: declined a warp-song's "Warp to X?" prompt - this is the
                             // one precise, false-positive-free spot that means "the player picked No
                             // on an actual offered warp," not just "the ocarina session ended" (which
                             // reaches OCARINA_MODE_04 through several other unrelated paths).

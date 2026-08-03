@@ -1,5 +1,5 @@
 /**
- * Ganon's Curse - dev-only browser for vanilla cutscenes.
+ * Seven Sages - dev-only browser for vanilla cutscenes.
  *
  * `gc_play_vanilla_cs <symbol>` plays any vanilla cutscene that SoH exports as
  * a named OTR asset; `gc_list_vanilla_cs [filter]` lists them. This exists to
@@ -12,7 +12,7 @@
  * name - notably everything in the Chamber of Sages (kenjyanoma) and the ending
  * scene (hiral_demo) - are NOT reachable this way; they are scene cutscene
  * layers, selected by entering the scene with cutsceneIndex >= 0xFFF0. See
- * docs/opening-cutscene.md in the ganons-curse repo.
+ * docs/opening-cutscene.md in the seven-sages repo.
  *
  * IMPORTANT CAVEAT: a cutscene's actor cues address actors by index in the
  * CURRENT scene. Playing a cutscene outside its home scene therefore gives you
@@ -25,7 +25,7 @@
  * Dev tool: no gating beyond the debug console itself, and nothing here is
  * reachable in normal play.
  */
-// Order matters - see the note in GanonsCurseCutscenes.cpp. Plain-C++ includes
+// Order matters - see the note in SevenSagesCutscenes.cpp. Plain-C++ includes
 // first, before the extern "C" block pulls in the functions.h chain.
 #include <soh/OTRGlobals.h>
 #include "soh/ShipInit.hpp"
@@ -39,7 +39,7 @@
 
 // Pulls in the functions.h/variables.h/macros.h chain in the order that defines
 // PlayState, Vec3f/Vec3s and gSaveContext before anything below needs them.
-#include "GanonsCurseCutscenes.h"
+#include "SevenSagesCutscenes.h"
 
 extern "C" {
 extern PlayState* gPlayState;
@@ -275,7 +275,7 @@ int32_t ChamberOfSagesCommand(std::shared_ptr<Ship::Console> console, std::vecto
     // was correct for all five, which is the signature of "chamberCutsceneNum is
     // read, actor presence is decided elsewhere". Before theorising further, open
     // the Actor Viewer in the chamber and look at whether the sage is in the room
-    // at all - see ganons-curse/docs/opening-cutscene.md section 3c.
+    // at all - see seven-sages/docs/opening-cutscene.md section 3c.
 
     gPlayState->nextEntranceIndex = 0x6B; // ENTR_CHAMBER_OF_THE_SAGES_0
     gPlayState->transitionTrigger = TRANS_TRIGGER_START;
@@ -289,19 +289,19 @@ int32_t ChamberOfSagesCommand(std::shared_ptr<Ship::Console> console, std::vecto
     return 0;
 }
 
-void RegisterGanonsCurseVanillaCutsceneCommands() {
+void RegisterSevenSagesVanillaCutsceneCommands() {
     auto console = Ship::Context::GetRawInstance()->GetConsole();
     console->AddCommand("gc_play_vanilla_cs",
                         { PlayVanillaCutsceneCommand,
-                          "Ganon's Curse (dev): play a named vanilla cutscene by symbol." });
+                          "Seven Sages (dev): play a named vanilla cutscene by symbol." });
     console->AddCommand("gc_list_vanilla_cs",
                         { ListVanillaCutscenesCommand,
-                          "Ganon's Curse (dev): list named vanilla cutscenes, optionally filtered." });
+                          "Seven Sages (dev): list named vanilla cutscenes, optionally filtered." });
     console->AddCommand("gc_chamber",
                         { ChamberOfSagesCommand,
-                          "Ganon's Curse (dev): enter the Chamber of Sages set up for one sage's cutscene (0-4)." });
+                          "Seven Sages (dev): enter the Chamber of Sages set up for one sage's cutscene (0-4)." });
 }
 
 } // namespace
 
-static RegisterShipInitFunc ganonsCurseVanillaCutsceneInitFunc(RegisterGanonsCurseVanillaCutsceneCommands);
+static RegisterShipInitFunc sevenSagesVanillaCutsceneInitFunc(RegisterSevenSagesVanillaCutsceneCommands);

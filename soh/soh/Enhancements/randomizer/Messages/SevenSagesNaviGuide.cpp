@@ -1,5 +1,5 @@
 /**
- * Ganon's Curse - Phase 4e: Navi as the "where next" guide.
+ * Seven Sages - Phase 4e: Navi as the "where next" guide.
  *
  * In vanilla, Navi's forced dialogue is the game's soft quest marker - she tells you where the
  * story goes next. Under a randomizer that role is vacant, and Phase 4a's SkipForcedDialog = 2 put
@@ -276,7 +276,7 @@ void RewriteNaviMessage(uint16_t* textId, bool* loadFromMessageTable) {
     *loadFromMessageTable = false;
 }
 
-void GanonsCurseNaviOnVanillaBehavior(GIVanillaBehavior id, bool* should, va_list originalArgs) {
+void SevenSagesNaviOnVanillaBehavior(GIVanillaBehavior id, bool* should, va_list originalArgs) {
     if (id != VB_NAVI_TALK) {
         return;
     }
@@ -287,12 +287,12 @@ void GanonsCurseNaviOnVanillaBehavior(GIVanillaBehavior id, bool* should, va_lis
     ArmNaviRewrite(should, naviTalk);
 }
 
-void RegisterGanonsCurseNaviGuide() {
+void RegisterSevenSagesNaviGuide() {
     COND_HOOK(OnSceneInit, IS_RANDO, RecalculateNaviSuggestion);
-    COND_HOOK(OnVanillaBehavior, IS_RANDO, GanonsCurseNaviOnVanillaBehavior);
+    COND_HOOK(OnVanillaBehavior, IS_RANDO, SevenSagesNaviOnVanillaBehavior);
     COND_HOOK(OnOpenText, IS_RANDO, RewriteNaviMessage);
 }
 
 } // namespace
 
-static RegisterShipInitFunc ganonsCurseNaviGuideInitFunc(RegisterGanonsCurseNaviGuide, { "IS_RANDO" });
+static RegisterShipInitFunc sevenSagesNaviGuideInitFunc(RegisterSevenSagesNaviGuide, { "IS_RANDO" });

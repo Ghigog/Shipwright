@@ -1,4 +1,4 @@
-#include "soh/Enhancements/GanonsCurse/GanonsCurseSongMagic.h"
+#include "soh/Enhancements/SevenSages/SevenSagesSongMagic.h"
 
 #include "soh/ShipInit.hpp"
 #include "functions.h"
@@ -19,7 +19,7 @@ s32 sPendingFrames = 0;
 s16 sPendingCost = 0;
 std::function<void()> sPendingOnSuccess;
 
-void GanonsCurseSongMagicFrameUpdate() {
+void SevenSagesSongMagicFrameUpdate() {
     if (!sPending) {
         return;
     }
@@ -64,15 +64,15 @@ void GanonsCurseSongMagicFrameUpdate() {
 
 } // namespace
 
-void GanonsCurseRequestSongMagic(short cost, std::function<void()> onSuccess) {
+void SevenSagesRequestSongMagic(short cost, std::function<void()> onSuccess) {
     sPending = true;
     sPendingFrames = 0;
     sPendingCost = cost;
     sPendingOnSuccess = std::move(onSuccess);
 }
 
-static void RegisterGanonsCurseSongMagic() {
-    COND_HOOK(OnGameFrameUpdate, IS_RANDO, GanonsCurseSongMagicFrameUpdate);
+static void RegisterSevenSagesSongMagic() {
+    COND_HOOK(OnGameFrameUpdate, IS_RANDO, SevenSagesSongMagicFrameUpdate);
 }
 
-static RegisterShipInitFunc ganonsCurseSongMagicInitFunc(RegisterGanonsCurseSongMagic, { "IS_RANDO" });
+static RegisterShipInitFunc sevenSagesSongMagicInitFunc(RegisterSevenSagesSongMagic, { "IS_RANDO" });

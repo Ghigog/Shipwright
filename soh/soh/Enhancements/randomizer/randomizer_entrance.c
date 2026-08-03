@@ -424,7 +424,7 @@ void Entrance_SetSavewarpEntrance(void) {
         // the entrance index is -1 (new save)
         return;
     } else if (Randomizer_GetSageHomeEntrance() != -1) {
-        // Ganon's Curse: this whole function is entrance-rando's own independent recompute of
+        // Seven Sages: this whole function is entrance-rando's own independent recompute of
         // "where does this file spawn" (separate from, and running after, Sram_OpenSave's version
         // of the same fallback - see the matching comment there). It has no knowledge of the
         // selected sage's home base, so it was routing every sage to the vanilla generic

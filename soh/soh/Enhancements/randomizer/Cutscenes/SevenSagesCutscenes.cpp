@@ -1,5 +1,5 @@
 /**
- * Ganon's Curse - Phase 4b: the JSON-authored cutscene pipeline.
+ * Seven Sages - Phase 4b: the JSON-authored cutscene pipeline.
  *
  * A cutscene is a plain CutsceneData[] array (z64cutscene_commands.h macros) -
  * playing one is `play->csCtx.segment = <array>; gSaveContext.cutsceneTrigger = 1;`,
@@ -15,7 +15,7 @@
  * at all right now. Extend deliberately if 4d ever needs a scene transition or
  * actor choreography; don't hand-edit the generated regions below to add one.
  *
- * Custom dialogue reuses the exact mechanism GanonsCurseNpcHints.cpp already
+ * Custom dialogue reuses the exact mechanism SevenSagesNpcHints.cpp already
  * established: an OnOpenText hook builds a CustomMessage on the fly and sets
  * loadFromMessageTable = false, rather than going through
  * CustomMessageManager::CreateMessage's table/registration path (that
@@ -26,7 +26,7 @@
  * disjoint from npc-hints.json's IDs (which are all real vanilla IDs, always
  * < 0x8000).
  */
-// Order matters: these plain-C++ includes must come before GanonsCurseCutscenes.h
+// Order matters: these plain-C++ includes must come before SevenSagesCutscenes.h
 // pulls in functions.h/variables.h/macros.h inside its extern "C" block. Several
 // libultraship headers reachable from that C chain (e.g. macros.h's own
 // ship/utils/binarytools/endianness.h) are template-using C++ headers; if their
@@ -34,7 +34,7 @@
 // extern "C" block, the templates fail to parse ("templates must have C++
 // linkage"). Getting them parsed once here in ordinary C++ context first makes
 // every later re-inclusion an include-guard no-op instead - the same reason
-// GanonsCurseNpcHints.cpp orders its includes this way.
+// SevenSagesNpcHints.cpp orders its includes this way.
 #include <soh/OTRGlobals.h>
 #include "soh/ShipInit.hpp"
 #include "soh/Enhancements/custom-message/CustomMessageManager.h"
@@ -46,7 +46,7 @@
 #include <string>
 #include <unordered_map>
 
-#include "GanonsCurseCutscenes.h"
+#include "SevenSagesCutscenes.h"
 
 extern "C" {
 extern PlayState* gPlayState;
@@ -60,12 +60,12 @@ struct CutsceneTextEntry {
     const char* dialogue;
 };
 
-// Generated from data/cutscenes.json in the ganons-curse repo - edit that file,
+// Generated from data/cutscenes.json in the seven-sages repo - edit that file,
 // not this table.
 constexpr CutsceneTextEntry cutsceneTextEntries[] = {
-// >>> GANONS_CURSE_GENERATED: TEXT_IDS - edit data/cutscenes.json, not this
+// >>> SEVEN_SAGES_GENERATED: TEXT_IDS - edit data/cutscenes.json, not this
 
-// <<< GANONS_CURSE_GENERATED: TEXT_IDS
+// <<< SEVEN_SAGES_GENERATED: TEXT_IDS
 };
 
 void BuildCutsceneMessage(uint16_t* textId, bool* loadFromMessageTable) {
@@ -92,9 +92,9 @@ void BuildCutsceneMessage(uint16_t* textId, bool* loadFromMessageTable) {
 // Generated from data/cutscenes.json - edit that file, not this. Defined at
 // namespace scope (not inside the anonymous namespace above) because these
 // need real external linkage to match the `extern` declarations in
-// GanonsCurseCutscenes.h.
-// >>> GANONS_CURSE_GENERATED: CUTSCENE_DATA - edit data/cutscenes.json, not this
-CutsceneData gGanonsCurseSariaForestTempleOpening[] = {
+// SevenSagesCutscenes.h.
+// >>> SEVEN_SAGES_GENERATED: CUTSCENE_DATA - edit data/cutscenes.json, not this
+CutsceneData gSevenSagesSariaForestTempleOpening[] = {
     CS_BEGIN_CUTSCENE(2, 140),
     CS_CAM_EYE_LIST(0, 1181),
         CS_CAM_EYE(CS_CMD_CONTINUE, 0, 0, 60.0f, 0, 567, -2138, 0),
@@ -117,7 +117,7 @@ CutsceneData gGanonsCurseSariaForestTempleOpening[] = {
     CS_END(),
 };
 
-CutsceneData gGanonsCurseZeldaCastleCourtyardOpening[] = {
+CutsceneData gSevenSagesZeldaCastleCourtyardOpening[] = {
     CS_BEGIN_CUTSCENE(2, 150),
     CS_CAM_EYE_LIST(0, 150),
         CS_CAM_EYE(CS_CMD_CONTINUE, 0, 0, 45.1999f, -461, 133, 0, 0),
@@ -136,7 +136,7 @@ CutsceneData gGanonsCurseZeldaCastleCourtyardOpening[] = {
     CS_END(),
 };
 
-CutsceneData gGanonsCurseDaruniaChamberOpening[] = {
+CutsceneData gSevenSagesDaruniaChamberOpening[] = {
     CS_BEGIN_CUTSCENE(2, 150),
     CS_CAM_EYE_LIST(0, 241),
         CS_CAM_EYE(CS_CMD_CONTINUE, 0, 0, 60.0f, 168, 203, -1311, 0),
@@ -160,18 +160,18 @@ CutsceneData gGanonsCurseDaruniaChamberOpening[] = {
         CS_CAM_AT(CS_CMD_STOP, 0, 30, 60.0f, 157, 134, -1031, 22032),
     CS_END(),
 };
-// <<< GANONS_CURSE_GENERATED: CUTSCENE_DATA
+// <<< SEVEN_SAGES_GENERATED: CUTSCENE_DATA
 
 namespace {
 
 // Generated from data/cutscenes.json - edit that file, not this. Backs the
 // gc_play_cutscene debug console command below.
 const std::unordered_map<std::string, CutsceneData*> cutsceneById = {
-// >>> GANONS_CURSE_GENERATED: CUTSCENE_REGISTRY - edit data/cutscenes.json, not this
-    { "SARIA_FOREST_TEMPLE_OPENING", gGanonsCurseSariaForestTempleOpening },
-    { "ZELDA_CASTLE_COURTYARD_OPENING", gGanonsCurseZeldaCastleCourtyardOpening },
-    { "DARUNIA_CHAMBER_OPENING", gGanonsCurseDaruniaChamberOpening },
-// <<< GANONS_CURSE_GENERATED: CUTSCENE_REGISTRY
+// >>> SEVEN_SAGES_GENERATED: CUTSCENE_REGISTRY - edit data/cutscenes.json, not this
+    { "SARIA_FOREST_TEMPLE_OPENING", gSevenSagesSariaForestTempleOpening },
+    { "ZELDA_CASTLE_COURTYARD_OPENING", gSevenSagesZeldaCastleCourtyardOpening },
+    { "DARUNIA_CHAMBER_OPENING", gSevenSagesDaruniaChamberOpening },
+// <<< SEVEN_SAGES_GENERATED: CUTSCENE_REGISTRY
 };
 
 // Dev-only trigger for the 4b pipeline: `gc_play_cutscene <id>` plays a
@@ -182,7 +182,7 @@ const std::unordered_map<std::string, CutsceneData*> cutsceneById = {
 // ignores cutsceneTrigger while csCtx.state != CS_STATE_IDLE (func_800645A0,
 // z_demo.c) and only consumes it once state returns to idle, so calling this
 // mid-cutscene is a safe no-op rather than a stomp.
-int32_t GanonsCursePlayCutsceneCommand(std::shared_ptr<Ship::Console> console, std::vector<std::string> args,
+int32_t SevenSagesPlayCutsceneCommand(std::shared_ptr<Ship::Console> console, std::vector<std::string> args,
                                        std::string* output) {
     if (gPlayState == nullptr) {
         if (output != nullptr) {
@@ -208,18 +208,18 @@ int32_t GanonsCursePlayCutsceneCommand(std::shared_ptr<Ship::Console> console, s
     return 0;
 }
 
-void RegisterGanonsCurseCutsceneDebugCommand() {
+void RegisterSevenSagesCutsceneDebugCommand() {
     Ship::Context::GetRawInstance()->GetConsole()->AddCommand(
         "gc_play_cutscene",
-        { GanonsCursePlayCutsceneCommand,
-          "Ganon's Curse: play a JSON-authored cutscene from data/cutscenes.json by id (4b pipeline)." });
+        { SevenSagesPlayCutsceneCommand,
+          "Seven Sages: play a JSON-authored cutscene from data/cutscenes.json by id (4b pipeline)." });
 }
 
-void RegisterGanonsCurseCutsceneText() {
+void RegisterSevenSagesCutsceneText() {
     COND_HOOK(OnOpenText, IS_RANDO, BuildCutsceneMessage);
 }
 
 } // namespace
 
-static RegisterShipInitFunc ganonsCurseCutsceneDebugCommandInitFunc(RegisterGanonsCurseCutsceneDebugCommand);
-static RegisterShipInitFunc ganonsCurseCutsceneTextInitFunc(RegisterGanonsCurseCutsceneText, { "IS_RANDO" });
+static RegisterShipInitFunc sevenSagesCutsceneDebugCommandInitFunc(RegisterSevenSagesCutsceneDebugCommand);
+static RegisterShipInitFunc sevenSagesCutsceneTextInitFunc(RegisterSevenSagesCutsceneText, { "IS_RANDO" });

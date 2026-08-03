@@ -1,5 +1,5 @@
 /**
- * Ganon's Curse - Phase 6: the Sun's Song temporary-heart pool.
+ * Seven Sages - Phase 6: the Sun's Song temporary-heart pool.
  *
  * docs/item-ability-overhaul.md: Sun's Song grants temporary hearts - one full heart, plus a
  * quarter heart for every heart piece ever found. Repeatable up to that cap, no expiry.
@@ -19,7 +19,7 @@
  * 2. A spent temporary heart is gone for good. The capacity shrinks as the pool drains, so there is
  *    no empty slot left for a fairy/potion/heart pickup to refill. Healing is separately clamped to
  *    the player's own capacity so it can never creep into temporary space.
- * 3. They never reach the save file. GanonsCurseStripTempHearts() runs from SaveManager::SaveFile
+ * 3. They never reach the save file. SevenSagesStripTempHearts() runs from SaveManager::SaveFile
  *    before gSaveContext is snapshotted - so saving genuinely ends the buff, which is the intended
  *    behaviour and not just a serialisation detail.
  *
@@ -33,7 +33,7 @@
 #include "functions.h"
 #include "macros.h"
 #include "variables.h"
-#include "soh/Enhancements/GanonsCurse/GanonsCurseTempHearts.h"
+#include "soh/Enhancements/SevenSages/SevenSagesTempHearts.h"
 #include "soh/Enhancements/game-interactor/GameInteractor_Hooks.h"
 
 extern "C" PlayState* gPlayState;
@@ -70,7 +70,7 @@ void ClearState() {
     sPermanentCapacity = 0;
 }
 
-void GanonsCurseTempHeartsFrameUpdate() {
+void SevenSagesTempHeartsFrameUpdate() {
     if (sTempHealth <= 0) {
         return;
     }
@@ -108,13 +108,13 @@ void GanonsCurseTempHeartsFrameUpdate() {
     }
 }
 
-void GanonsCurseTempHeartsOnLoadGame(int32_t fileNum) {
+void SevenSagesTempHeartsOnLoadGame(int32_t fileNum) {
     ClearState();
 }
 
 } // namespace
 
-extern "C" void GanonsCurseGrantTempHearts(void) {
+extern "C" void SevenSagesGrantTempHearts(void) {
     if (!GameInteractor::IsSaveLoaded(true)) {
         return;
     }
@@ -136,7 +136,7 @@ extern "C" void GanonsCurseGrantTempHearts(void) {
     ApplyCapacity();
 }
 
-extern "C" void GanonsCurseStripTempHearts(void) {
+extern "C" void SevenSagesStripTempHearts(void) {
     if (sTempHealth <= 0) {
         return;
     }
@@ -146,16 +146,16 @@ extern "C" void GanonsCurseStripTempHearts(void) {
     ClearState();
 }
 
-extern "C" int GanonsCurseTempHeartStartIndex(void) {
+extern "C" int SevenSagesTempHeartStartIndex(void) {
     if (sTempHealth <= 0) {
         return -1;
     }
     return sPermanentHealth / FULL_HEART_HEALTH;
 }
 
-static void RegisterGanonsCurseTempHearts() {
-    COND_HOOK(OnGameFrameUpdate, IS_RANDO, GanonsCurseTempHeartsFrameUpdate);
-    COND_HOOK(OnLoadGame, IS_RANDO, GanonsCurseTempHeartsOnLoadGame);
+static void RegisterSevenSagesTempHearts() {
+    COND_HOOK(OnGameFrameUpdate, IS_RANDO, SevenSagesTempHeartsFrameUpdate);
+    COND_HOOK(OnLoadGame, IS_RANDO, SevenSagesTempHeartsOnLoadGame);
 }
 
-static RegisterShipInitFunc ganonsCurseTempHeartsInitFunc(RegisterGanonsCurseTempHearts, { "IS_RANDO" });
+static RegisterShipInitFunc sevenSagesTempHeartsInitFunc(RegisterSevenSagesTempHearts, { "IS_RANDO" });

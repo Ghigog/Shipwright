@@ -5,7 +5,7 @@
 #include "soh/Enhancements/game-interactor/GameInteractor.h"
 #include "soh/Enhancements/game-interactor/GameInteractor_Hooks.h"
 #include "soh/Enhancements/randomizer/savefile.h"
-#include "soh/Enhancements/GanonsCurse/GanonsCurseSageCosmetics.h"
+#include "soh/Enhancements/SevenSages/SevenSagesSageCosmetics.h"
 #include "soh/OTRGlobals.h"
 #include "soh/SaveManager.h"
 #include "soh/ResourceManagerHelpers.h"
@@ -135,7 +135,7 @@ void Sram_OpenSave() {
                 break;
             }
 
-            // Ganon's Curse: this branch is what vanilla uses to route every non-dungeon continue back to
+            // Seven Sages: this branch is what vanilla uses to route every non-dungeon continue back to
             // Link's House (child) / Temple of Time (adult), which was silently overwriting the sage's
             // starting entrance set in Sram_InitSave on every single load (not just the first one, since
             // entranceIndex isn't a persisted field - it's recomputed here each time the file is opened).
@@ -280,7 +280,7 @@ void Sram_InitSave(FileChooseContext* fileChooseCtx) {
 
         Randomizer_InitSaveFile();
 
-        // Ganon's Curse: override starting scene + age based on the selected sage. Must run
+        // Seven Sages: override starting scene + age based on the selected sage. Must run
         // after Randomizer_InitSaveFile(), not before - that function sets linkAge/entranceIndex
         // itself based on the unrelated RSK_SELECTED_STARTING_AGE setting, which was silently
         // clobbering this override when it ran first (entranceIndex happened to get recomputed
@@ -290,10 +290,10 @@ void Sram_InitSave(FileChooseContext* fileChooseCtx) {
         // Age is set to whichever vanilla equip-slot restrictions the sage's kit actually needs
         // (e.g. Hookshot/Hover Boots/Mirror Shield/Megaton Hammer are adult-only equipment in
         // vanilla), not a narrative choice.
-        // Ganon's Curse: age and entrance both come from the single sage definition table in
+        // Seven Sages: age and entrance both come from the single sage definition table in
         // savefile.cpp, which generation-time code reads too. These used to be hardcoded here in a
         // parallel switch; the duplication is what let the generator and the runtime disagree about a
-        // sage's starting age. Appearance is separate - see GanonsCurseSageCosmetics.cpp.
+        // sage's starting age. Appearance is separate - see SevenSagesSageCosmetics.cpp.
         {
             int32_t sageEntrance = Randomizer_GetSageHomeEntrance();
             if (sageEntrance != -1) {
@@ -301,15 +301,15 @@ void Sram_InitSave(FileChooseContext* fileChooseCtx) {
                 gSaveContext.linkAge =
                     Randomizer_GetSageStartingAge() == RO_AGE_ADULT ? LINK_AGE_ADULT : LINK_AGE_CHILD;
 
-                // Ganon's Curse: the sage's whole cosmetic identity (tunic now, plus HUD/voice/
-                // instrument as later slices land) lives in GanonsCurseSageCosmetics.cpp. It is
+                // Seven Sages: the sage's whole cosmetic identity (tunic now, plus HUD/voice/
+                // instrument as later slices land) lives in SevenSagesSageCosmetics.cpp. It is
                 // applied again from an OnLoadGame hook there, which is the call that actually
                 // makes it correct - these are global CVars, not save data, so a file-creation
                 // write alone gets clobbered by the next file you create. See
                 // docs/sage-cosmetics.md.
-                GanonsCurse_ApplySageCosmetics();
+                SevenSages_ApplySageCosmetics();
 
-                // Ganon's Curse: mark Saria's Kokiri Forest greeting as already happened.
+                // Seven Sages: mark Saria's Kokiri Forest greeting as already happened.
                 //
                 // EnSa plays gSpot04Cs_10E20 (z_en_sa.c:511) whenever the player is in Kokiri
                 // Forest without the Kokiri Emerald and INFTABLE_GREETED_BY_SARIA is unset. That
@@ -334,7 +334,7 @@ void Sram_InitSave(FileChooseContext* fileChooseCtx) {
             }
         }
 
-        // Ganon's Curse: cutsceneIndex >= 0xFFF0 (the "skip cutscene" sentinel this function set
+        // Seven Sages: cutsceneIndex >= 0xFFF0 (the "skip cutscene" sentinel this function set
         // earlier, and what Randomizer_InitSaveFile() above also uses for RO_AGE_CHILD) is NOT a
         // generic "no cutscene" flag - z_play.c's scene-layer computation treats it as
         // "sceneLayer = 4 + (cutsceneIndex & 0xF)", and that sceneLayer gets ADDED DIRECTLY to
@@ -348,9 +348,9 @@ void Sram_InitSave(FileChooseContext* fileChooseCtx) {
         // through to the ordinary child/adult day/night branch instead.
         gSaveContext.cutsceneIndex = 0;
 
-        // Ganon's Curse (4c): this is also the hook point for the universal opening,
+        // Seven Sages (4c): this is also the hook point for the universal opening,
         // which is specified but deliberately not built - see
-        // ganons-curse/docs/opening-cutscene.md section 7. Whatever arms it must go
+        // seven-sages/docs/opening-cutscene.md section 7. Whatever arms it must go
         // here, inside this branch and after the cutsceneIndex = 0 above: that
         // assignment is what lets the home region's vanilla entrance cutscene fire at
         // all (Cutscene_HandleEntranceTriggers gates on cutsceneIndex < 0xFFF0), and

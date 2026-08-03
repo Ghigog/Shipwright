@@ -1,9 +1,9 @@
 /**
- * Ganon's Curse - Phase 6: Serenade of Water, declined, slow health regeneration.
+ * Seven Sages - Phase 6: Serenade of Water, declined, slow health regeneration.
  *
- * See GanonsCurseMinuetOfForest.cpp's header for the shared "No" mechanism. Costs 24 magic via the
+ * See SevenSagesMinuetOfForest.cpp's header for the shared "No" mechanism. Costs 24 magic via the
  * shared helper, then spreads a full heart bar's worth of healing over roughly three real minutes -
- * same accumulator trick GanonsCurseSongOfStorms.cpp uses for its magic trickle (nudge the value one
+ * same accumulator trick SevenSagesSongOfStorms.cpp uses for its magic trickle (nudge the value one
  * unit at a time rather than a big instant jump), scaled so a full heart bar takes the same wall-clock
  * time regardless of the player's current health capacity.
  *
@@ -21,7 +21,7 @@
 #include "functions.h"
 #include "macros.h"
 #include "variables.h"
-#include "soh/Enhancements/GanonsCurse/GanonsCurseSongMagic.h"
+#include "soh/Enhancements/SevenSages/SevenSagesSongMagic.h"
 #include "soh/Enhancements/game-interactor/GameInteractor_Hooks.h"
 
 extern "C" PlayState* gPlayState;
@@ -36,7 +36,7 @@ constexpr s32 SERENADE_REGEN_FRAMES = 20 * 60 * 3;
 s32 sRegenFramesRemaining = 0;
 s32 sRegenAccumulator = 0;
 
-void GanonsCurseSerenadeOfWaterDeclined() {
+void SevenSagesSerenadeOfWaterDeclined() {
     if (!GameInteractor::IsSaveLoaded(true)) {
         return;
     }
@@ -44,7 +44,7 @@ void GanonsCurseSerenadeOfWaterDeclined() {
         return;
     }
 
-    GanonsCurseRequestSongMagic(SERENADE_MAGIC_COST, []() {
+    SevenSagesRequestSongMagic(SERENADE_MAGIC_COST, []() {
         // Replaying while already regenerating restarts the three minutes rather than stacking a
         // second trickle on top, same refresh-not-stack pattern every other song uses.
         sRegenFramesRemaining = SERENADE_REGEN_FRAMES;
@@ -52,7 +52,7 @@ void GanonsCurseSerenadeOfWaterDeclined() {
     });
 }
 
-void GanonsCurseSerenadeOfWaterFrameUpdate() {
+void SevenSagesSerenadeOfWaterFrameUpdate() {
     if (sRegenFramesRemaining <= 0) {
         return;
     }
@@ -79,9 +79,9 @@ void GanonsCurseSerenadeOfWaterFrameUpdate() {
 
 } // namespace
 
-static void RegisterGanonsCurseSerenadeOfWater() {
-    COND_HOOK(OnWarpSongDeclined, IS_RANDO, GanonsCurseSerenadeOfWaterDeclined);
-    COND_HOOK(OnGameFrameUpdate, IS_RANDO, GanonsCurseSerenadeOfWaterFrameUpdate);
+static void RegisterSevenSagesSerenadeOfWater() {
+    COND_HOOK(OnWarpSongDeclined, IS_RANDO, SevenSagesSerenadeOfWaterDeclined);
+    COND_HOOK(OnGameFrameUpdate, IS_RANDO, SevenSagesSerenadeOfWaterFrameUpdate);
 }
 
-static RegisterShipInitFunc ganonsCurseSerenadeOfWaterInitFunc(RegisterGanonsCurseSerenadeOfWater, { "IS_RANDO" });
+static RegisterShipInitFunc sevenSagesSerenadeOfWaterInitFunc(RegisterSevenSagesSerenadeOfWater, { "IS_RANDO" });

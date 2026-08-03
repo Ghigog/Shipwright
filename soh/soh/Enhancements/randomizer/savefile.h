@@ -9,7 +9,7 @@ extern "C" {
 
 void Randomizer_InitSaveFile();
 
-// Ganon's Curse: accessors over the sage definition table in savefile.cpp - the single source of
+// Seven Sages: accessors over the sage definition table in savefile.cpp - the single source of
 // truth for each sage's fixed starting state. See the big comment above that table for why the kit
 // is modelled as real RSK_STARTING_* options instead of direct item grants.
 

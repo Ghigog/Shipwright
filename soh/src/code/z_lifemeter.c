@@ -4,7 +4,7 @@
 #include "soh/OTRGlobals.h"
 #include "soh/Enhancements/cosmetics/cosmeticsTypes.h"
 #include "soh/Enhancements/game-interactor/GameInteractor_Hooks.h"
-#include "soh/Enhancements/GanonsCurse/GanonsCurseTempHearts.h"
+#include "soh/Enhancements/SevenSages/SevenSagesTempHearts.h"
 
 s16 Top_LM_Margin = 0;
 s16 Left_LM_Margin = 0;
@@ -424,9 +424,9 @@ void HealthMeter_Draw(PlayState* play) {
     s32 curCombineModeSet = 0;
     u8* curBgImgLoaded = NULL;
     s32 ddHeartCountMinusOne = gSaveContext.isDoubleDefenseAcquired ? totalHeartCount - 1 : -1;
-    // Ganon's Curse: Sun's Song's temporary hearts are the topmost filled hearts, drawn in the
+    // Seven Sages: Sun's Song's temporary hearts are the topmost filled hearts, drawn in the
     // magic meter's colour so they read as magic-bought rather than earned. -1 when none are held.
-    s32 tempHeartStart = GanonsCurseTempHeartStartIndex();
+    s32 tempHeartStart = SevenSagesTempHeartStartIndex();
     Color_RGB8 tempHeartColor = CVarGetColor24(CVAR_COSMETIC("Consumable.Magic"), (Color_RGB8){ 0, 200, 0 });
     f32 HeartsScale = 0.7f;
     if (CVarGetInteger(CVAR_COSMETIC("HUD.HeartsCount.PosType"), 0) != ORIGINAL_LOCATION) {
@@ -517,7 +517,7 @@ void HealthMeter_Draw(PlayState* play) {
                 }
             }
 
-            // Ganon's Curse: recolour the temporary hearts, overriding whichever set was chosen
+            // Seven Sages: recolour the temporary hearts, overriding whichever set was chosen
             // above. Keyed off filled position rather than a fixed index, so the green hearts are
             // always the ones about to be lost - which is also the order damage consumes them in.
             if ((tempHeartStart >= 0) && (i >= tempHeartStart) && (i <= fullHeartCount)) {

@@ -1,5 +1,5 @@
 /**
- * Ganon's Curse - the sage's home-region establishing shot.
+ * Seven Sages - the sage's home-region establishing shot.
  *
  * Phase 4a's whole result was that six of the seven sages spawned on an entrance that already had
  * a thematically correct vanilla cutscene waiting, so restoring SkipCutscene.Entrances gave us
@@ -34,18 +34,18 @@
  * plays that opening and an entry here would fight it.
  *
  * Hooked on OnSceneSpawnActors, not OnSceneInit - see the comment above
- * RegisterGanonsCurseSageOpenings for why (Player doesn't exist yet at OnSceneInit, which broke
+ * RegisterSevenSagesSageOpenings for why (Player doesn't exist yet at OnSceneInit, which broke
  * relativeToPlayer cutscenes specifically).
  */
-// Order matters - same include-ordering constraint as GanonsCurseCutscenes.cpp: these plain-C++
-// headers have to be parsed outside the extern "C" block that GanonsCurseCutscenes.h opens.
+// Order matters - same include-ordering constraint as SevenSagesCutscenes.cpp: these plain-C++
+// headers have to be parsed outside the extern "C" block that SevenSagesCutscenes.h opens.
 #include <soh/OTRGlobals.h>
 #include "soh/ShipInit.hpp"
 #include "soh/Enhancements/game-interactor/GameInteractor.h"
 
 #include "soh/Enhancements/randomizer/savefile.h"
 
-#include "GanonsCurseCutscenes.h"
+#include "SevenSagesCutscenes.h"
 
 extern "C" {
 extern PlayState* gPlayState;
@@ -62,7 +62,7 @@ struct SageOpening {
     uint16_t playedFlag;    // the vanilla EVENTCHKINF for this cutscene - see the header comment
     // The scene headers define these g*Cs symbols as OTR resource PATHS, not as CutsceneData
     // arrays - Cutscene_SetSegment resolves the path. Same handling as
-    // GanonsCurseVanillaCutscenes.cpp's table, which is where this pattern is already proven.
+    // SevenSagesVanillaCutscenes.cpp's table, which is where this pattern is already proven.
     const char* cutscene;
 };
 
@@ -129,7 +129,7 @@ void PlaySageOpening() {
     // change establishing-shot behaviour across the whole game rather than doing the one job this
     // file exists for. gSaveContext.entranceIndex doesn't change again until the next transition,
     // so it's still the spawn entrance here even though this now fires a frame later than
-    // Play_Init (see the OnSceneSpawnActors note above RegisterGanonsCurseSageOpenings).
+    // Play_Init (see the OnSceneSpawnActors note above RegisterSevenSagesSageOpenings).
     const int32_t sageEntrance = Randomizer_GetSageHomeEntrance();
     if (sageEntrance == -1 || gSaveContext.entranceIndex != sageEntrance) {
         return;
@@ -140,27 +140,27 @@ void PlaySageOpening() {
     // mod-owned RandomizerInf. Same play-once-per-file, survives-a-quit behaviour either way,
     // which is the property that matters.
     if (sageEntrance == kSariaHomeEntrance) {
-        if (!Flags_GetRandomizerInf(RAND_INF_GANONS_CURSE_SARIA_OPENING_PLAYED)) {
-            Flags_SetRandomizerInf(RAND_INF_GANONS_CURSE_SARIA_OPENING_PLAYED);
-            Cutscene_SetSegment(gPlayState, gGanonsCurseSariaForestTempleOpening);
+        if (!Flags_GetRandomizerInf(RAND_INF_SEVEN_SAGES_SARIA_OPENING_PLAYED)) {
+            Flags_SetRandomizerInf(RAND_INF_SEVEN_SAGES_SARIA_OPENING_PLAYED);
+            Cutscene_SetSegment(gPlayState, gSevenSagesSariaForestTempleOpening);
             gSaveContext.cutsceneTrigger = 1;
         }
         return;
     }
 
     if (sageEntrance == kZeldaHomeEntrance) {
-        if (!Flags_GetRandomizerInf(RAND_INF_GANONS_CURSE_ZELDA_OPENING_PLAYED)) {
-            Flags_SetRandomizerInf(RAND_INF_GANONS_CURSE_ZELDA_OPENING_PLAYED);
-            Cutscene_SetSegment(gPlayState, gGanonsCurseZeldaCastleCourtyardOpening);
+        if (!Flags_GetRandomizerInf(RAND_INF_SEVEN_SAGES_ZELDA_OPENING_PLAYED)) {
+            Flags_SetRandomizerInf(RAND_INF_SEVEN_SAGES_ZELDA_OPENING_PLAYED);
+            Cutscene_SetSegment(gPlayState, gSevenSagesZeldaCastleCourtyardOpening);
             gSaveContext.cutsceneTrigger = 1;
         }
         return;
     }
 
     if (sageEntrance == kDaruniaHomeEntrance) {
-        if (!Flags_GetRandomizerInf(RAND_INF_GANONS_CURSE_DARUNIA_OPENING_PLAYED)) {
-            Flags_SetRandomizerInf(RAND_INF_GANONS_CURSE_DARUNIA_OPENING_PLAYED);
-            Cutscene_SetSegment(gPlayState, gGanonsCurseDaruniaChamberOpening);
+        if (!Flags_GetRandomizerInf(RAND_INF_SEVEN_SAGES_DARUNIA_OPENING_PLAYED)) {
+            Flags_SetRandomizerInf(RAND_INF_SEVEN_SAGES_DARUNIA_OPENING_PLAYED);
+            Cutscene_SetSegment(gPlayState, gSevenSagesDaruniaChamberOpening);
             gSaveContext.cutsceneTrigger = 1;
         }
         return;
@@ -194,10 +194,10 @@ void PlaySageOpening() {
 // original race this file's header describes doesn't apply here. Absolute-coordinate openings
 // (Saria, Darunia) don't need this fix but aren't hurt by it either - moved along with the rest
 // rather than splitting the hook.
-void RegisterGanonsCurseSageOpenings() {
+void RegisterSevenSagesSageOpenings() {
     COND_HOOK(OnSceneSpawnActors, IS_RANDO, PlaySageOpening);
 }
 
 } // namespace
 
-static RegisterShipInitFunc ganonsCurseSageOpeningsInitFunc(RegisterGanonsCurseSageOpenings, { "IS_RANDO" });
+static RegisterShipInitFunc sevenSagesSageOpeningsInitFunc(RegisterSevenSagesSageOpenings, { "IS_RANDO" });

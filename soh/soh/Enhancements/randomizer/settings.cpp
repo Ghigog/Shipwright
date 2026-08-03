@@ -2987,7 +2987,7 @@ void Context::FinalizeSettings(const std::set<RandomizerCheck>& excludedLocation
         mOptions[RSK_SELECTED_STARTING_AGE].Set(mOptions[RSK_STARTING_AGE].Get());
     }
 
-    // Ganon's Curse: the selected sage overrides both the starting age just resolved above and the
+    // Seven Sages: the selected sage overrides both the starting age just resolved above and the
     // relevant RSK_STARTING_* item options, because a sage's age and kit are fixed properties of
     // that sage rather than free settings. This has to happen here, at the end of settings
     // finalization, so everything downstream in Fill() - the logic solver's starting inventory and

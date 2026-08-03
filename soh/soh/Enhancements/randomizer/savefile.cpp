@@ -421,7 +421,7 @@ void SetStartingItems() {
     }
 }
 
-// Ganon's Curse: single source of truth for every sage's fixed starting state.
+// Seven Sages: single source of truth for every sage's fixed starting state.
 //
 // The kit is expressed as real SoH RSK_STARTING_* option values rather than raw Item_Give calls,
 // and that distinction is the entire point. SoH already threads those options through three
@@ -442,7 +442,7 @@ void SetStartingItems() {
 // left the generator computing reachability from the wrong starting age.
 //
 // Starting state only. Everything about how a sage *looks and sounds* - tunic colors included,
-// which this table used to carry - lives in GanonsCurseSageCosmetics.cpp instead. The split is
+// which this table used to carry - lives in SevenSagesSageCosmetics.cpp instead. The split is
 // deliberate: this struct is what the generator and file creation read, and the presentation set
 // has since grown to HUD layout, proportions, voice mappings and an instrument, none of which the
 // generator has any business knowing about.
@@ -481,7 +481,7 @@ struct SageDefinition {
     uint8_t saveFlagCount;
 };
 
-// Ganon's Curse: every sage spawns INSIDE their home region, at the landmark they are actually
+// Seven Sages: every sage spawns INSIDE their home region, at the landmark they are actually
 // tied to, rather than at the doormat of the region they own (changed 2026-07-31). A sage arriving
 // at their own front gate like a tourist was backwards.
 //
@@ -499,7 +499,7 @@ struct SageDefinition {
 //  2. Moving off an entrance LOSES its vanilla entrance cutscene. sEntranceCutsceneTable
 //     (z_demo.c:61) is keyed on the exact entranceIndex, so e.g. Rauru at the ranch tower no
 //     longer triggers gLonLonRanchIntroCs the way LON_LON_RANCH_ENTRANCE did. That is deliberate
-//     and handled elsewhere: GanonsCurseOpenings.cpp re-fires the same vanilla cutscene from the
+//     and handled elsewhere: SevenSagesOpenings.cpp re-fires the same vanilla cutscene from the
 //     new spawn, which works because each new spawn is in the SAME SCENE as the old one (camera
 //     shots are absolute world coordinates, so a shot reused in its own scene is pixel-identical).
 //     Ruto is the exception in the good direction - her new spawn has an entrance cutscene of its
@@ -578,7 +578,7 @@ static const SageDefinition sSageDefinitions[] = {
     // the other six seeds unaffected.
     // Note this is the one sage whose new spawn is itself in sEntranceCutsceneTable
     // (gZorasFountainIntroCs, age-2 so child qualifies), so vanilla plays her opening and
-    // GanonsCurseOpenings.cpp deliberately has no entry for her.
+    // SevenSagesOpenings.cpp deliberately has no entry for her.
     { RO_SAGE_RUTO,
       RO_AGE_CHILD,
       ENTR_ZORAS_FOUNTAIN_TUNNEL_EXIT,
@@ -667,7 +667,7 @@ static const SageDefinition sSageDefinitions[] = {
     //
     // She has no opening cutscene right now. The old ZELDA_CASTLE_COURTYARD_OPENING
     // (data/cutscenes.json) was built against hairal_niwa's coordinates and is stale in the new
-    // scene - dropped from GanonsCurseOpenings.cpp rather than left wired to the wrong place.
+    // scene - dropped from SevenSagesOpenings.cpp rather than left wired to the wrong place.
     // nakaniwa has four of its own embedded cutscenes (gZeldasCourtyardGanonCs/WindowCs/MeetCs/
     // LullabyCs, see nakaniwa_scene.h) worth investigating for a replacement, not yet done.
     //
@@ -746,7 +746,7 @@ extern "C" void Randomizer_ApplySageGenerationSettings() {
         ctx->GetOption(def->world[i].key).Set(def->world[i].value);
     }
 
-    // Ganon's Curse: an adult-starting sage gets the Temple of Time pedestal check's contents for
+    // Seven Sages: an adult-starting sage gets the Temple of Time pedestal check's contents for
     // free at file creation - SetStartingItems() does that for any adult start with Master Sword
     // shuffled, on the reasoning that an adult start has already pulled the sword. That grant can't
     // simply be removed: an adult sage has no Master Sword, so it can never turn child, so it can
@@ -771,7 +771,7 @@ extern "C" uint16_t Randomizer_GetSageHomeRegion() {
     return def == nullptr ? 0 : def->homeRegion;
 }
 
-// Ganon's Curse: see savefile.h - the single source of truth for each sage's fixed home-base
+// Seven Sages: see savefile.h - the single source of truth for each sage's fixed home-base
 // entrance, shared by every piece of code that independently recomputes the fallback "where does
 // this file spawn" entrance. -1 means no override (randomizer not active).
 int32_t Randomizer_GetSageHomeEntrance() {
@@ -792,14 +792,14 @@ extern "C" void Randomizer_InitSaveFile() {
     // Reset Bombchu Bag Upgrade
     gSaveContext.ship.quest.data.randomizer.bombchuUpgradeLevel = 0;
 
-    // Ganon's Curse: the selected sage's kit is granted right here by SetStartingItems(), from the
+    // Seven Sages: the selected sage's kit is granted right here by SetStartingItems(), from the
     // real RSK_STARTING_* options that Randomizer_ApplySageGenerationSettings() set at generation
     // time. There is deliberately no separate sage-kit grant step anymore - the old one used bare
     // Item_Give calls that the generator knew nothing about, which is what caused kit items to also
     // be placed in the world as duplicates. See the sage definition table above.
     SetStartingItems();
 
-    // Ganon's Curse: per-sage world flags SoH exposes no setting for (see SageDefinition::saveFlags
+    // Seven Sages: per-sage world flags SoH exposes no setting for (see SageDefinition::saveFlags
     // for why this direction is safe). Applied after SetStartingItems() so a sage flag always wins
     // over anything the generic starting-item path set.
     {

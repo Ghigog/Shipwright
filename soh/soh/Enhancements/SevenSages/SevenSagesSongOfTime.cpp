@@ -1,5 +1,5 @@
 /**
- * Ganon's Curse - Phase 6: Song of Time as an on-demand adult/child toggle.
+ * Seven Sages - Phase 6: Song of Time as an on-demand adult/child toggle.
  *
  * docs/item-ability-overhaul.md picked option 2 of three Song of Time proposals: instead of
  * vanilla's fixed Temple-of-Time-pedestal-only age switch, playing Song of Time anywhere lets the
@@ -11,7 +11,7 @@
  * pipeline, so equipment/inventory swap comes for free. OcarinaTimeTravel.cpp
  * (soh/soh/Enhancements/QoL/) already proved the "cast Song of Time -> SwitchAge()" wiring works,
  * gated behind a disabled-by-default QoL cheat CVar with a configurable equipment-requirement
- * dial. This file is the built-in Ganon's Curse version: always on under the randomizer (no CVar,
+ * dial. This file is the built-in Seven Sages version: always on under the randomizer (no CVar,
  * no equipment requirement - only knowing the song matters), gated on magic instead.
  *
  * Kept from OcarinaTimeTravel: the proximity guard against vanilla time-mechanic actors/props
@@ -29,7 +29,7 @@
  * that same error sound) whenever gSaveContext.magicState isn't MAGIC_STATE_IDLE or
  * MAGIC_STATE_CONSUME_LENS - regardless of how much magic is actually available, and doesn't apply
  * its own deduction before an immediately-following scene transition can cut the drain animation
- * short. Both fixes are now shared plumbing - see GanonsCurseSongMagic.h/.cpp, extracted here after
+ * short. Both fixes are now shared plumbing - see SevenSagesSongMagic.h/.cpp, extracted here after
  * the same race was expected to recur for every other magic-costing song.
  */
 #include "soh/ShipInit.hpp"
@@ -37,7 +37,7 @@
 #include "macros.h"
 #include "variables.h"
 #include "soh/Enhancements/SwitchAge.h"
-#include "soh/Enhancements/GanonsCurse/GanonsCurseSongMagic.h"
+#include "soh/Enhancements/SevenSages/SevenSagesSongMagic.h"
 #include "soh/Enhancements/game-interactor/GameInteractor_Hooks.h"
 
 extern "C" PlayState* gPlayState;
@@ -55,7 +55,7 @@ bool NearVanillaTimeMechanic(Actor* player) {
            Actor_FindNearby(gPlayState, player, ACTOR_EN_GS, ACTORCAT_NPC, 300.0f) != NULL;
 }
 
-void GanonsCurseSongOfTimePlayed() {
+void SevenSagesSongOfTimePlayed() {
     if (!GameInteractor::IsSaveLoaded(true)) {
         return;
     }
@@ -68,13 +68,13 @@ void GanonsCurseSongOfTimePlayed() {
         return;
     }
 
-    GanonsCurseRequestSongMagic(SONG_OF_TIME_MAGIC_COST, []() { SwitchAge(); });
+    SevenSagesRequestSongMagic(SONG_OF_TIME_MAGIC_COST, []() { SwitchAge(); });
 }
 
 } // namespace
 
-static void RegisterGanonsCurseSongOfTime() {
-    COND_HOOK(OnOcarinaSongAction, IS_RANDO, GanonsCurseSongOfTimePlayed);
+static void RegisterSevenSagesSongOfTime() {
+    COND_HOOK(OnOcarinaSongAction, IS_RANDO, SevenSagesSongOfTimePlayed);
 }
 
-static RegisterShipInitFunc ganonsCurseSongOfTimeInitFunc(RegisterGanonsCurseSongOfTime, { "IS_RANDO" });
+static RegisterShipInitFunc sevenSagesSongOfTimeInitFunc(RegisterSevenSagesSongOfTime, { "IS_RANDO" });

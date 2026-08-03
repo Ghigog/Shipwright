@@ -1,5 +1,5 @@
 /**
- * Ganon's Curse - Phase 3: talking overworld NPCs deliver hints about the
+ * Seven Sages - Phase 3: talking overworld NPCs deliver hints about the
  * current seed.
  *
  * The hints themselves are real entries in `StaticData::staticHintInfoMap`
@@ -65,10 +65,10 @@ struct NpcHintTextId {
     RandomizerHint hint;
 };
 
-// Generated from docs/npc-hints.md in the ganons-curse repo - edit that file,
+// Generated from docs/npc-hints.md in the seven-sages repo - edit that file,
 // not this table.
 constexpr NpcHintTextId npcHintTextIds[] = {
-// >>> GANONS_CURSE_GENERATED: TEXT_IDS - edit data/npc-hints.json, not this
+// >>> SEVEN_SAGES_GENERATED: TEXT_IDS - edit data/npc-hints.json, not this
     { 0x3028, SCENE_GORON_SHOP, RH_NPC_SHOP_GORON },  // Shop Goron
     { 0x302D, SCENE_GORON_SHOP, RH_NPC_SHOP_GORON },  // Shop Goron
     { 0x300F, SCENE_GORON_SHOP, RH_NPC_SHOP_GORON },  // Shop Goron
@@ -86,17 +86,17 @@ constexpr NpcHintTextId npcHintTextIds[] = {
     { 0x70A4, SCENE_HAPPY_MASK_SHOP, RH_NPC_SHOP_MASK },  // Shop Mask
     { 0x403A, SCENE_ZORA_SHOP, RH_NPC_SHOP_ZORA },  // Shop Zora
     { 0x403B, SCENE_ZORA_SHOP, RH_NPC_SHOP_ZORA },  // Shop Zora
-// <<< GANONS_CURSE_GENERATED: TEXT_IDS
+// <<< SEVEN_SAGES_GENERATED: TEXT_IDS
 };
 
-// Generated from docs/npc-hints.md in the ganons-curse repo - edit that file,
+// Generated from docs/npc-hints.md in the seven-sages repo - edit that file,
 // not this table.
 //
 // Actors are picked to avoid anything an existing hook already claims: Saria
 // (RSK_SARIA_HINT), Malon (RSK_MALON_HINT), Anju (RSK_CHICKENS_HINT) and
 // Medigoron (TEXT_MEDIGORON, an EN_GO2) would all double-fire against ours.
 constexpr NpcHintSpeaker npcHintSpeakers[] = {
-// >>> GANONS_CURSE_GENERATED: SPEAKERS - edit data/npc-hints.json, not this
+// >>> SEVEN_SAGES_GENERATED: SPEAKERS - edit data/npc-hints.json, not this
     { ACTOR_EN_HEISHI4, SCENE_HYRULE_CASTLE, 0x00, 0, RH_NPC_HC_GUARD },  // Hyrule Castle Guard
     { ACTOR_EN_MA1, SCENE_HYRULE_CASTLE, 0x00, 0, RH_NPC_HC_MALON },  // Hyrule Castle Malon
     { ACTOR_EN_GO2, SCENE_DEATH_MOUNTAIN_TRAIL, 0x1F, 4, RH_NPC_DMT_GORON_BOMB_FLOWER },  // Death Mountain Trail Goron Bomb Flower
@@ -203,7 +203,7 @@ constexpr NpcHintSpeaker npcHintSpeakers[] = {
     { ACTOR_EN_ZO, SCENE_ZORAS_FOUNTAIN, 0x3F, 6, RH_NPC_ZF_ZORA_6 },  // Zora's Fountain Zora 6
     { ACTOR_EN_ZO, SCENE_ZORAS_FOUNTAIN, 0x3F, 7, RH_NPC_ZF_ZORA_7 },  // Zora's Fountain Zora 7
     { ACTOR_EN_ZO, SCENE_ZORAS_RIVER, 0x3F, 8, RH_NPC_ZR_ZORA_8 },  // Zora's River Zora 8
-// <<< GANONS_CURSE_GENERATED: SPEAKERS
+// <<< SEVEN_SAGES_GENERATED: SPEAKERS
 };
 
 // True only for the opening textbox of a conversation.
@@ -273,7 +273,7 @@ RandomizerHint FindHintForCurrentTalkActor() {
     // Unclaimed NPC. Logged so that walking around and talking to everyone
     // produces a ground-truth roster - actor/scene/params straight from the game
     // rather than guessed from scene data we can't read offline.
-    SPDLOG_INFO("[GanonsCurse] unclaimed NPC: actor={} scene={} params=0x{:04X}", talkActor->id,
+    SPDLOG_INFO("[SevenSages] unclaimed NPC: actor={} scene={} params=0x{:04X}", talkActor->id,
                 gPlayState->sceneNum, static_cast<uint16_t>(talkActor->params));
     return RH_NONE;
 }
@@ -326,8 +326,8 @@ void BuildNpcHintMessage(uint16_t* textId, bool* loadFromMessageTable) {
     *loadFromMessageTable = false;
 }
 
-void RegisterGanonsCurseNpcHints() {
+void RegisterSevenSagesNpcHints() {
     COND_HOOK(OnOpenText, RAND_GET_OPTION(RSK_NPC_HINTS), BuildNpcHintMessage);
 }
 
-static RegisterShipInitFunc ganonsCurseNpcHintsInitFunc(RegisterGanonsCurseNpcHints, { "IS_RANDO" });
+static RegisterShipInitFunc sevenSagesNpcHintsInitFunc(RegisterSevenSagesNpcHints, { "IS_RANDO" });

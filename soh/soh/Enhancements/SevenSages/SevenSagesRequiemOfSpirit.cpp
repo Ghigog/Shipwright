@@ -1,7 +1,7 @@
 /**
- * Ganon's Curse - Phase 6: Requiem of Spirit, declined, free spell casts for 20 seconds.
+ * Seven Sages - Phase 6: Requiem of Spirit, declined, free spell casts for 20 seconds.
  *
- * See GanonsCurseMinuetOfForest.cpp's header for the shared "No" mechanism. Costs 24 magic via the
+ * See SevenSagesMinuetOfForest.cpp's header for the shared "No" mechanism. Costs 24 magic via the
  * shared helper, then waives the cost of Din's Fire, Nayru's Love, and Farore's Wind for the buff's
  * duration - the three-spell system funnels through one exact call site,
  * z_player.c's func_8083AF44 (`Magic_RequestChange(play, sMagicSpellCosts[magicSpell],
@@ -49,7 +49,7 @@
 #include "functions.h"
 #include "macros.h"
 #include "variables.h"
-#include "soh/Enhancements/GanonsCurse/GanonsCurseSongMagic.h"
+#include "soh/Enhancements/SevenSages/SevenSagesSongMagic.h"
 #include "soh/Enhancements/game-interactor/GameInteractor_Hooks.h"
 
 extern "C" PlayState* gPlayState;
@@ -61,7 +61,7 @@ constexpr s32 REQUIEM_BUFF_FRAMES = 20 * 20;
 
 s32 sBuffFramesRemaining = 0;
 
-void GanonsCurseRequiemOfSpiritDeclined() {
+void SevenSagesRequiemOfSpiritDeclined() {
     if (!GameInteractor::IsSaveLoaded(true)) {
         return;
     }
@@ -69,10 +69,10 @@ void GanonsCurseRequiemOfSpiritDeclined() {
         return;
     }
 
-    GanonsCurseRequestSongMagic(REQUIEM_MAGIC_COST, []() { sBuffFramesRemaining = REQUIEM_BUFF_FRAMES; });
+    SevenSagesRequestSongMagic(REQUIEM_MAGIC_COST, []() { sBuffFramesRemaining = REQUIEM_BUFF_FRAMES; });
 }
 
-void GanonsCurseRequiemOfSpiritFrameUpdate() {
+void SevenSagesRequiemOfSpiritFrameUpdate() {
     if (sBuffFramesRemaining > 0) {
         sBuffFramesRemaining--;
     }
@@ -80,9 +80,9 @@ void GanonsCurseRequiemOfSpiritFrameUpdate() {
 
 } // namespace
 
-static void RegisterGanonsCurseRequiemOfSpirit() {
-    COND_HOOK(OnWarpSongDeclined, IS_RANDO, GanonsCurseRequiemOfSpiritDeclined);
-    COND_HOOK(OnGameFrameUpdate, IS_RANDO, GanonsCurseRequiemOfSpiritFrameUpdate);
+static void RegisterSevenSagesRequiemOfSpirit() {
+    COND_HOOK(OnWarpSongDeclined, IS_RANDO, SevenSagesRequiemOfSpiritDeclined);
+    COND_HOOK(OnGameFrameUpdate, IS_RANDO, SevenSagesRequiemOfSpiritFrameUpdate);
     COND_VB_SHOULD(VB_PLAYER_MODIFY_MAGIC_SPELL_COST, IS_RANDO, {
         [[maybe_unused]] Player* player = va_arg(args, Player*);
         s16* cost = va_arg(args, s16*);
@@ -117,4 +117,4 @@ static void RegisterGanonsCurseRequiemOfSpirit() {
     });
 }
 
-static RegisterShipInitFunc ganonsCurseRequiemOfSpiritInitFunc(RegisterGanonsCurseRequiemOfSpirit, { "IS_RANDO" });
+static RegisterShipInitFunc sevenSagesRequiemOfSpiritInitFunc(RegisterSevenSagesRequiemOfSpirit, { "IS_RANDO" });

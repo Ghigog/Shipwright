@@ -49,7 +49,7 @@ typedef struct EnBox {
     /*        */ GetItemEntry getItemEntry; // This is only to determine the Chest Style, randomzier item gives are handled elsewhere
     /*        */ Gfx* boxLidDL;
     /*        */ Gfx* boxBodyDL;
-    // Ganon's Curse: snapshotted once in EnBox_Init, not recomputed every EnBox_Update tick.
+    // Seven Sages: snapshotted once in EnBox_Init, not recomputed every EnBox_Update tick.
     // Randomizer_AdjustItemCategory() downgrades categories based on live inventory state (e.g.
     // "already have bombchus" -> lesser), which is correct for a chest you haven't opened yet,
     // but recomputing it every frame meant collecting THIS chest's own item could immediately

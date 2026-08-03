@@ -46,9 +46,9 @@ void Settings::CreateOptionDescriptions() {
         "Starting as adult means you start with the Master Sword in your inventory.\n"
         "The child option is forcefully set if it would conflict with other options.";
     mOptionDescriptions[RSK_SELECTED_SAGE] =
-        "Ganon's Curse: choose which sage plays this seed. Overrides starting scene, starting "
+        "Seven Sages: choose which sage plays this seed. Overrides starting scene, starting "
         "age, and grants that sage's curated kit. Link is not playable in this mod - he's "
-        "already gone from Hyrule by the time Ganon's Curse begins - Rauru is the default.";
+        "already gone from Hyrule by the time Seven Sages begins - Rauru is the default.";
     mOptionDescriptions[RSK_GERUDO_FORTRESS] = "Sets the state of the carpenters captured by Gerudo "
                                                "in Gerudo Fortress, and with it the number of guards that spawn.\n"
                                                "\n"
@@ -229,7 +229,7 @@ void Settings::CreateOptionDescriptions() {
                                               "\n"
                                               "All Tokens - Shuffle all 100 GS tokens.";
     mOptionDescriptions[RSK_NPC_HINTS] =
-        "Ganon's Curse: talking overworld NPCs each know something true about this seed and will tell you. "
+        "Seven Sages: talking overworld NPCs each know something true about this seed and will tell you. "
         "Every NPC has a fixed subject that suits them - what's stashed in a landmark they watch over, or "
         "where a particular item ended up - so their phrasing stays in character while the answer changes "
         "every seed.\n"

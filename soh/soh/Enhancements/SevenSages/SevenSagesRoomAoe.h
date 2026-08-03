@@ -14,5 +14,5 @@ struct Actor;
 //
 // category is a plain int rather than the ActorCategory enum type, so callers don't need to pull
 // in z64actor.h just to call this - pass the ACTORCAT_* constant directly, e.g.
-// GanonsCurseForEachActorInRoom(play, ACTORCAT_ENEMY, ...).
-void GanonsCurseForEachActorInRoom(PlayState* play, int category, const std::function<void(Actor*)>& fn);
+// SevenSagesForEachActorInRoom(play, ACTORCAT_ENEMY, ...).
+void SevenSagesForEachActorInRoom(PlayState* play, int category, const std::function<void(Actor*)>& fn);

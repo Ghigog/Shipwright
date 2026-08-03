@@ -1336,7 +1336,7 @@ typedef enum {
     // - None
     VB_GTG_GATE_BE_OPEN,
 
-    // Ganon's Curse: the OTHER Gerudo Fortress gate - the outer wall gate onto the Haunted
+    // Seven Sages: the OTHER Gerudo Fortress gate - the outer wall gate onto the Haunted
     // Wasteland (Bg_Spot12_Gate), not the Training Ground one above (Bg_Spot12_Saku). Normally
     // stays shut until talked open from the fortress-interior side by the GATE_OPERATOR NPC; the
     // NPC standing on the wasteland-facing side is a GATE_GUARD with no code path to open it at
@@ -1350,7 +1350,7 @@ typedef enum {
     // - None
     VB_GF_WEST_GATE_BE_OPEN,
 
-    // Ganon's Curse: Darunia's chamber, the child-side front shutter (Bg_Spot18_Shutter,
+    // Seven Sages: Darunia's chamber, the child-side front shutter (Bg_Spot18_Shutter,
     // param&0xFF==0). Normally opens only after Zelda's Lullaby is played at it
     // (LOGIC_GORON_CITY_DARUNIAS_DOOR_OPEN_CHILD in goron_city.cpp requires it) - Darunia's own
     // kit has no ocarina at all, let alone that song, so this door is otherwise permanently shut
@@ -1363,7 +1363,7 @@ typedef enum {
     // - None
     VB_GORON_CITY_DARUNIA_FRONT_DOOR_BE_OPEN,
 
-    // Ganon's Curse: the OTHER Goron City "doors unlocked" gate - shared by Bg_Spot18_Shutter's
+    // Seven Sages: the OTHER Goron City "doors unlocked" gate - shared by Bg_Spot18_Shutter's
     // non-front-door variant (params&0xFF!=0, presumably the back door) and by En_Go/En_Go2 (the
     // sleeping/rolling Gorons blocking paths elsewhere in the city). Vanilla sets this once,
     // permanently, the first time ANY door in the city is opened by song - a single city-wide
@@ -1894,12 +1894,12 @@ typedef enum {
     // - None
     VB_PLAY_DARUNIAS_JOY_CS,
 
-    // Ganon's Curse: EnDu_Init's OWN first-meeting-with-Link trigger (gGoronCityDarunia01Cs),
-    // independent of and uncoordinated with GanonsCurseOpenings.cpp's re-fired gGoronCityIntroCs -
+    // Seven Sages: EnDu_Init's OWN first-meeting-with-Link trigger (gGoronCityDarunia01Cs),
+    // independent of and uncoordinated with SevenSagesOpenings.cpp's re-fired gGoronCityIntroCs -
     // both write the single csCtx.segment pointer with no queue, so whichever fires later silently
     // wins. gGoronCityDarunia01Cs is a full dialogue scene addressed to "Link", the same class of
     // lore break Saria's Kokiri Forest greeting needed suppressing for (see z_sram.c). Suppressed
-    // for Ganon's Curse so our own establishing shot is the one that survives.
+    // for Seven Sages so our own establishing shot is the one that survives.
     // #### `result`
     // ```c
     // gSaveContext.cutsceneIndex >= 0xFFF0

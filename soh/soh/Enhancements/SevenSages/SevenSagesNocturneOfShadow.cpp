@@ -1,7 +1,7 @@
 /**
- * Ganon's Curse - Phase 6: Nocturne of Shadow, declined, unseen by guards for 20 seconds.
+ * Seven Sages - Phase 6: Nocturne of Shadow, declined, unseen by guards for 20 seconds.
  *
- * See GanonsCurseMinuetOfForest.cpp's header for the shared "No" mechanism. Costs 24 magic via the
+ * See SevenSagesMinuetOfForest.cpp's header for the shared "No" mechanism. Costs 24 magic via the
  * shared helper, then no guard in the game spots the player for the duration.
  *
  * Vanilla has no shared detection code whatsoever - every guard inlines its own cone-and-distance
@@ -36,7 +36,7 @@
 #include "functions.h"
 #include "macros.h"
 #include "variables.h"
-#include "soh/Enhancements/GanonsCurse/GanonsCurseSongMagic.h"
+#include "soh/Enhancements/SevenSages/SevenSagesSongMagic.h"
 #include "soh/Enhancements/game-interactor/GameInteractor_Hooks.h"
 
 extern "C" PlayState* gPlayState;
@@ -48,7 +48,7 @@ constexpr s32 NOCTURNE_BUFF_FRAMES = 20 * 20;
 
 s32 sBuffFramesRemaining = 0;
 
-void GanonsCurseNocturneOfShadowDeclined() {
+void SevenSagesNocturneOfShadowDeclined() {
     if (!GameInteractor::IsSaveLoaded(true)) {
         return;
     }
@@ -56,10 +56,10 @@ void GanonsCurseNocturneOfShadowDeclined() {
         return;
     }
 
-    GanonsCurseRequestSongMagic(NOCTURNE_MAGIC_COST, []() { sBuffFramesRemaining = NOCTURNE_BUFF_FRAMES; });
+    SevenSagesRequestSongMagic(NOCTURNE_MAGIC_COST, []() { sBuffFramesRemaining = NOCTURNE_BUFF_FRAMES; });
 }
 
-void GanonsCurseNocturneOfShadowFrameUpdate() {
+void SevenSagesNocturneOfShadowFrameUpdate() {
     if (sBuffFramesRemaining > 0) {
         sBuffFramesRemaining--;
     }
@@ -67,9 +67,9 @@ void GanonsCurseNocturneOfShadowFrameUpdate() {
 
 } // namespace
 
-static void RegisterGanonsCurseNocturneOfShadow() {
-    COND_HOOK(OnWarpSongDeclined, IS_RANDO, GanonsCurseNocturneOfShadowDeclined);
-    COND_HOOK(OnGameFrameUpdate, IS_RANDO, GanonsCurseNocturneOfShadowFrameUpdate);
+static void RegisterSevenSagesNocturneOfShadow() {
+    COND_HOOK(OnWarpSongDeclined, IS_RANDO, SevenSagesNocturneOfShadowDeclined);
+    COND_HOOK(OnGameFrameUpdate, IS_RANDO, SevenSagesNocturneOfShadowFrameUpdate);
     COND_VB_SHOULD(VB_GUARD_DETECT_PLAYER, IS_RANDO, {
         [[maybe_unused]] Actor* guard = va_arg(args, Actor*);
         if (sBuffFramesRemaining > 0) {
@@ -78,4 +78,4 @@ static void RegisterGanonsCurseNocturneOfShadow() {
     });
 }
 
-static RegisterShipInitFunc ganonsCurseNocturneOfShadowInitFunc(RegisterGanonsCurseNocturneOfShadow, { "IS_RANDO" });
+static RegisterShipInitFunc sevenSagesNocturneOfShadowInitFunc(RegisterSevenSagesNocturneOfShadow, { "IS_RANDO" });

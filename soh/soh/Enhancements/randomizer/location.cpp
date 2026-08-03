@@ -31,7 +31,7 @@ int32_t Rando::Location::GetActorParams() const {
     return actorParams;
 }
 
-// Ganon's Curse: chest-size classification for tiered placement (Phase 1).
+// Seven Sages: chest-size classification for tiered placement (Phase 1).
 // EnBoxType values, from soh/src/overlays/actors/ovl_En_Box/z_en_box.h:
 //   Big:   0 (default), 1 (room clear), 2 (decorated/boss key), 3 (switch flag fall),
 //          4, 9, 10 (variant draws), 11 (switch flag)

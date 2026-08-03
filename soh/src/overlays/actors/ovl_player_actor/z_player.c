@@ -5918,7 +5918,7 @@ void func_8083AE40(Player* this, s16 objectId) {
     }
 }
 
-// Ganon's Curse: "Faster Farore's Wind" extended to all three magic spells.
+// Seven Sages: "Faster Farore's Wind" extended to all three magic spells.
 //
 // The fast path skips the framed camera set up at the end of func_8083AF44 and lets
 // Player_Action_808507F4 exit as soon as the cast animation ends, rather than holding Link in

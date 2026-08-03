@@ -1,9 +1,9 @@
 /**
- * Ganon's Curse - Phase 6: Saria's Song as a temporary "climb anything" boost.
+ * Seven Sages - Phase 6: Saria's Song as a temporary "climb anything" boost.
  *
  * docs/item-ability-overhaul.md: climb any surface for 20 seconds. Costs 24 magic (the
  * system-wide "songs cost magic" rule) via the shared deferred-request helper
- * (GanonsCurseSongMagic.h) built for Song of Time. No proximity guard needed here, same
+ * (SevenSagesSongMagic.h) built for Song of Time. No proximity guard needed here, same
  * reasoning as Epona's Song - this doesn't intercept or replace any vanilla Saria's Song
  * trigger (calling Saria, opening the Sacred Forest Meadow maze door), it only additionally
  * starts the climb buff alongside whatever vanilla already does.
@@ -22,7 +22,7 @@
  * guarding against that would mean intercepting the menu checkbox itself, out of scope here.
  *
  * Duration is a plain frame countdown, not an absolute target against PlayState::gameplayFrames
- * - see GanonsCurseEponasSong.cpp's header comment for why. 400 frames assumes the game's ~20Hz
+ * - see SevenSagesEponasSong.cpp's header comment for why. 400 frames assumes the game's ~20Hz
  * logic tick rate (20 * 20s) - confirm empirically that the buff actually lasts ~20 real
  * seconds, and adjust SARIAS_SONG_BUFF_FRAMES if not.
  *
@@ -44,7 +44,7 @@
 #include "macros.h"
 #include "variables.h"
 #include "soh/cvar_prefixes.h"
-#include "soh/Enhancements/GanonsCurse/GanonsCurseSongMagic.h"
+#include "soh/Enhancements/SevenSages/SevenSagesSongMagic.h"
 #include "soh/Enhancements/game-interactor/GameInteractor_Hooks.h"
 
 extern "C" PlayState* gPlayState;
@@ -62,7 +62,7 @@ void SetClimbEverything(s32 value) {
     ShipInit::Init(CVAR_CHEAT("ClimbEverything"));
 }
 
-void GanonsCurseSariasSongPlayed() {
+void SevenSagesSariasSongPlayed() {
     if (!GameInteractor::IsSaveLoaded(true)) {
         return;
     }
@@ -70,7 +70,7 @@ void GanonsCurseSariasSongPlayed() {
         return;
     }
 
-    GanonsCurseRequestSongMagic(SARIAS_SONG_MAGIC_COST, []() {
+    SevenSagesRequestSongMagic(SARIAS_SONG_MAGIC_COST, []() {
         if (sBuffFramesRemaining <= 0) {
             sPriorClimbEverythingValue = CVarGetInteger(CVAR_CHEAT("ClimbEverything"), 0);
             SetClimbEverything(1);
@@ -79,7 +79,7 @@ void GanonsCurseSariasSongPlayed() {
     });
 }
 
-void GanonsCurseSariasSongFrameUpdate() {
+void SevenSagesSariasSongFrameUpdate() {
     if (sBuffFramesRemaining <= 0) {
         return;
     }
@@ -92,9 +92,9 @@ void GanonsCurseSariasSongFrameUpdate() {
 
 } // namespace
 
-static void RegisterGanonsCurseSariasSong() {
-    COND_HOOK(OnOcarinaSongAction, IS_RANDO, GanonsCurseSariasSongPlayed);
-    COND_HOOK(OnGameFrameUpdate, IS_RANDO, GanonsCurseSariasSongFrameUpdate);
+static void RegisterSevenSagesSariasSong() {
+    COND_HOOK(OnOcarinaSongAction, IS_RANDO, SevenSagesSariasSongPlayed);
+    COND_HOOK(OnGameFrameUpdate, IS_RANDO, SevenSagesSariasSongFrameUpdate);
 }
 
-static RegisterShipInitFunc ganonsCurseSariasSongInitFunc(RegisterGanonsCurseSariasSong, { "IS_RANDO" });
+static RegisterShipInitFunc sevenSagesSariasSongInitFunc(RegisterSevenSagesSariasSong, { "IS_RANDO" });

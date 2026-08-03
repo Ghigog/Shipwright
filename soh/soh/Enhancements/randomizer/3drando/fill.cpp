@@ -1450,7 +1450,7 @@ int Fill() {
         std::vector<RandomizerGet> remainingAdvancementItems = FilterAndEraseFromPool(
             itemPool, [](const auto i) { return Rando::StaticData::RetrieveItem(i).IsAdvancement(); });
 
-        // Ganon's Curse: grass/pot/crate (RSK_SHUFFLE_GRASS/POTS/CRATES) locations exist
+        // Seven Sages: grass/pot/crate (RSK_SHUFFLE_GRASS/POTS/CRATES) locations exist
         // specifically as a destination for JUNK overflow - since junk can't go in chests,
         // it needs somewhere else to live. They were never meant to be genuine "any item"
         // shuffle locations like a chest or NPC give-item slot. Confirmed via live playtesting:
@@ -1466,7 +1466,7 @@ int Fill() {
         std::vector<RandomizerCheck> nonTrivialContainerLocations =
             FilterFromPool(ctx->allLocations, [&](const auto loc) { return !isTrivialContainer(loc); });
 
-        // Ganon's Curse: majors used to get a priority pass into empty big chests here, but
+        // Seven Sages: majors used to get a priority pass into empty big chests here, but
         // that's no longer needed - chest SIZE now automatically follows contents at render
         // time (EnBox_UpdateTexture, z_en_box.c: a major always renders as a big chest
         // regardless of the location's original size, and vice versa), so a major can place
@@ -1479,7 +1479,7 @@ int Fill() {
         // Fast fill for the rest of the pool
         SPDLOG_INFO("Shuffling Remaining Items");
         if (ctx->GetOption(RSK_TIERED_CHEST_PLACEMENT)) {
-            // Ganon's Curse: junk (rupees, etc.) should never land in any chest, big or small -
+            // Seven Sages: junk (rupees, etc.) should never land in any chest, big or small -
             // that's the one placement constraint tiered-chest-placement still needs, now that
             // chest size is handled entirely by rendering (see above). The final catch-all
             // FastFill below places whatever's left in itemPool (genuine junk, by this point)
@@ -1517,7 +1517,7 @@ int Fill() {
                 SohUtils::AppendVector(itemPool, nonJunkFiller);
             }
 
-            // Ganon's Curse: any non-junk left over after the chest guard above (only possible
+            // Seven Sages: any non-junk left over after the chest guard above (only possible
             // if non-junk filler outnumbered empty chests) must still avoid trivial containers -
             // same rule as majors, just catching the residual. Whatever's genuinely left after
             // this is junk-only, safe for the catch-all below to hand to any remaining location,

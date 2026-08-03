@@ -1,7 +1,7 @@
 /**
- * Ganon's Curse - Phase 6: Prelude of Light, declined, prevents death for 20 seconds.
+ * Seven Sages - Phase 6: Prelude of Light, declined, prevents death for 20 seconds.
  *
- * See GanonsCurseMinuetOfForest.cpp's header for the shared "No" mechanism. Costs 24 magic via the
+ * See SevenSagesMinuetOfForest.cpp's header for the shared "No" mechanism. Costs 24 magic via the
  * shared helper, then for 20 seconds any hit that would drop health to 0 or below instead leaves
  * Link at 1 HP and the hit counts as survived, not lethal - a fairy-style save. Interpretation note:
  * the spec ("stops you from dying within the next 20s ... like a fairy") reads as duration-based
@@ -19,7 +19,7 @@
 #include "functions.h"
 #include "macros.h"
 #include "variables.h"
-#include "soh/Enhancements/GanonsCurse/GanonsCurseSongMagic.h"
+#include "soh/Enhancements/SevenSages/SevenSagesSongMagic.h"
 #include "soh/Enhancements/game-interactor/GameInteractor_Hooks.h"
 
 extern "C" PlayState* gPlayState;
@@ -31,7 +31,7 @@ constexpr s32 PRELUDE_BUFF_FRAMES = 20 * 20;
 
 s32 sBuffFramesRemaining = 0;
 
-void GanonsCursePreludeOfLightDeclined() {
+void SevenSagesPreludeOfLightDeclined() {
     if (!GameInteractor::IsSaveLoaded(true)) {
         return;
     }
@@ -39,10 +39,10 @@ void GanonsCursePreludeOfLightDeclined() {
         return;
     }
 
-    GanonsCurseRequestSongMagic(PRELUDE_MAGIC_COST, []() { sBuffFramesRemaining = PRELUDE_BUFF_FRAMES; });
+    SevenSagesRequestSongMagic(PRELUDE_MAGIC_COST, []() { sBuffFramesRemaining = PRELUDE_BUFF_FRAMES; });
 }
 
-void GanonsCursePreludeOfLightFrameUpdate() {
+void SevenSagesPreludeOfLightFrameUpdate() {
     if (sBuffFramesRemaining > 0) {
         sBuffFramesRemaining--;
     }
@@ -50,10 +50,10 @@ void GanonsCursePreludeOfLightFrameUpdate() {
 
 } // namespace
 
-static void RegisterGanonsCursePreludeOfLight() {
-    COND_HOOK(OnWarpSongDeclined, IS_RANDO, GanonsCursePreludeOfLightDeclined);
-    COND_HOOK(OnGameFrameUpdate, IS_RANDO, GanonsCursePreludeOfLightFrameUpdate);
+static void RegisterSevenSagesPreludeOfLight() {
+    COND_HOOK(OnWarpSongDeclined, IS_RANDO, SevenSagesPreludeOfLightDeclined);
+    COND_HOOK(OnGameFrameUpdate, IS_RANDO, SevenSagesPreludeOfLightFrameUpdate);
     COND_VB_SHOULD(VB_PREVENT_PLAYER_DEATH, IS_RANDO, { *should = sBuffFramesRemaining > 0; });
 }
 
-static RegisterShipInitFunc ganonsCursePreludeOfLightInitFunc(RegisterGanonsCursePreludeOfLight, { "IS_RANDO" });
+static RegisterShipInitFunc sevenSagesPreludeOfLightInitFunc(RegisterSevenSagesPreludeOfLight, { "IS_RANDO" });
