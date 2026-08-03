@@ -632,18 +632,39 @@ constexpr int32_t kBottomB = 187, kBottomA = 179, kBottomCLeft = 188, kBottomCDo
 // Pushed up again (2026-08-01, "again I think we can push everything up") - both sages asked for
 // this in the same round they asked for the D-pad to come back down, so the two moved apart
 // slightly rather than staying locked together like the earlier rounds.
-constexpr int32_t kStackedA = 56, kStackedCUp = 63, kStackedB = 64, kStackedCLeft = 65, kStackedCRight = 65,
-                  kStackedCDown = 81;
+//
+// Pushed up 25 more (2026-08-02, requested: "push all the item buttons up"). Once the hearts moved
+// to their own top margin the round before, the dead space between the magic bar and this cluster
+// measured ~39 units - a sixth of the HUD's height, and the largest empty gap in either layout.
+// This closes it from the button side; kStackedMagicPosY closes the rest from the meter side. All
+// six shift by the same 25 so the cluster stays a rigid block: the delta against the vanilla
+// kTop* values goes 47 -> 22 but stays uniform, which is what lets one Start offset serve all seven
+// sages (see kStartOffsetX/Y). Nothing above is at risk - the Start button, the only element that
+// would now land on the magic bar, draws only while paused (z_parameter.c:4194), never in the
+// gameplay HUD these values are tuned against.
+constexpr int32_t kStackedA = 31, kStackedCUp = 38, kStackedB = 39, kStackedCLeft = 40, kStackedCRight = 40,
+                  kStackedCDown = 56;
 
 // Rauru and Impa's magic PosY, and their shared D-pad Y.
-// Magic PosY -16: R_MAGIC_BAR_SMALL_Y(34) - 2 - 16 + getHealthMeterYOffset(8 + 0.7*15 = 18.5) = 34.5,
-// bottom edge ~50.5, clear of kStackedA(56) above.
+//
+// Magic dropped 6 (2026-08-02, requested: "drop the magic bar a bit for both"). The bar's Y is
+// R_MAGIC_BAR_SMALL_Y(34) - 2 + this + getHealthMeterYOffset(), and that last term collapsed from
+// 18 to 0 when the hearts moved to kStackedHeartsY(-10) last round - the bar is glued to the hearts,
+// so it followed them up and ended up touching the bottom of the heart row. -10 gives the pair ~6
+// units of daylight between them again while keeping them reading as one block.
 //
 // D-pad Y unified (2026-08-01, requested): Rauru previously had its own separate D-pad Y; Impa's
 // was reported as "in the right place" at the time, so Rauru took Impa's value instead of tracking
-// its own. Both then asked for the D-pad to come down again this round (80 -> 100) - kept shared.
-constexpr int32_t kStackedMagicPosY = -16;
-constexpr int32_t kImpaRauruDpadY = 100;
+// its own. Both then asked for the D-pad to come down again that round (80 -> 100) - kept shared.
+//
+// Moved up 25 with the buttons (2026-08-02). The request named the item buttons, not the D-pad, but
+// the 100 above was chosen by eye against where the buttons sat at the time - it puts the D-pad ~8
+// units under C-right. Holding it still while the cluster moved would have turned that into a
+// 33-unit hole and silently undone the placement that was already signed off. Moving it by the same
+// amount preserves the approved spacing; if the D-pad was meant to stay put, this is the one line
+// to revert.
+constexpr int32_t kStackedMagicPosY = -10;
+constexpr int32_t kImpaRauruDpadY = 75;
 
 // Impa and Rauru's hearts, pushed up from 8 (2026-08-01, requested: "the hearts are a bit too far
 // down... maybe there's a margin in the way"). It wasn't a margin - UseMargins is explicitly 0 for
@@ -785,7 +806,22 @@ constexpr HudPos kMinimapOriginal = { ORIGINAL_LOCATION, 0, 0 };
 // distance from its C-up everywhere, and the residual overlap (2.75 units into the A button, 3.75
 // into C-up) is the same for every sage. If that ever stops being true, this offset stops being
 // one-size-fits-all - it is only safe while the kStacked*/kTop* delta stays uniform.
-constexpr int32_t kStartOffsetX = 0;
+// Moved right 8 (2026-08-02, requested: "they all just need to be moved right a bit... this is the
+// case with every character since they all carry the same point"). Correct on both counts - one
+// offset does move all seven, and rightward is the same direction for every sage even though they
+// use opposite anchors, because PosX grows rightward under ANCHOR_LEFT and ANCHOR_RIGHT alike (only
+// the baseline differs; see kZeldaRightCornerX). 8 is where the label centres on the C-cluster
+// rather than hanging off its left end: the label's centre lands at PosX + 1.75 (the -9.75 above
+// plus the +11.5 in its matrix draw), and the three C buttons span 227..298 for a right-anchored
+// sage and 22..93 for Rauru, wanting +6.75 and +7.75 respectively. 8 splits them to within a unit
+// and errs to the right.
+//
+// Eased back to 4 (2026-08-02, "just a smidge to the left; overshot a bit"), then settled at 5 by
+// live-tuning the slider in the Cosmetics Editor - 258 -> 259 for a right-anchored sage, which is
+// kRightCUp(254) + 5. Dead-centre on the C-cluster was slightly too far right by eye, and that is
+// the honest answer here: the label is 49 wide against a 71-wide cluster, so no placement is
+// unambiguously "aligned", only one that looks right. This one was chosen by eye, not derived.
+constexpr int32_t kStartOffsetX = 5;
 constexpr int32_t kStartOffsetY = -6;
 constexpr HudPos kRauruStartButton = { ANCHOR_LEFT, kRauruCUpX + kStartOffsetX, kStackedCUp + kStartOffsetY };
 constexpr HudPos kSariaStartButton = { ANCHOR_RIGHT, kRightCUp + kStartOffsetX, kBottomCUp + kStartOffsetY };
