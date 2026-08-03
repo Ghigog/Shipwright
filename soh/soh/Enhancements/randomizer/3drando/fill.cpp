@@ -1466,12 +1466,53 @@ int Fill() {
         std::vector<RandomizerCheck> nonTrivialContainerLocations =
             FilterFromPool(ctx->allLocations, [&](const auto loc) { return !isTrivialContainer(loc); });
 
-        // Seven Sages: majors used to get a priority pass into empty big chests here, but
+        // Seven Sages: ~~majors used to get a priority pass into empty big chests here, but
         // that's no longer needed - chest SIZE now automatically follows contents at render
-        // time (EnBox_UpdateTexture, z_en_box.c: a major always renders as a big chest
-        // regardless of the location's original size, and vice versa), so a major can place
-        // anywhere reachable (other than a trivial container, per above) via normal fill and
-        // still look correct. Simpler and one fewer AssumedFill pass to reason about.
+        // time~~ - that reasoning was only ever about SIZE, and deleting the pass quietly broke
+        // the *other* rule that depended on it: junk never in a chest. Measured on three seeds
+        // from 76b1c92b, 66 of ~170 chests held junk. Cause: an unbiased AssumedFill scatters
+        // advancement across all ~465 non-trivial locations, so most chests are still empty when
+        // the junk guard below runs, and that guard can only use leftover non-junk *filler*
+        // (LESSER/HEALTH, ~59 items) - nowhere near enough to cover them. ~92 advancement items
+        // were sitting at non-chest locations while chests took rupees.
+        //
+        // So the pass is back, targeting every chest rather than only big ones (size is handled
+        // by rendering now, so the big/small distinction no longer matters here). Chests get
+        // first claim on advancement; whatever the reserve holds back still places anywhere.
+        if (ctx->GetOption(RSK_TIERED_CHEST_PLACEMENT)) {
+            std::vector<RandomizerCheck> emptyChests = GetEmptyLocations(FilterFromPool(
+                ctx->allLocations, [](const auto loc) {
+                    return Rando::StaticData::GetLocation(loc)->IsBigChest() ||
+                           Rando::StaticData::GetLocation(loc)->IsSmallChest();
+                }));
+
+            // Hold back one in eight advancement items for the open fill. Without a reserve,
+            // advancement (~169) and chests (~170) are close enough in number that *every* major
+            // would end up in a chest and an NPC could never hand you anything important - the
+            // tier ladder wants NPCs inconsistent-but-worthwhile, not stripped bare.
+            size_t reserve = remainingAdvancementItems.size() / 8;
+            size_t toChests = std::min(remainingAdvancementItems.size() - reserve, emptyChests.size());
+
+            if (toChests > 0) {
+                Shuffle(remainingAdvancementItems);
+                std::vector<RandomizerGet> chestClaim(remainingAdvancementItems.begin(),
+                                                      remainingAdvancementItems.begin() + toChests);
+                remainingAdvancementItems.erase(remainingAdvancementItems.begin(),
+                                                remainingAdvancementItems.begin() + toChests);
+
+                // AssumedFill decides reachability by assuming the player holds every advancement
+                // item still in itemPool. The deferred ones were erased from the pool along with
+                // the rest, so without this they'd be invisible here and this pass would assume a
+                // weaker player than the single combined pass did - tighter logic, more retries,
+                // more whole-seed regenerations. Put them back for the duration so the assumption
+                // is identical to the pre-split behaviour, then take them out again.
+                size_t poolSizeBefore = itemPool.size();
+                SohUtils::AppendVector(itemPool, remainingAdvancementItems);
+                AssumedFill(chestClaim, emptyChests, true);
+                itemPool.resize(poolSizeBefore);
+            }
+        }
+
         AssumedFill(remainingAdvancementItems, nonTrivialContainerLocations, true);
         StopPerformanceTimer(PT_ADVANCEMENT_ITEMS);
 
