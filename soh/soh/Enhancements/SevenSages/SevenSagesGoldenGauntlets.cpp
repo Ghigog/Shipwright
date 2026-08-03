@@ -47,18 +47,24 @@
  * VB_DOOR_SHUTTER_CONSUME_SMALL_KEY exists for, and its default (`keys > 0`) means the underflow
  * is impossible even if this file is never loaded.
  *
- * ~~Magic goes through Magic_RequestChange directly ... a door opening during ordinary gameplay
- * has no such timing hazard.~~ **Wrong, and found in playtest**: the hazard is not specific to
- * ocarina callbacks at all. Magic_RequestChange accepts MAGIC_CONSUME_NOW only from
- * MAGIC_STATE_IDLE or MAGIC_STATE_CONSUME_LENS; from MAGIC_STATE_CONSUME - the several-frame
- * drain animation left by the *previous* charge - it plays NA_SE_SY_ERROR and returns false.
- * Forcing two doors in quick succession therefore gave an error sound, an opened door, and no
- * magic spent, because the gate had already granted passage before the charge was attempted.
+ * **Magic goes through SevenSagesRequestSongMagic**, the shared helper, despite the song-flavoured
+ * name - the mechanism is general and this file previously reinvented a worse version of it. Two
+ * playtest bugs came out of not using it:
  *
- * Handled with a pending-charge retry rather than by refusing at the gate: the debt is recorded
- * when the door opens and flushed on the first frame the magic system will accept it. The gate
- * also refuses while a charge is outstanding, since until it lands the meter still reads full and
- * a second door would otherwise be paid for with magic already spoken for.
+ *   1. Magic_RequestChange accepts MAGIC_CONSUME_NOW only from MAGIC_STATE_IDLE or
+ *      MAGIC_STATE_CONSUME_LENS. From MAGIC_STATE_CONSUME - the drain left by a previous charge -
+ *      it plays NA_SE_SY_ERROR and returns false. The gate had already opened the door, so a
+ *      declined charge surfaced as a free door. The helper waits for a usable state instead.
+ *   2. MAGIC_CONSUME_NOW ends in MAGIC_STATE_METER_FLASH_*, and **those states have no exit**.
+ *      Only Magic_Reset returns the machine to idle, and in vanilla that is called by the spell
+ *      effect actors (Oceff_*) or by Player when an action ends - a door has neither. The meter
+ *      flashed forever and the magic system stayed permanently busy, blocking further doors and
+ *      the Lens of Truth. The helper sidesteps the whole animated drain: it applies the deduction
+ *      immediately and forces the state back to idle.
+ *
+ * The helper's own reason for fast-forwarding applies here too, and would have bitten
+ * independently: a scene transition cuts the animated drain short. A boss door loads the boss room,
+ * so the charge for the most important door in the feature was the one most likely to be lost.
  *
  * Both doors play their usual unlock sound either way, so a bypass reads as "the door gave way"
  * rather than announcing itself. Whether that wants its own distinct feedback is a playtest
@@ -69,6 +75,7 @@
 #include "macros.h"
 #include "variables.h"
 #include "soh/Enhancements/game-interactor/GameInteractor_Hooks.h"
+#include "soh/Enhancements/SevenSages/SevenSagesSongMagic.h"
 
 extern "C" PlayState* gPlayState;
 
@@ -90,31 +97,6 @@ bool CanUseGauntlets(u8 tier) {
     return LINK_IS_ADULT && CUR_UPG_VALUE(UPG_STRENGTH) >= tier;
 }
 
-// Magic_RequestChange only accepts MAGIC_CONSUME_NOW from these two states (z_parameter.c:3096).
-// From any other - notably MAGIC_STATE_CONSUME, the several-frame drain animation left behind by
-// the *previous* charge - it plays NA_SE_SY_ERROR and returns false.
-bool MagicSystemReady() {
-    return gSaveContext.magicState == MAGIC_STATE_IDLE || gSaveContext.magicState == MAGIC_STATE_CONSUME_LENS;
-}
-
-// A charge that has been incurred but not yet accepted by the magic system. Non-zero means the
-// player owes magic for a door they have already been let through.
-s16 sPendingCharge = 0;
-
-void TryFlushPendingCharge() {
-    if (sPendingCharge <= 0 || !GameInteractor::IsSaveLoaded(true)) {
-        return;
-    }
-    // Checked rather than just attempted: calling into a busy magic system is what plays the error
-    // sound, so attempting-and-failing every frame would machine-gun it.
-    if (!MagicSystemReady()) {
-        return;
-    }
-    if (Magic_RequestChange(gPlayState, sPendingCharge, MAGIC_CONSUME_NOW)) {
-        sPendingCharge = 0;
-    }
-}
-
 // Affordability only - no state touched. See the header comment for why these must stay pure.
 bool CanForceDoor(u8 requiredTier) {
     const s16 cost = DoorMagicCost();
@@ -123,16 +105,12 @@ bool CanForceDoor(u8 requiredTier) {
     // anyone without a meter, which is every child sage and any adult before their first Great
     // Fairy. Having a meter and no magic in it was always refused correctly; having no meter was
     // the hole.
-    // `sPendingCharge == 0` closes a free-pass window: while a charge is owed the meter still reads
-    // full, so without this a second door forced during the drain would pass the `magic >= cost`
-    // test against magic that is already spoken for.
     return GameInteractor::IsSaveLoaded(true) && CanUseGauntlets(requiredTier) && cost > 0 &&
-           sPendingCharge == 0 && MagicSystemReady() && gSaveContext.magic >= cost;
+           gSaveContext.magic >= cost;
 }
 
 void ChargeForBypass() {
-    sPendingCharge = DoorMagicCost();
-    TryFlushPendingCharge();
+    SevenSagesRequestSongMagic(DoorMagicCost(), nullptr);
 }
 
 void SevenSagesGauntletsBossDoorOpened(uint16_t mapIndex) {
@@ -155,8 +133,6 @@ void SevenSagesGauntletsBossDoorOpened(uint16_t mapIndex) {
 
 static void RegisterSevenSagesGoldenGauntlets() {
     COND_HOOK(OnBossDoorOpened, IS_RANDO, SevenSagesGauntletsBossDoorOpened);
-    // Flushes any charge the magic system was too busy to accept when the door opened.
-    COND_HOOK(OnGameFrameUpdate, IS_RANDO, TryFlushPendingCharge);
 
     COND_VB_SHOULD(VB_BOSS_DOOR_REQUIRE_BOSS_KEY, IS_RANDO, {
         [[maybe_unused]] Actor* door = va_arg(args, Actor*);
