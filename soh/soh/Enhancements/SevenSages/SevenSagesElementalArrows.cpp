@@ -63,9 +63,13 @@ constexpr int16_t LIGHT_MAGIC_COST = 24;
 // while a tougher or more resistant enemy still takes proportionally more.
 constexpr float LIGHT_DAMAGE_MULTIPLIER = 6.0f;
 
-// The light arrow's dmgFlags bit, from the arrow's own collider - what VB_MODIFY_RESOLVED_DAMAGE
-// receives so a handler can tell which attack resolved.
-constexpr uint32_t LIGHT_ARROW_DMG_FLAG = 0x00000800;
+// The light arrow's dmgFlags bit, from EnArrow's own dmgFlags[] table indexed by ArrowType
+// (z_en_arrow.c:83, z_en_arrow.h:31). ARROW_LIGHT is index 5. Getting this wrong is silent and
+// looks exactly like the feature not working: 0x00000800 is index 3, the FIRE arrow, which had the
+// multiplier landing on fire hits while light arrows stayed at their vanilla table value.
+// The damage table is indexed by this flag's BIT POSITION - bit 13 for 0x2000, which is the
+// "Light arrow" row of every enemy's table.
+constexpr uint32_t LIGHT_ARROW_DMG_FLAG = 0x00002000;
 
 void SevenSagesElementalArrowImpact(void* arrowPtr) {
     if (!GameInteractor::IsSaveLoaded(true) || gPlayState == nullptr || arrowPtr == nullptr) {
