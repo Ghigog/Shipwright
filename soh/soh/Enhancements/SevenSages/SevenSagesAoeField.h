@@ -27,10 +27,13 @@ struct PlayState;
 
 // Damage flags for a field, matching the toucher dmgFlags vanilla actors use.
 constexpr uint32_t SEVEN_SAGES_AOE_DMG_FIRE = 0x00020000; // same flag Din's Fire attacks with
+// The deku nut's flag. Vanilla pairs it with 0 damage - the effect is the stun, not the hit - so a
+// "freeze" field is this flag with damage 0.
+constexpr uint32_t SEVEN_SAGES_AOE_DMG_STUN = 0x00000001;
 
 // Spawn a field at pos. It expands from nothing to maxRadius over a few frames like a bomb blast,
 // then holds at that size until lifetimeFrames runs out. Fields are pooled; if the pool is full the
 // call is a no-op rather than displacing a live field. Passing a lifetime of 1 gives the
 // instantaneous case (a hammer swing) through the same mechanism.
 void SevenSagesSpawnAoeField(PlayState* play, float x, float y, float z, float maxRadius, float height,
-                             int32_t lifetimeFrames, uint32_t damageFlags);
+                             int32_t lifetimeFrames, uint32_t damageFlags, uint8_t damage);

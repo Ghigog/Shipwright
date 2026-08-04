@@ -134,6 +134,10 @@ void GameInteractor_ExecuteOnBossDoorOpenedHooks(uint16_t mapIndex) {
     GameInteractor::Instance->ExecuteHooks<GameInteractor::OnBossDoorOpened>(mapIndex);
 }
 
+void GameInteractor_ExecuteOnArrowImpactHooks(void* arrow) {
+    GameInteractor::Instance->ExecuteHooks<GameInteractor::OnArrowImpact>(arrow);
+}
+
 bool GameInteractor_ShouldActorInit(void* actor) {
     bool result = true;
     GameInteractor::Instance->ExecuteHooks<GameInteractor::ShouldActorInit>(actor, &result);

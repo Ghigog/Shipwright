@@ -39,6 +39,11 @@ DEFINE_HOOK(OnDungeonKeyUsed, (uint16_t mapIndex));
 // once; the approach check in DoorShutter_Idle re-runs every frame the player stands there, so
 // it is not a safe place to charge anything.
 DEFINE_HOOK(OnBossDoorOpened, (uint16_t mapIndex));
+// Seven Sages: fired the frame an arrow stops, whether it hit an actor or geometry. The arrow's
+// own world.pos is the impact point. Vanilla has no such hook - magic arrows apply their effect
+// through the damage tables at the moment of contact and then simply die - so anything that wants
+// to happen *at the landing point* needs this.
+DEFINE_HOOK(OnArrowImpact, (void* arrow));
 DEFINE_HOOK(ShouldActorInit, (void* actor, bool* result));
 DEFINE_HOOK(OnActorInit, (void* actor));
 DEFINE_HOOK(OnActorSpawn, (void* actor));

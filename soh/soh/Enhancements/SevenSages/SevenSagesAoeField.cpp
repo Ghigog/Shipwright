@@ -125,7 +125,7 @@ void SevenSagesAoeFieldFrameUpdate() {
 } // namespace
 
 void SevenSagesSpawnAoeField(PlayState* play, float x, float y, float z, float maxRadius, float height,
-                             int32_t lifetimeFrames, uint32_t damageFlags) {
+                             int32_t lifetimeFrames, uint32_t damageFlags, uint8_t damage) {
     if (play == nullptr || lifetimeFrames <= 0 || maxRadius <= 0.0f) {
         return;
     }
@@ -136,6 +136,7 @@ void SevenSagesSpawnAoeField(PlayState* play, float x, float y, float z, float m
         }
 
         sFieldColliderInit.info.toucher.dmgFlags = damageFlags;
+        sFieldColliderInit.info.toucher.damage = damage;
         Collider_InitCylinder(play, &field.collider);
         Collider_SetCylinder(play, &field.collider, nullptr, &sFieldColliderInit);
 

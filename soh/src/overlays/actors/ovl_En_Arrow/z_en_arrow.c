@@ -317,6 +317,10 @@ void EnArrow_Fly(EnArrow* this, PlayState* play) {
                 (this->collider.base.atFlags & AT_HIT);
 
     if (atTouched || this->touchedPoly) {
+        // Seven Sages: the arrow has stopped, on an actor or on geometry, and actor.world.pos is
+        // where. Fired before the type split below because every arrow type reaches this point.
+        GameInteractor_ExecuteOnArrowImpactHooks(this);
+
         if (this->actor.params >= ARROW_SEED) {
             if (atTouched) {
                 this->actor.world.pos.x = (this->actor.world.pos.x + this->actor.prevPos.x) * 0.5f;
