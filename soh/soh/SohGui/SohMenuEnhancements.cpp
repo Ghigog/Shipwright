@@ -1025,9 +1025,10 @@ void SohMenu::AddMenuEnhancements() {
         .Options(CheckboxOptions().Tooltip(
             "Helps FW persist between ages, gives Child and Adult separate FW points, and can "
             "be used in more places."));
-    AddWidget(path, "Faster Farore's Wind", WIDGET_CVAR_CHECKBOX)
+    AddWidget(path, "Faster Magic Spells", WIDGET_CVAR_CHECKBOX)
         .CVar(CVAR_ENHANCEMENT("FastFarores"))
-        .Options(CheckboxOptions().Tooltip("Greatly decreases cast time of Farore's Wind magic spell."));
+        .Options(CheckboxOptions().Tooltip(
+            "Greatly decreases cast time of Din's Fire, Farore's Wind, and Nayru's Love."));
 
     AddWidget(path, "Bottles", WIDGET_SEPARATOR_TEXT);
     AddWidget(path, "Rebottle Blue Fire", WIDGET_CVAR_CHECKBOX)
