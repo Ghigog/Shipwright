@@ -130,9 +130,15 @@ void SevenSagesAoeFieldFrameUpdate() {
 
 } // namespace
 
-// The blast's scale units are not world units, so this ratio is eyeball-tuned rather than derived.
-// Growth is spread over GROW_FRAMES so the flash expands at the same rate the collider does - the
-// point of the visual is to show the real extent, not to look impressive independently of it.
+// Uses vanilla's own coloured-shockwave call rather than hand-rolled EffectSsBlast_Spawn
+// parameters. The first attempt passed scaleStep 16 and scaleStepDecay 0 where every vanilla caller
+// passes 375 and 35 (z_effect_soft_sprite_old_init.c:341), so the ring barely grew - and since the
+// effect is gEffShockwaveDL, a flat ground ring, a barely-grown one viewed edge-on from a wall hit
+// is invisible. Proven parameters first; tune only if it renders and is the wrong size.
+//
+// Ring particles are placed around the field's edge rather than one at the centre, because a single
+// ground ring cannot show a field that reaches as far above and below the impact point as this one
+// does.
 void SpawnFieldVisual(PlayState* play, const Vec3f& pos, float maxRadius, SevenSagesAoeVisual visual) {
     if (visual == SEVEN_SAGES_AOE_VISUAL_NONE) {
         return;
@@ -143,19 +149,23 @@ void SpawnFieldVisual(PlayState* play, const Vec3f& pos, float maxRadius, SevenS
     static Color_RGBA8 icePrim = { 170, 230, 255, 255 };
     static Color_RGBA8 iceEnv = { 40, 120, 255, 255 };
 
-    Vec3f effectPos = pos;
+    const bool isFire = (visual == SEVEN_SAGES_AOE_VISUAL_FIRE);
     Vec3f zero = { 0.0f, 0.0f, 0.0f };
-    const s16 scale = (s16)(maxRadius * 0.4f);
+    Vec3f centre = pos;
 
-    EffectSsBlast_Spawn(play, &effectPos, &zero, &zero,
-                        visual == SEVEN_SAGES_AOE_VISUAL_FIRE ? &firePrim : &icePrim,
-                        visual == SEVEN_SAGES_AOE_VISUAL_FIRE ? &fireEnv : &iceEnv, scale,
-                        scale / GROW_FRAMES, 0, GROW_FRAMES * 2);
+    EffectSsBlast_SpawnShockwave(play, &centre, &zero, &zero, isFire ? &firePrim : &icePrim,
+                                 isFire ? &fireEnv : &iceEnv, 10);
 
-    // Fire also gets Din's Fire's own particle, which is what makes the patch read as still burning
-    // rather than as a single flash.
-    if (visual == SEVEN_SAGES_AOE_VISUAL_FIRE) {
-        EffectSsDFire_Spawn(play, &effectPos, &zero, &zero, scale, scale / GROW_FRAMES, 255, 8, GROW_FRAMES * 3);
+    // Din's Fire's own particle, the same call EnDodongo uses, ringed around the field so the extent
+    // is legible rather than a single dot at the impact point.
+    if (isFire) {
+        static const float kSin[] = { 0.0f, 0.951f, 0.588f, -0.588f, -0.951f };
+        static const float kCos[] = { 1.0f, 0.309f, -0.809f, -0.809f, 0.309f };
+        for (int i = 0; i < 5; i++) {
+            Vec3f p = { pos.x + maxRadius * 0.6f * kCos[i], pos.y, pos.z + maxRadius * 0.6f * kSin[i] };
+            EffectSsDFire_SpawnFixedScale(play, &p, &zero, &zero, 255, 8);
+        }
+        EffectSsDFire_SpawnFixedScale(play, &centre, &zero, &zero, 255, 8);
     }
 }
 

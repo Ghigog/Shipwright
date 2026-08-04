@@ -39,15 +39,15 @@ extern "C" PlayState* gPlayState;
 namespace {
 
 // Fire: a patch of ground that keeps burning. 3 seconds at OoT's 20fps logic rate.
-constexpr float FIRE_RADIUS = 250.0f; // ~3.5 bomb blasts (a bomb is 72)
-constexpr float FIRE_HEIGHT = 250.0f; // total, centred - 125 up and 125 down
+constexpr float FIRE_RADIUS = 150.0f; // ~2 bomb blasts (a bomb is 72)
+constexpr float FIRE_HEIGHT = 150.0f; // total, centred - 75 up and 75 down
 constexpr int32_t FIRE_LIFETIME_FRAMES = 3 * 20;
 constexpr uint8_t FIRE_DAMAGE = 1;
 
 // Ice: shorter, because a stun that outlasts the enemy's own stun timer just re-applies itself and
 // the enemy never gets to act. Damage is 0 deliberately - see the header.
-constexpr float ICE_RADIUS = 250.0f;
-constexpr float ICE_HEIGHT = 250.0f;
+constexpr float ICE_RADIUS = 150.0f;
+constexpr float ICE_HEIGHT = 150.0f;
 constexpr int32_t ICE_LIFETIME_FRAMES = 2 * 20;
 constexpr uint8_t ICE_DAMAGE = 0;
 
