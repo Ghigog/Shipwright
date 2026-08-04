@@ -3753,6 +3753,23 @@ typedef enum {
     // #### `args`
     // - `*Actor` (the door)
     VB_DOOR_SHUTTER_CONSUME_SMALL_KEY,
+
+    // #### `result`
+    // ```c
+    // true
+    // ```
+    // Seven Sages: fired once the damage for a hit has been resolved, before it is added to the
+    // target's colChkInfo.damage. This is the ONLY place an attack's damage can be changed:
+    // whenever the target has a damageTable - every enemy does - the amount comes from that table
+    // indexed by the attacker's dmgFlags, and the attacker's own toucher.damage is ignored
+    // entirely. Raising an attacker's damage therefore does nothing without this hook.
+    // Handlers should scale `*damage` rather than replace it, so an enemy that resists a damage
+    // type keeps resisting it proportionally and an immune enemy (table entry 0) stays immune.
+    // #### `args`
+    // - `*Actor` (the target)
+    // - `f32*` (the damage, modifiable)
+    // - `u32` (the attacker's toucher dmgFlags)
+    VB_MODIFY_RESOLVED_DAMAGE,
 } GIVanillaBehavior;
 
 #endif

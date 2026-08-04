@@ -39,23 +39,33 @@ extern "C" PlayState* gPlayState;
 namespace {
 
 // Fire: a patch of ground that keeps burning. 3 seconds at OoT's 20fps logic rate.
-constexpr float FIRE_RADIUS = 80.0f;
+constexpr float FIRE_RADIUS = 110.0f;
 constexpr float FIRE_HEIGHT = 50.0f;
 constexpr int32_t FIRE_LIFETIME_FRAMES = 3 * 20;
 constexpr uint8_t FIRE_DAMAGE = 1;
 
 // Ice: shorter, because a stun that outlasts the enemy's own stun timer just re-applies itself and
 // the enemy never gets to act. Damage is 0 deliberately - see the header.
-constexpr float ICE_RADIUS = 80.0f;
+constexpr float ICE_RADIUS = 110.0f;
 constexpr float ICE_HEIGHT = 50.0f;
 constexpr int32_t ICE_LIFETIME_FRAMES = 2 * 20;
 constexpr uint8_t ICE_DAMAGE = 0;
 
-// Light: vanilla is 8 magic and 1 damage. 24 is the same "expensive" tier the songs and the
-// gauntlet doors use, which still leaves 2 shots on a single bar and 4 on a double - deliberately
-// enough for the Ganon fight, per the ceiling described in the header.
+// Light: vanilla is 8 magic. 24 is the same "expensive" tier the songs and the gauntlet doors use,
+// and still leaves 2 shots on a single bar and 4 on a double - deliberately enough for the Ganon
+// fight, per the ceiling described in the header.
 constexpr int16_t LIGHT_MAGIC_COST = 24;
-constexpr uint8_t LIGHT_DAMAGE = 8;
+
+// A MULTIPLIER, not a damage value. Damage comes from the target's own damageTable, so it cannot be
+// set from the attacker at all (see VB_MODIFY_RESOLVED_DAMAGE). Scaling preserves each enemy's
+// relative resistance and keeps immune enemies (table entry 0) immune, which setting a flat number
+// would not. 6x turns a Wolfos's light-arrow entry of 2 into 12 against its 8 health - a one-shot -
+// while a tougher or more resistant enemy still takes proportionally more.
+constexpr float LIGHT_DAMAGE_MULTIPLIER = 6.0f;
+
+// The light arrow's dmgFlags bit, from the arrow's own collider - what VB_MODIFY_RESOLVED_DAMAGE
+// receives so a handler can tell which attack resolved.
+constexpr uint32_t LIGHT_ARROW_DMG_FLAG = 0x00000800;
 
 void SevenSagesElementalArrowImpact(void* arrowPtr) {
     if (!GameInteractor::IsSaveLoaded(true) || gPlayState == nullptr || arrowPtr == nullptr) {
@@ -80,24 +90,24 @@ void SevenSagesElementalArrowImpact(void* arrowPtr) {
     }
 }
 
-// Raising the arrow's own toucher damage rather than adding a field: a light arrow is meant to hit
-// one thing very hard, and the damage tables already give it its own reaction on every enemy.
-void SevenSagesElementalArrowInit(void* actorPtr) {
-    if (!GameInteractor::IsSaveLoaded(true) || actorPtr == nullptr) {
-        return;
-    }
 
-    EnArrow* arrow = static_cast<EnArrow*>(actorPtr);
-    if (arrow->actor.params == ARROW_LIGHT) {
-        arrow->collider.info.toucher.damage = LIGHT_DAMAGE;
-    }
-}
 
 } // namespace
 
 static void RegisterSevenSagesElementalArrows() {
     COND_HOOK(OnArrowImpact, IS_RANDO, SevenSagesElementalArrowImpact);
-    COND_ID_HOOK(OnActorInit, ACTOR_EN_ARROW, IS_RANDO, SevenSagesElementalArrowInit);
+
+    // Light arrow damage. Has to happen here rather than on the arrow, because the attacker's
+    // toucher.damage is ignored whenever the target has a damageTable - which every enemy does.
+    COND_VB_SHOULD(VB_MODIFY_RESOLVED_DAMAGE, IS_RANDO, {
+        [[maybe_unused]] Actor* target = va_arg(args, Actor*);
+        f32* damage = va_arg(args, f32*);
+        uint32_t dmgFlags = va_arg(args, uint32_t);
+
+        if (dmgFlags == LIGHT_ARROW_DMG_FLAG) {
+            *damage *= LIGHT_DAMAGE_MULTIPLIER;
+        }
+    });
 
     // Vanilla charges sMagicArrowCosts[] - 4/4/8 for fire/ice/light - at the moment the arrow is
     // nocked. Returning false suppresses that entirely so the light arrow can be charged at its own
