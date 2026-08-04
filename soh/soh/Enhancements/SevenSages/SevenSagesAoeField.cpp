@@ -150,21 +150,39 @@ void SpawnFieldVisual(PlayState* play, const Vec3f& pos, float maxRadius, SevenS
     static Color_RGBA8 iceEnv = { 40, 120, 255, 255 };
 
     const bool isFire = (visual == SEVEN_SAGES_AOE_VISUAL_FIRE);
+    Color_RGBA8* prim = isFire ? &firePrim : &icePrim;
+    Color_RGBA8* env = isFire ? &fireEnv : &iceEnv;
+
     Vec3f zero = { 0.0f, 0.0f, 0.0f };
     Vec3f centre = pos;
 
-    EffectSsBlast_SpawnShockwave(play, &centre, &zero, &zero, isFire ? &firePrim : &icePrim,
-                                 isFire ? &fireEnv : &iceEnv, 10);
+    // Ground ring. Kept because it reads the horizontal extent well, but it is gEffShockwaveDL - a
+    // flat disc - so it says nothing about a field that reaches as far above and below the impact
+    // point as this one does. The shell below is what covers that.
+    EffectSsBlast_SpawnShockwave(play, &centre, &zero, &zero, prim, env, 10);
 
-    // Din's Fire's own particle, the same call EnDodongo uses, ringed around the field so the extent
-    // is legible rather than a single dot at the impact point.
+    // A shell of sparkles ON the field boundary, which is the only way to see the radius in the air.
+    // Points are a fixed spread over a sphere rather than random, so two shots of the same size look
+    // the same - the visual is a measurement, and a measurement that jitters is not one.
+    // KiraKira is used rather than Din's Fire's own particle because EffectSsDFire_Spawn takes no
+    // colour at all; its fire palette is baked in, so it could never show an ice field.
+    static const float kShell[][3] = {
+        {  1.000f,  0.000f,  0.000f }, { -1.000f,  0.000f,  0.000f },
+        {  0.000f,  1.000f,  0.000f }, {  0.000f, -1.000f,  0.000f },
+        {  0.000f,  0.000f,  1.000f }, {  0.000f,  0.000f, -1.000f },
+        {  0.577f,  0.577f,  0.577f }, { -0.577f,  0.577f,  0.577f },
+        {  0.577f, -0.577f,  0.577f }, { -0.577f, -0.577f,  0.577f },
+        {  0.577f,  0.577f, -0.577f }, { -0.577f,  0.577f, -0.577f },
+        {  0.577f, -0.577f, -0.577f }, { -0.577f, -0.577f, -0.577f },
+    };
+
+    for (const auto& dir : kShell) {
+        Vec3f p = { pos.x + maxRadius * dir[0], pos.y + maxRadius * dir[1], pos.z + maxRadius * dir[2] };
+        EffectSsKiraKira_SpawnDispersed(play, &p, &zero, &zero, prim, env, 300, 24);
+    }
+
+    // Din's Fire's own particle at the centre, for the burning-patch character the sparkles lack.
     if (isFire) {
-        static const float kSin[] = { 0.0f, 0.951f, 0.588f, -0.588f, -0.951f };
-        static const float kCos[] = { 1.0f, 0.309f, -0.809f, -0.809f, 0.309f };
-        for (int i = 0; i < 5; i++) {
-            Vec3f p = { pos.x + maxRadius * 0.6f * kCos[i], pos.y, pos.z + maxRadius * 0.6f * kSin[i] };
-            EffectSsDFire_SpawnFixedScale(play, &p, &zero, &zero, 255, 8);
-        }
         EffectSsDFire_SpawnFixedScale(play, &centre, &zero, &zero, 255, 8);
     }
 }
