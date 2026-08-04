@@ -52,6 +52,8 @@ struct AoeField {
     f32 growthPerFrame;
     s16 height;
     s32 framesLeft;
+    SevenSagesAoeVisual visual;
+    s32 emitFrame; // counts up through the growth phase, picks which shell directions to emit
     // The PlayState the collider was initialised against. Colliders allocate from the play arena,
     // so a field must not survive a scene change - see the check in the frame update.
     PlayState* owner;
@@ -73,6 +75,80 @@ void ReleaseField(AoeField& field) {
 void ReleaseAllFields() {
     for (AoeField& field : sFields) {
         ReleaseField(field);
+    }
+}
+
+void FieldColors(SevenSagesAoeVisual visual, Color_RGBA8** prim, Color_RGBA8** env) {
+    static Color_RGBA8 firePrim = { 255, 200, 60, 255 };
+    static Color_RGBA8 fireEnv = { 255, 80, 0, 255 };
+    static Color_RGBA8 icePrim = { 170, 230, 255, 255 };
+    static Color_RGBA8 iceEnv = { 40, 120, 255, 255 };
+    const bool isFire = (visual == SEVEN_SAGES_AOE_VISUAL_FIRE);
+    *prim = isFire ? &firePrim : &icePrim;
+    *env = isFire ? &fireEnv : &iceEnv;
+}
+
+// 24 directions over a sphere: 6 axes, 8 cube diagonals, 10 more spread between them.
+const float kShell[][3] = {
+    {  1.000f,  0.000f,  0.000f }, { -1.000f,  0.000f,  0.000f },
+    {  0.000f,  1.000f,  0.000f }, {  0.000f, -1.000f,  0.000f },
+    {  0.000f,  0.000f,  1.000f }, {  0.000f,  0.000f, -1.000f },
+    {  0.577f,  0.577f,  0.577f }, { -0.577f,  0.577f,  0.577f },
+    {  0.577f, -0.577f,  0.577f }, { -0.577f, -0.577f,  0.577f },
+    {  0.577f,  0.577f, -0.577f }, { -0.577f,  0.577f, -0.577f },
+    {  0.577f, -0.577f, -0.577f }, { -0.577f, -0.577f, -0.577f },
+    {  0.707f,  0.707f,  0.000f }, { -0.707f,  0.707f,  0.000f },
+    {  0.707f, -0.707f,  0.000f }, { -0.707f, -0.707f,  0.000f },
+    {  0.707f,  0.000f,  0.707f }, { -0.707f,  0.000f,  0.707f },
+    {  0.000f,  0.707f,  0.707f }, {  0.000f,  0.707f, -0.707f },
+    {  0.000f, -0.707f,  0.707f }, {  0.000f, -0.707f, -0.707f },
+};
+constexpr int32_t SHELL_POINTS = (int32_t)(sizeof(kShell) / sizeof(kShell[0]));
+
+// Emitted per growth frame rather than all at once. The whole shell every frame would be 24 x 6 =
+// 144 sprites against a game-wide pool of 85 (EffectSs_InitInfo(play, 0x55) in z_play.c), which
+// would starve every hit mark and dust puff in the scene. Four per frame traces the expansion
+// instead, and the eye integrates the sweep into a sphere.
+constexpr int32_t SHELL_EMIT_PER_FRAME = 4;
+
+// Scale and life are calibrated against vanilla: the call vanilla itself names "SpawnSmallYellow"
+// passes scale 1000, Demo_Kekkai passes 3000. life feeds alphaStep as -(255/life)*2, so 32 stays
+// legible for roughly 16 frames - long enough to judge a radius by, which 16 was not.
+constexpr int16_t SHELL_SCALE = 2000;
+constexpr int32_t SHELL_LIFE = 32;
+
+void SpawnShellRing(PlayState* play, const Vec3f& pos, float radius, SevenSagesAoeVisual visual, s32 emitFrame) {
+    if (visual == SEVEN_SAGES_AOE_VISUAL_NONE || radius <= 0.0f) {
+        return;
+    }
+    Color_RGBA8* prim;
+    Color_RGBA8* env;
+    FieldColors(visual, &prim, &env);
+
+    Vec3f zero = { 0.0f, 0.0f, 0.0f };
+    for (int32_t i = 0; i < SHELL_EMIT_PER_FRAME; i++) {
+        const auto& dir = kShell[(emitFrame * SHELL_EMIT_PER_FRAME + i) % SHELL_POINTS];
+        Vec3f p = { pos.x + radius * dir[0], pos.y + radius * dir[1], pos.z + radius * dir[2] };
+        EffectSsKiraKira_SpawnDispersed(play, &p, &zero, &zero, prim, env, SHELL_SCALE, SHELL_LIFE);
+    }
+}
+
+// The one-shot part: a ground ring for horizontal extent, and Din's Fire's own particle at the
+// centre for a burning patch's character. EffectSsDFire_Spawn takes no colour at all - its palette
+// is baked in - which is why the shell above uses KiraKira and not this.
+void SpawnFieldBurst(PlayState* play, const Vec3f& pos, SevenSagesAoeVisual visual) {
+    if (visual == SEVEN_SAGES_AOE_VISUAL_NONE) {
+        return;
+    }
+    Color_RGBA8* prim;
+    Color_RGBA8* env;
+    FieldColors(visual, &prim, &env);
+
+    Vec3f zero = { 0.0f, 0.0f, 0.0f };
+    Vec3f centre = pos;
+    EffectSsBlast_SpawnShockwave(play, &centre, &zero, &zero, prim, env, 10);
+    if (visual == SEVEN_SAGES_AOE_VISUAL_FIRE) {
+        EffectSsDFire_SpawnFixedScale(play, &centre, &zero, &zero, 255, 8);
     }
 }
 
@@ -109,6 +185,13 @@ void SevenSagesAoeFieldFrameUpdate() {
             }
         }
 
+        // Emitted while the field is still expanding, at the radius it currently has, so the
+        // sparkles trace the growth instead of marking the final size before it exists.
+        if (field.emitFrame < GROW_FRAMES) {
+            SpawnShellRing(gPlayState, field.pos, field.radius, field.visual, field.emitFrame);
+            field.emitFrame++;
+        }
+
         field.collider.dim.radius = (s16)field.radius;
         field.collider.dim.height = field.height;
         // A cylinder spans [pos.y + yShift, pos.y + yShift + height] (sys_math3d.c:1615), so with
@@ -139,58 +222,6 @@ void SevenSagesAoeFieldFrameUpdate() {
 // Ring particles are placed around the field's edge rather than one at the centre, because a single
 // ground ring cannot show a field that reaches as far above and below the impact point as this one
 // does.
-void SpawnFieldVisual(PlayState* play, const Vec3f& pos, float maxRadius, SevenSagesAoeVisual visual) {
-    if (visual == SEVEN_SAGES_AOE_VISUAL_NONE) {
-        return;
-    }
-
-    static Color_RGBA8 firePrim = { 255, 200, 60, 255 };
-    static Color_RGBA8 fireEnv = { 255, 80, 0, 255 };
-    static Color_RGBA8 icePrim = { 170, 230, 255, 255 };
-    static Color_RGBA8 iceEnv = { 40, 120, 255, 255 };
-
-    const bool isFire = (visual == SEVEN_SAGES_AOE_VISUAL_FIRE);
-    Color_RGBA8* prim = isFire ? &firePrim : &icePrim;
-    Color_RGBA8* env = isFire ? &fireEnv : &iceEnv;
-
-    Vec3f zero = { 0.0f, 0.0f, 0.0f };
-    Vec3f centre = pos;
-
-    // Ground ring. Kept because it reads the horizontal extent well, but it is gEffShockwaveDL - a
-    // flat disc - so it says nothing about a field that reaches as far above and below the impact
-    // point as this one does. The shell below is what covers that.
-    EffectSsBlast_SpawnShockwave(play, &centre, &zero, &zero, prim, env, 10);
-
-    // A shell of sparkles ON the field boundary, which is the only way to see the radius in the air.
-    // Points are a fixed spread over a sphere rather than random, so two shots of the same size look
-    // the same - the visual is a measurement, and a measurement that jitters is not one.
-    // KiraKira is used rather than Din's Fire's own particle because EffectSsDFire_Spawn takes no
-    // colour at all; its fire palette is baked in, so it could never show an ice field.
-    static const float kShell[][3] = {
-        {  1.000f,  0.000f,  0.000f }, { -1.000f,  0.000f,  0.000f },
-        {  0.000f,  1.000f,  0.000f }, {  0.000f, -1.000f,  0.000f },
-        {  0.000f,  0.000f,  1.000f }, {  0.000f,  0.000f, -1.000f },
-        {  0.577f,  0.577f,  0.577f }, { -0.577f,  0.577f,  0.577f },
-        {  0.577f, -0.577f,  0.577f }, { -0.577f, -0.577f,  0.577f },
-        {  0.577f,  0.577f, -0.577f }, { -0.577f,  0.577f, -0.577f },
-        {  0.577f, -0.577f, -0.577f }, { -0.577f, -0.577f, -0.577f },
-    };
-
-    for (const auto& dir : kShell) {
-        Vec3f p = { pos.x + maxRadius * dir[0], pos.y + maxRadius * dir[1], pos.z + maxRadius * dir[2] };
-        // Scale 2000 and life 16 are calibrated against vanilla, not guessed: the call vanilla
-        // itself names "SpawnSmallYellow" passes 1000, and Demo_Kekkai passes 3000. An earlier 300
-        // was under a third of vanilla's *smallest* sparkle and rendered as nothing at all.
-        // life feeds alphaStep as -(255/life)*2, so 16 fades over roughly 8 frames.
-        EffectSsKiraKira_SpawnDispersed(play, &p, &zero, &zero, prim, env, 2000, 16);
-    }
-
-    // Din's Fire's own particle at the centre, for the burning-patch character the sparkles lack.
-    if (isFire) {
-        EffectSsDFire_SpawnFixedScale(play, &centre, &zero, &zero, 255, 8);
-    }
-}
-
 void SevenSagesSpawnAoeField(PlayState* play, float x, float y, float z, float maxRadius, float height,
                              int32_t lifetimeFrames, uint32_t damageFlags, uint8_t damage,
                              SevenSagesAoeVisual visual) {
@@ -215,8 +246,10 @@ void SevenSagesSpawnAoeField(PlayState* play, float x, float y, float z, float m
         field.height = (s16)height;
         field.framesLeft = lifetimeFrames;
         field.owner = play;
+        field.visual = visual;
+        field.emitFrame = 0;
         field.active = true;
-        SpawnFieldVisual(play, field.pos, maxRadius, visual);
+        SpawnFieldBurst(play, field.pos, visual);
         return;
     }
     // Pool full: drop the request rather than displace a live field. Eight concurrent fields is
