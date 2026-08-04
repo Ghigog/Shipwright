@@ -1369,6 +1369,14 @@ void Interface_SetSceneRestrictions(PlayState* play) {
                     interfaceCtx->restrictions.farores = 0;
                 }
             }
+            // Seven Sages: Farore's Wind becomes a general-purpose warp tool, usable to set/return a
+            // point anywhere rather than only in vanilla's dungeon-like scene list. Solver-safe: a
+            // bookmarked point can only ever be one the player already reached under normal logic, so
+            // this never expands what the randomizer's reachability search considers accessible - see
+            // docs/item-ability-overhaul.md, "Magic items".
+            if (IS_RANDO) {
+                interfaceCtx->restrictions.farores = 0;
+            }
             return;
         }
         i++;
