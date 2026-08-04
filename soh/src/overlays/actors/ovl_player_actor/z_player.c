@@ -5225,11 +5225,21 @@ s32 Player_HandleExitsAndVoids(PlayState* play, Player* this, CollisionPoly* pol
         } else {
             if (play->transitionTrigger == TRANS_TRIGGER_OFF) {
 
-                if ((this->actor.world.pos.y < -4000.0f) ||
-                    (((this->floorProperty == 5) || (this->floorProperty == 12)) &&
-                     ((sYDistToFloor < 100.0f) || (this->fallDistance > 400.0f) ||
-                      ((play->sceneNum != SCENE_SHADOW_TEMPLE) && (this->fallDistance > 200.0f)))) ||
-                    ((play->sceneNum == SCENE_GANONS_TOWER_COLLAPSE_EXTERIOR) && (this->fallDistance > 320.0f))) {
+                // Seven Sages: Nayru's Love lets Link walk across lava (floorProperty 5) instead of
+                // sinking and respawning nearby. Shadow Temple's sinking-sand trap shares the same
+                // floorProperty value, so it's excluded by scene rather than letting the shield
+                // trivialize that puzzle too. floorProperty 12 (the other value this block handles)
+                // is an unrelated exit/void mechanism, untouched here.
+                u8 nayruBypassesLava = IS_RANDO && (this->floorProperty == 5) &&
+                                       (gSaveContext.nayrusLoveTimer != 0) &&
+                                       (play->sceneNum != SCENE_SHADOW_TEMPLE);
+
+                if (!nayruBypassesLava &&
+                    ((this->actor.world.pos.y < -4000.0f) ||
+                     (((this->floorProperty == 5) || (this->floorProperty == 12)) &&
+                      ((sYDistToFloor < 100.0f) || (this->fallDistance > 400.0f) ||
+                       ((play->sceneNum != SCENE_SHADOW_TEMPLE) && (this->fallDistance > 200.0f)))) ||
+                     ((play->sceneNum == SCENE_GANONS_TOWER_COLLAPSE_EXTERIOR) && (this->fallDistance > 320.0f)))) {
 
                     if (this->actor.bgCheckFlags & BGCHECKFLAG_GROUND) {
                         if (this->floorProperty == 5) {
