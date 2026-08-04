@@ -82,11 +82,12 @@ void SevenSagesElementalArrowImpact(void* arrowPtr) {
     switch (arrow->params) {
         case ARROW_FIRE:
             SevenSagesSpawnAoeField(gPlayState, pos.x, pos.y, pos.z, FIRE_RADIUS, FIRE_HEIGHT,
-                                    FIRE_LIFETIME_FRAMES, SEVEN_SAGES_AOE_DMG_FIRE, FIRE_DAMAGE);
+                                    FIRE_LIFETIME_FRAMES, SEVEN_SAGES_AOE_DMG_FIRE, FIRE_DAMAGE,
+                                    SEVEN_SAGES_AOE_VISUAL_FIRE);
             break;
         case ARROW_ICE:
             SevenSagesSpawnAoeField(gPlayState, pos.x, pos.y, pos.z, ICE_RADIUS, ICE_HEIGHT, ICE_LIFETIME_FRAMES,
-                                    SEVEN_SAGES_AOE_DMG_STUN, ICE_DAMAGE);
+                                    SEVEN_SAGES_AOE_DMG_STUN, ICE_DAMAGE, SEVEN_SAGES_AOE_VISUAL_ICE);
             break;
         default:
             // Light arrows leave no field, and every other arrow type is vanilla.

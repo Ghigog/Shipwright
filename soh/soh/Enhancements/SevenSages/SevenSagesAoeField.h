@@ -35,9 +35,21 @@ constexpr uint32_t SEVEN_SAGES_AOE_DMG_STUN = 0x00000001;
 // height/2 above and height/2 below. Vanilla's own area effects only extend upward, which suits a
 // bomb at your feet but not an arrow that lands above its target.
 //
+// What the field looks like. Vanilla's spell ACTORS are unusable for this - Magic_Fire and friends
+// hard-set their position to the player's every frame (z_magic_fire.c:114) and kill themselves on
+// player state, so one spawned at an arrow's landing point snaps straight to Link. The particle
+// effects have no such tie: EffectSsBlast_Spawn takes a position, a colour, a scale, a growth rate
+// and a lifetime, which is exactly a radius indicator.
+enum SevenSagesAoeVisual {
+    SEVEN_SAGES_AOE_VISUAL_NONE, // for fields whose source is already visible, e.g. a blue flame
+    SEVEN_SAGES_AOE_VISUAL_FIRE,
+    SEVEN_SAGES_AOE_VISUAL_ICE,
+};
+
 // Spawn a field at pos. It expands from nothing to maxRadius over a few frames like a bomb blast,
 // then holds at that size until lifetimeFrames runs out. Fields are pooled; if the pool is full the
 // call is a no-op rather than displacing a live field. Passing a lifetime of 1 gives the
 // instantaneous case (a hammer swing) through the same mechanism.
 void SevenSagesSpawnAoeField(PlayState* play, float x, float y, float z, float maxRadius, float height,
-                             int32_t lifetimeFrames, uint32_t damageFlags, uint8_t damage);
+                             int32_t lifetimeFrames, uint32_t damageFlags, uint8_t damage,
+                             SevenSagesAoeVisual visual);

@@ -130,8 +130,38 @@ void SevenSagesAoeFieldFrameUpdate() {
 
 } // namespace
 
+// The blast's scale units are not world units, so this ratio is eyeball-tuned rather than derived.
+// Growth is spread over GROW_FRAMES so the flash expands at the same rate the collider does - the
+// point of the visual is to show the real extent, not to look impressive independently of it.
+void SpawnFieldVisual(PlayState* play, const Vec3f& pos, float maxRadius, SevenSagesAoeVisual visual) {
+    if (visual == SEVEN_SAGES_AOE_VISUAL_NONE) {
+        return;
+    }
+
+    static Color_RGBA8 firePrim = { 255, 200, 60, 255 };
+    static Color_RGBA8 fireEnv = { 255, 80, 0, 255 };
+    static Color_RGBA8 icePrim = { 170, 230, 255, 255 };
+    static Color_RGBA8 iceEnv = { 40, 120, 255, 255 };
+
+    Vec3f effectPos = pos;
+    Vec3f zero = { 0.0f, 0.0f, 0.0f };
+    const s16 scale = (s16)(maxRadius * 0.4f);
+
+    EffectSsBlast_Spawn(play, &effectPos, &zero, &zero,
+                        visual == SEVEN_SAGES_AOE_VISUAL_FIRE ? &firePrim : &icePrim,
+                        visual == SEVEN_SAGES_AOE_VISUAL_FIRE ? &fireEnv : &iceEnv, scale,
+                        scale / GROW_FRAMES, 0, GROW_FRAMES * 2);
+
+    // Fire also gets Din's Fire's own particle, which is what makes the patch read as still burning
+    // rather than as a single flash.
+    if (visual == SEVEN_SAGES_AOE_VISUAL_FIRE) {
+        EffectSsDFire_Spawn(play, &effectPos, &zero, &zero, scale, scale / GROW_FRAMES, 255, 8, GROW_FRAMES * 3);
+    }
+}
+
 void SevenSagesSpawnAoeField(PlayState* play, float x, float y, float z, float maxRadius, float height,
-                             int32_t lifetimeFrames, uint32_t damageFlags, uint8_t damage) {
+                             int32_t lifetimeFrames, uint32_t damageFlags, uint8_t damage,
+                             SevenSagesAoeVisual visual) {
     if (play == nullptr || lifetimeFrames <= 0 || maxRadius <= 0.0f) {
         return;
     }
@@ -154,6 +184,7 @@ void SevenSagesSpawnAoeField(PlayState* play, float x, float y, float z, float m
         field.framesLeft = lifetimeFrames;
         field.owner = play;
         field.active = true;
+        SpawnFieldVisual(play, field.pos, maxRadius, visual);
         return;
     }
     // Pool full: drop the request rather than displace a live field. Eight concurrent fields is
