@@ -31,6 +31,10 @@ constexpr uint32_t SEVEN_SAGES_AOE_DMG_FIRE = 0x00020000; // same flag Din's Fir
 // "freeze" field is this flag with damage 0.
 constexpr uint32_t SEVEN_SAGES_AOE_DMG_STUN = 0x00000001;
 
+// `height` is the field's TOTAL vertical extent, centred on the point given - the field reaches
+// height/2 above and height/2 below. Vanilla's own area effects only extend upward, which suits a
+// bomb at your feet but not an arrow that lands above its target.
+//
 // Spawn a field at pos. It expands from nothing to maxRadius over a few frames like a bomb blast,
 // then holds at that size until lifetimeFrames runs out. Fields are pooled; if the pool is full the
 // call is a no-op rather than displacing a live field. Passing a lifetime of 1 gives the

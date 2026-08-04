@@ -40,8 +40,8 @@ extern "C" PlayState* gPlayState;
 
 namespace {
 
-constexpr float BLUE_FIRE_RADIUS = 90.0f;
-constexpr float BLUE_FIRE_HEIGHT = 50.0f;
+constexpr float BLUE_FIRE_RADIUS = 250.0f;
+constexpr float BLUE_FIRE_HEIGHT = 250.0f; // total, centred
 
 // Renew every REFRESH frames with a field that lives slightly longer, so there is no gap between
 // one field expiring and the next appearing.

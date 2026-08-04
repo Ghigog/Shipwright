@@ -111,6 +111,12 @@ void SevenSagesAoeFieldFrameUpdate() {
 
         field.collider.dim.radius = (s16)field.radius;
         field.collider.dim.height = field.height;
+        // A cylinder spans [pos.y + yShift, pos.y + yShift + height] (sys_math3d.c:1615), so with
+        // the default yShift of 0 it only ever extends UPWARD from the impact point. That is right
+        // for a bomb, which is always at your feet, and wrong for an arrow: one shot into a wall
+        // above an enemy never reached back down to it. Centring on the impact point instead makes
+        // the field reach equally up and down.
+        field.collider.dim.yShift = (s16)(-field.height / 2);
         field.collider.dim.pos.x = (s16)field.pos.x;
         field.collider.dim.pos.y = (s16)field.pos.y;
         field.collider.dim.pos.z = (s16)field.pos.z;
