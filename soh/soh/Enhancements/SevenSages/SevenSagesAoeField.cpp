@@ -178,7 +178,11 @@ void SpawnFieldVisual(PlayState* play, const Vec3f& pos, float maxRadius, SevenS
 
     for (const auto& dir : kShell) {
         Vec3f p = { pos.x + maxRadius * dir[0], pos.y + maxRadius * dir[1], pos.z + maxRadius * dir[2] };
-        EffectSsKiraKira_SpawnDispersed(play, &p, &zero, &zero, prim, env, 300, 24);
+        // Scale 2000 and life 16 are calibrated against vanilla, not guessed: the call vanilla
+        // itself names "SpawnSmallYellow" passes 1000, and Demo_Kekkai passes 3000. An earlier 300
+        // was under a third of vanilla's *smallest* sparkle and rendered as nothing at all.
+        // life feeds alphaStep as -(255/life)*2, so 16 fades over roughly 8 frames.
+        EffectSsKiraKira_SpawnDispersed(play, &p, &zero, &zero, prim, env, 2000, 16);
     }
 
     // Din's Fire's own particle at the centre, for the burning-patch character the sparkles lack.
