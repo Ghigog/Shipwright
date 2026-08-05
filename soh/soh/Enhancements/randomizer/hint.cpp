@@ -135,7 +135,18 @@ void Hint::FillGapsInData() {
     for (uint8_t c = 0; c < locations.size(); c++) {
         // if area matters for the hint, it should be specified and not left to this
         if (fillAreas) {
-            areas.push_back(ctx->GetItemLocation(locations[c])->GetFirstArea());
+            // A location with no area assignment is not fatal here. This is reached when
+            // loading a save written before a hint existed: LoadArray default-constructs
+            // the missing entries, and a default-constructed Hint pulls its targetChecks
+            // back out of staticHintInfoMap above - so it asks for an area on a location
+            // the save never assigned one to. GetFirstArea() asserts in that case, which
+            // turned adding any new hint into a crash on every older save.
+            //
+            // CreateAllHints already treats the same condition as non-fatal and
+            // substitutes RA_NONE (its assert is commented out, see hints.cpp) - this
+            // just gives the load path the tolerance the generation path already has.
+            auto itemLocation = ctx->GetItemLocation(locations[c]);
+            areas.push_back(itemLocation->GetAreas().empty() ? RA_NONE : itemLocation->GetFirstArea());
         }
         if (fillItems) {
             items.push_back(ctx->GetItemLocation(locations[c])->GetPlacedRandomizerGet());

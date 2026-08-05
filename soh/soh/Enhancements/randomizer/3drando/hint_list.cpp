@@ -3009,6 +3009,36 @@ void StaticData::HintTable_Init() {
         "taken it.",
         { QM_RED }));
 
+    // Fire Temple Goron Pillar - Fire Temple
+    hintTextTable[RHT_NPC_FT_GORON_PILLAR] = HintText(CustomMessage(
+        "Free, goro! I was starting to like it in there, if I'm honest.^Anyway - another one of us is sitting "
+        "on #[[1]]#. Go bother him instead.",
+        { QM_RED }));
+
+    // Fire Temple Goron Flame Dancer - Fire Temple
+    hintTextTable[RHT_NPC_FT_GORON_FLAME_DANCER] = HintText(CustomMessage(
+        "Whew! Thought I'd be dancing with fire dancers forever, goro.^One of my brothers elsewhere in here "
+        "has #[[1]]#. Tell him I said hi.",
+        { QM_RED }));
+
+    // Fire Temple Goron Falling Doors - Fire Temple
+    hintTextTable[RHT_NPC_FT_GORON_FALLING_DOORS] = HintText(CustomMessage(
+        "Goro! Doors falling everywhere, and me stuck watching.^Another trapped brother's got #[[1]]# waiting "
+        "on him. Go find him.",
+        { QM_RED }));
+
+    // Fire Temple Goron Ocarina - Fire Temple
+    hintTextTable[RHT_NPC_FT_GORON_OCARINA] = HintText(CustomMessage(
+        "You hear that? No? Never mind, goro.^There's a brother of mine somewhere with #[[1]]#. Free him too, "
+        "would you?",
+        { QM_RED }));
+
+    // Fire Temple Goron Hidden Door - Fire Temple
+    hintTextTable[RHT_NPC_FT_GORON_HIDDEN_DOOR] = HintText(CustomMessage(
+        "Ha! Knew someone would find the door eventually, goro.^Another cage in here's got a Goron sitting on "
+        "#[[1]]#. Good luck finding it.",
+        { QM_RED }));
+
 // <<< SEVEN_SAGES_GENERATED: HINT_TEXT
     /*--------------------------
     |    Static Entrance Hint   |
