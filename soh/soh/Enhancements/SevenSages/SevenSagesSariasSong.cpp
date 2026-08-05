@@ -18,8 +18,11 @@
  *
  * So the buff is back on the song itself (OnOcarinaSongAction, as originally built and playtested
  * 2026-08-01) and the prompt chain is suppressed outright via VB_NAVI_ASK_TO_TALK_AFTER_SARIAS_SONG.
- * Nothing else about vanilla Saria's Song is touched: the Sacred Forest Meadow maze door, Darunia,
- * Grog and the rest react to the song directly, not through this prompt.
+ * Nothing else about vanilla Saria's Song is touched. Its real reactors all go through
+ * OCARINA_ACTION_CHECK_SARIA on the play-for-actor path, never through this prompt: Mido stepping
+ * out of the Lost Woods passage (z_en_md.c, gated on SCENE_LOST_WOODS), Darunia's dance in Goron
+ * City (z_en_du.c), the Lost Woods Skull Kid (z_en_skj.c), any En_Okarina_Tag spot placed with
+ * this song's param, and Gossip Stones (z_en_gs.c, which checks the song id directly).
  *
  * Checked before suppressing, since both branches of the prompt did lead somewhere:
  * - "talk to Navi instead?" -> ElfMessage_GetCUpText, which returns 0 unless the scene loaded a
