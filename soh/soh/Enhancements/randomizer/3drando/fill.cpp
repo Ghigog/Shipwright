@@ -943,6 +943,27 @@ static void AssumedFill(const std::vector<RandomizerGet>& items, const std::vect
     } while (unsuccessfulPlacement);
 }
 
+// Seven Sages: grass/pot/crate (RSK_SHUFFLE_GRASS/POTS/CRATES) locations exist specifically as a
+// destination for JUNK overflow - since junk can't go in chests, it needs somewhere else to live.
+// They were never meant to be genuine "any item" shuffle locations like a chest or NPC give-item
+// slot, so nothing that matters may be placed at one. Every AssumedFill pass that places majors
+// must filter its candidate locations through this, not just the open advancement fill - the
+// restricted dungeon-item pools (own dungeon / any dungeon / overworld) are built from area
+// membership and happily include pots unless told otherwise. Confirmed via live playtesting twice:
+// first a Bottle with Ruto's Letter in a crate and an Empty Bottle in a pot (fixed by filtering the
+// open fill), then a Bottom of the Well Key Ring in a Bottom of the Well pot with RSK_KEYSANITY on
+// Own Dungeon, which never went through the open fill at all.
+static bool IsTrivialContainer(const RandomizerCheck loc) {
+    RandomizerCheckType type = Rando::StaticData::GetLocation(loc)->GetRCType();
+    return type == RCTYPE_GRASS || type == RCTYPE_POT || type == RCTYPE_CRATE || type == RCTYPE_NLCRATE ||
+           type == RCTYPE_SMALL_CRATE;
+}
+
+// Takes a non-const reference only because FilterFromPool does; the pool is not modified.
+static std::vector<RandomizerCheck> WithoutTrivialContainers(std::vector<RandomizerCheck>& locations) {
+    return FilterFromPool(locations, [](const auto loc) { return !IsTrivialContainer(loc); });
+}
+
 static std::vector<RandomizerGet> GetStonesInPool(std::vector<RandomizerGet> pool) {
     return FilterFromPool(pool, [](const auto i) {
         return Rando::StaticData::RetrieveItem(i).GetItemType() == ITEMTYPE_DUNGEONREWARD &&
@@ -1097,7 +1118,10 @@ static void RandomizeOwnDungeon(const Rando::DungeonInfo* dungeon) {
     }
 
     // randomize boss key, small keys, and rewards together for even distribution
-    AssumedFill(dungeonItems, dungeonLocations);
+    // Seven Sages: keys, key rings, boss keys and dungeon rewards are all majors, so they get the
+    // same trivial-container exclusion the open advancement fill uses. Maps and compasses below
+    // keep the unfiltered pool - they're junk-tier and a pot is a fine place for one.
+    AssumedFill(dungeonItems, WithoutTrivialContainers(dungeonLocations));
 
     // randomize map and compass separately since they're not progressive
     if (ctx->GetOption(RSK_SHUFFLE_MAPANDCOMPASS).Is(RO_DUNGEON_ITEM_LOC_OWN_DUNGEON) && dungeon->GetMap() != RG_NONE &&
@@ -1204,8 +1228,11 @@ static void RandomizeDungeonItems() {
     }
 
     // Randomize Any Dungeon and Overworld pools
-    AssumedFill(anyDungeonItems, anyDungeonLocations, true);
-    AssumedFill(overworldItems, ctx->overworldLocations, true);
+    // Seven Sages: same trivial-container exclusion as the own-dungeon pass above - everything in
+    // these two pools (keys, key rings, boss keys, Ganon's Soul, dungeon rewards, Triforce pieces)
+    // is a major. The map/compass fills below deliberately keep the unfiltered pools.
+    AssumedFill(anyDungeonItems, WithoutTrivialContainers(anyDungeonLocations), true);
+    AssumedFill(overworldItems, WithoutTrivialContainers(ctx->overworldLocations), true);
 
     // Randomize maps and compasses after since they're not advancement items
     for (auto dungeon : ctx->GetDungeons()->GetDungeonList()) {
@@ -1450,21 +1477,10 @@ int Fill() {
         std::vector<RandomizerGet> remainingAdvancementItems = FilterAndEraseFromPool(
             itemPool, [](const auto i) { return Rando::StaticData::RetrieveItem(i).IsAdvancement(); });
 
-        // Seven Sages: grass/pot/crate (RSK_SHUFFLE_GRASS/POTS/CRATES) locations exist
-        // specifically as a destination for JUNK overflow - since junk can't go in chests,
-        // it needs somewhere else to live. They were never meant to be genuine "any item"
-        // shuffle locations like a chest or NPC give-item slot. Confirmed via live playtesting:
-        // a Bottle with Ruto's Letter and an Empty Bottle (both ITEM_CATEGORY_MAJOR) turned up
-        // in a crate and a pot respectively. Exclude these location types from the majors
-        // AssumedFill's candidate pool entirely - majors place anywhere else reachable, same as
-        // before this locations list existed.
-        auto isTrivialContainer = [](const auto loc) {
-            RandomizerCheckType type = Rando::StaticData::GetLocation(loc)->GetRCType();
-            return type == RCTYPE_GRASS || type == RCTYPE_POT || type == RCTYPE_CRATE ||
-                   type == RCTYPE_NLCRATE || type == RCTYPE_SMALL_CRATE;
-        };
-        std::vector<RandomizerCheck> nonTrivialContainerLocations =
-            FilterFromPool(ctx->allLocations, [&](const auto loc) { return !isTrivialContainer(loc); });
+        // Seven Sages: majors never go in a trivial container (grass/pot/crate) - see
+        // IsTrivialContainer above for why. Majors place anywhere else reachable, same as before
+        // that locations list existed.
+        std::vector<RandomizerCheck> nonTrivialContainerLocations = WithoutTrivialContainers(ctx->allLocations);
 
         // Seven Sages: ~~majors used to get a priority pass into empty big chests here, but
         // that's no longer needed - chest SIZE now automatically follows contents at render
