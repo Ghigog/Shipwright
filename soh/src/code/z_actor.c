@@ -3864,7 +3864,13 @@ void func_80033480(PlayState* play, Vec3f* posBase, f32 randRangeDiameter, s32 a
 }
 
 Actor* Actor_GetCollidedExplosive(PlayState* play, Collider* collider) {
-    if ((collider->acFlags & AC_HIT) && (collider->ac->category == ACTORCAT_EXPLOSIVE)) {
+    // Seven Sages: Din's Fire counts as an explosive here too - everywhere this function gates
+    // "was I hit by a bomb" (Fire Temple/Dodongo's Cavern bombable walls and floors, the Dodongo
+    // mouth door, and a handful of unrelated actors like Beamos/Bubble/Dead Hand/fake doors that
+    // react to nearby explosives), Din's Fire now qualifies the same way a real bomb does. Treat it
+    // as a permanent bomb the player carries that costs magic instead of a limited consumable.
+    if ((collider->acFlags & AC_HIT) &&
+        ((collider->ac->category == ACTORCAT_EXPLOSIVE) || (IS_RANDO && collider->ac->id == ACTOR_MAGIC_FIRE))) {
         collider->acFlags &= ~AC_HIT;
         return collider->ac;
     }
