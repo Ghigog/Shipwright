@@ -46,6 +46,19 @@
  * InternalRecalculateAvailableChecks: that is gated behind the `EnableAvailableChecks` tracker
  * CVar, which is off by default, and a story feature must not depend on a user-facing tracker
  * toggle.
+ *
+ * Known limitation, not yet addressed: sSuggestedRegion is only recomputed on OnSceneInit, so it
+ * goes stale the moment the player moves between rooms *within* a scene (a whole dungeon interior
+ * is one scene) or collects an item - GetCurrentRegion() likewise only tracks which entrance the
+ * player used, not which room they are currently in, so both the "current" and "nearest" ends of
+ * the BFS can be wrong deep inside a multi-room scene. Left alone here rather than patched blind,
+ * since fixing it properly needs a real per-room position source this file doesn't have, and
+ * re-running ReachabilitySearch more often than "once per scene" reopens the cost concern above.
+ *
+ * Re-scoped 2026-08-05: only fires on the player's own C-Up talk to Navi (an optional ElfMsg
+ * trigger), never on a forced/auto-interrupt one. See SuppressForcedNaviInterrupt and
+ * ArmNaviRewrite below for why - short version, this hint is deliberately player-initiated now,
+ * and no longer hijacks vanilla's environmental tips (e.g. "you can bottle that").
  */
 #include "soh/OTRGlobals.h"
 #include "soh/ShipInit.hpp"
@@ -241,12 +254,53 @@ std::string GetRegionAreaName(RandomizerRegion regionKey) {
     return Rando::StaticData::hintTextTable[nameEntry->second].GetClear().GetForCurrentLanguage(MF_CLEAN);
 }
 
+// ElfMsg_GetMessageId (z_elf_msg.c:112, static to that file) returns a positive id - optional,
+// requires the player to C-Up Navi themselves - when this bit is set on the trigger's params, and
+// a negative (forced, auto-interrupt) id otherwise. We match the same bit here rather than
+// duplicating GetMessageId's arithmetic, since we only need the sign, not the magnitude.
+bool IsOptionalNaviTrigger(ElfMsg* naviTalk) {
+    return (naviTalk->actor.params & 0x8000) != 0;
+}
+
+// Re-scoped 2026-08-05: forced (auto-interrupt) ElfMsg triggers are killed outright rather than
+// rewritten. These are vanilla's scattered environmental tips ("you can bottle that!", "this
+// looks climbable") - useful in vanilla, but under this project they were getting hijacked by
+// RewriteNaviMessage below (which used to fire on every VB_NAVI_TALK, forced or optional) and
+// replaced with a region suggestion that frequently had nothing to say mid-puzzle, reading as
+// Navi randomly interrupting to announce she has no idea what's going on. The "where next" guide
+// is a deliberate, player-initiated action now (C-Up talk to Navi) - it has no business hijacking
+// a forced trigger the player didn't ask to hear from.
+//
+// Kill-and-set-switch-flag mirrors the equivalent SkipForcedDialog path
+// (timesaver_hook_handlers.cpp's VB_NAVI_TALK case) so a suppressed trigger doesn't linger and
+// re-fire every time the player re-enters its zone. The high-params-byte 0x80 bit marks triggers
+// that path also leaves alone (its own comment: not further documented there either, but treated
+// as "don't touch" is the safe default here too, so those still interrupt).
+void SuppressForcedNaviInterrupt(bool* should, ElfMsg* naviTalk) {
+    if (naviTalk == nullptr || !*should || IsOptionalNaviTrigger(naviTalk)) {
+        return;
+    }
+    const int32_t paramsHighByte = naviTalk->actor.params >> 8;
+    if ((paramsHighByte & 0x80) != 0) {
+        return;
+    }
+    if ((paramsHighByte & 0x3F) != 0x3F) {
+        Flags_SetSwitch(gPlayState, paramsHighByte & 0x3F);
+    }
+    Actor_Kill(&naviTalk->actor);
+    *should = false;
+}
+
 // Arm the rewrite. Left at *should = true on purpose: vanilla still does all its own work (sets
 // player->naviTextId, points Navi at this trigger), and we only swap what the resulting textbox
 // says. Capturing the exact textId here is what keeps the OnOpenText hook below from touching any
 // other message - it is far more precise than guessing at the ElfMsg id range.
+//
+// Optional triggers only - see SuppressForcedNaviInterrupt above for why forced ones never reach
+// here at all (*should is already false by the time this runs, so the early return below covers
+// it too, but the guard is kept explicit rather than relying on call order).
 void ArmNaviRewrite(bool* should, ElfMsg* naviTalk) {
-    if (naviTalk == nullptr || !*should) {
+    if (naviTalk == nullptr || !*should || !IsOptionalNaviTrigger(naviTalk)) {
         return;
     }
     // Mirrors ElfMsg_GetMessageId (z_elf_msg.c:112), which is static to that file. Player takes
@@ -284,6 +338,7 @@ void SevenSagesNaviOnVanillaBehavior(GIVanillaBehavior id, bool* should, va_list
     va_copy(args, originalArgs);
     ElfMsg* naviTalk = va_arg(args, ElfMsg*);
     va_end(args);
+    SuppressForcedNaviInterrupt(should, naviTalk);
     ArmNaviRewrite(should, naviTalk);
 }
 
