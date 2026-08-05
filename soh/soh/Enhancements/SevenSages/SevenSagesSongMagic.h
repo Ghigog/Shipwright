@@ -10,6 +10,18 @@
 // machine has settled back to idle from the reset left by scene/player-init code. This module
 // centralizes that fix so each song only has to provide its own effect, not re-derive it.
 //
+// `fromOcarinaPerformance`, the default, additionally drops the whole request - cost and effect
+// both - when the performance that just finished was played *for* something in the world rather
+// than by the player on their own: Mido barring the Lost Woods, Darunia's dance, the Skull Kid,
+// the frogs, a scarecrow spot. Those all have their own vanilla payoff, and a sage aiming a song
+// at an NPC isn't casting it, so charging magic and firing a buff there was wrong on both counts.
+// Detected off msgCtx.ocarinaAction, which vanilla sets to one of the CHECK_*/recording actions
+// for exactly these and to FREE_PLAY(_DONE) otherwise.
+//
+// Pass false from a caller that is not an ocarina performance at all - the Golden Gauntlets door
+// bypass is the only one - where ocarinaAction still holds a stale value from whenever the ocarina
+// was last used and would otherwise refuse the charge based on something the player did earlier.
+//
 // Call SevenSagesRequestSongMagic from an OnOcarinaSongAction handler once a song is recognized
 // and any song-specific guards (proximity, etc.) have passed. onSuccess runs once the magic state
 // has settled and the charge is armed (magicTarget set, Magic_RequestChange succeeded) - not
@@ -23,4 +35,5 @@
 // caller needing to know any of this happened. Only one request is tracked at a time, which is fine
 // in practice: songs are played one at a time through the same ocarina performance UI, and the
 // gauntlet bypass charges once per door open.
-void SevenSagesRequestSongMagic(short cost, std::function<void()> onSuccess);
+void SevenSagesRequestSongMagic(short cost, std::function<void()> onSuccess,
+                                bool fromOcarinaPerformance = true);

@@ -660,7 +660,8 @@ void EnMd_Init(Actor* thisx, PlayState* play) {
         ((play->sceneNum == SCENE_KOKIRI_FOREST) && Flags_GetEventChkInf(EVENTCHKINF_SHOWED_MIDO_SWORD_SHIELD) &&
          GameInteractor_Should(VB_MIDO_CONSIDER_DEKU_TREE_DEAD, CHECK_QUEST_ITEM(QUEST_KOKIRI_EMERALD))) ||
         ((play->sceneNum == SCENE_LOST_WOODS) &&
-         !Flags_GetEventChkInf(EVENTCHKINF_PLAYED_SARIAS_SONG_FOR_MIDO_AS_ADULT))) {
+         GameInteractor_Should(VB_MIDO_BLOCK_LOST_WOODS_PATH,
+                               !Flags_GetEventChkInf(EVENTCHKINF_PLAYED_SARIAS_SONG_FOR_MIDO_AS_ADULT), this))) {
         this->actor.home.pos = this->actor.world.pos;
         this->actionFunc = EnMd_BlockPath;
         return;

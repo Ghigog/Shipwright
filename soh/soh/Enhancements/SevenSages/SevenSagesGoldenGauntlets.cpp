@@ -110,7 +110,10 @@ bool CanForceDoor(u8 requiredTier) {
 }
 
 void ChargeForBypass() {
-    SevenSagesRequestSongMagic(DoorMagicCost(), nullptr);
+    // Not an ocarina performance - see SevenSagesSongMagic.h. Without this the charge would be
+    // refused whenever msgCtx.ocarinaAction happened to still hold a play-for-actor value from the
+    // last time the player played a song at an NPC, which persists across scenes.
+    SevenSagesRequestSongMagic(DoorMagicCost(), nullptr, false);
 }
 
 // The three approach checks below re-run every frame the player stands where they could interact

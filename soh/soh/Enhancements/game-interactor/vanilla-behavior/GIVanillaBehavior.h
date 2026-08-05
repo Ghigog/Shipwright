@@ -1644,6 +1644,21 @@ typedef enum {
 
     // #### `result`
     // ```c
+    // !Flags_GetEventChkInf(EVENTCHKINF_PLAYED_SARIAS_SONG_FOR_MIDO_AS_ADULT)
+    // ```
+    // #### `args`
+    // - `*EnMd`
+    //
+    // ### Note:
+    // Only consulted for the Lost Woods Mido, the one standing in the way of the Sacred Forest
+    // Meadow until you play Saria's Song for him. Overriding this to false sends him to the end of
+    // his path at spawn (`EnMd_SetMovedPos`) instead of `EnMd_BlockPath` - the same place vanilla
+    // walks him to once he steps aside - so the passage is simply open. It does not touch the
+    // Kokiri Forest Mido, who has his own conditions above this one.
+    VB_MIDO_BLOCK_LOST_WOODS_PATH,
+
+    // #### `result`
+    // ```c
     // CHECK_QUEST_ITEM(QUEST_KOKIRI_EMERALD)
     // ```
     // #### `args`
