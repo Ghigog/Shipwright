@@ -30,12 +30,6 @@ DEFINE_HOOK(OnSetDoAction, (uint16_t action));
 DEFINE_HOOK(OnPlayerSfx, (u16 sfxId));
 DEFINE_HOOK(OnOcarinaSongAction, ());
 DEFINE_HOOK(OnWarpSongDeclined, ());
-// Seven Sages: the Saria's-Song counterpart to OnWarpSongDeclined above. Vanilla playing Saria's
-// Song forces Navi to ask "talk to Saria?" then, if declined, "talk to Navi instead?" (En_Elf's
-// func_80A052F4/func_80A05208 state chain). Fired only from the second prompt's "no" branch -
-// the one spot that means "the player took neither vanilla option," not just "closed a textbox."
-// Saying yes to either question takes the OG vanilla effect and should not also fire this.
-DEFINE_HOOK(OnSariasSongFullyDeclined, ());
 DEFINE_HOOK(OnOcarinaNote, (uint8_t note, float modulator, int8_t bend));
 DEFINE_HOOK(OnShopSlotChange, (uint8_t cursorIndex, int16_t price));
 DEFINE_HOOK(OnDungeonKeyUsed, (uint16_t mapIndex));

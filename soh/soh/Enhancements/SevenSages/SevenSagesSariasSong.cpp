@@ -5,13 +5,32 @@
  * system-wide "songs cost magic" rule) via the shared deferred-request helper
  * (SevenSagesSongMagic.h) built for Song of Time.
  *
- * Re-scoped 2026-08-05: only fires on OnSariasSongFullyDeclined, not on every play of the song.
- * Playing Saria's Song in vanilla forces Navi to ask "talk to Saria?" and, if declined, "talk to
- * Navi instead?" (En_Elf's func_80A052F4/func_80A05208 state chain in z_en_elf.c). Saying yes to
- * either question takes the OG vanilla effect and should not also grant the buff - same mutual-
- * exclusion shape as the warp songs' Yes/No prompt (see SevenSagesMinuetOfForest.cpp). Only
- * declining both, the new hook's one firing point, means the player wants the mod's bonus
- * instead of the vanilla option.
+ * ── The vanilla Navi prompt chain is suppressed, not used as a gate ─────────────────────────
+ * Playing Saria's Song in vanilla makes Navi force a textbox asking "talk to Saria?" and, if
+ * declined, "talk to Navi instead?" (z_message_PAL.c sets a negative player->naviTextId, which
+ * En_Elf's func_80A052F4/func_80A05208 state chain then walks). An earlier pass treated that
+ * chain the way the warp songs treat their Yes/No prompt - buff only on declining both, vanilla
+ * option on saying yes - and it was wrong for this song. A warp song's prompt is one question the
+ * player is already used to answering; this is two questions between the player and the buff,
+ * every single cast, and playtesting 2026-08-05 confirmed it reads as the song nagging rather
+ * than doing anything. It is also lore-hostile here: the player *is* a sage, so "do you want to
+ * talk to Saria?" is not a question this project can keep asking (docs/lore.md).
+ *
+ * So the buff is back on the song itself (OnOcarinaSongAction, as originally built and playtested
+ * 2026-08-01) and the prompt chain is suppressed outright via VB_NAVI_ASK_TO_TALK_AFTER_SARIAS_SONG.
+ * Nothing else about vanilla Saria's Song is touched: the Sacred Forest Meadow maze door, Darunia,
+ * Grog and the rest react to the song directly, not through this prompt.
+ *
+ * Checked before suppressing, since both branches of the prompt did lead somewhere:
+ * - "talk to Navi instead?" -> ElfMessage_GetCUpText, which returns 0 unless the scene loaded a
+ *   cUpElfMsgs table, and only two of those exist in the whole game (z_scene.c's sNaviMsgFiles:
+ *   Hyrule Field and Inside the Deku Tree), falling back to TEXT_NAVI_TRY_TO_KEEP_MOVING
+ *   otherwise. It never carried Phase 4e's "where next" hint either - SevenSagesNaviGuide.cpp
+ *   rewrites optional ElfMsg trigger volumes, a different path entirely. Nothing lost.
+ * - "talk to Saria?" -> ElfMessage_GetSariaText, which under IS_RANDO with RSK_SARIA_HINT (on in
+ *   the Seven Sages seed preset) returns TEXT_SARIAS_SONG_FOREST_SOUNDS for StaticHints.cpp to
+ *   rewrite into the seed's Saria hint. That delivery IS given up here; talking to Saria in
+ *   person in the Sacred Forest Meadow (TEXT_SARIA_SFM, hooked separately) still gives it.
  *
  * Rather than new climbable-surface logic, this toggles the existing "ClimbEverything" cheat
  * (see Cheats/ClimbEverything.cpp) on for the buff's duration and back off when it expires -
@@ -52,6 +71,8 @@
 #include "soh/Enhancements/SevenSages/SevenSagesSongMagic.h"
 #include "soh/Enhancements/game-interactor/GameInteractor_Hooks.h"
 
+extern "C" PlayState* gPlayState;
+
 namespace {
 
 constexpr s16 SARIAS_SONG_MAGIC_COST = 24;
@@ -65,8 +86,11 @@ void SetClimbEverything(s32 value) {
     ShipInit::Init(CVAR_CHEAT("ClimbEverything"));
 }
 
-void SevenSagesSariasSongFullyDeclined() {
+void SevenSagesSariasSongPlayed() {
     if (!GameInteractor::IsSaveLoaded(true)) {
+        return;
+    }
+    if (gPlayState->msgCtx.lastPlayedSong != OCARINA_SONG_SARIAS) {
         return;
     }
 
@@ -90,10 +114,21 @@ void SevenSagesSariasSongFrameUpdate() {
     }
 }
 
+// Skip vanilla's "talk to Saria?" / "talk to Navi instead?" chain entirely - see the header
+// comment. Unconditional under IS_RANDO: the buff above fires on every play of the song, so there
+// is no branch of the prompt left that still leads anywhere this project wants the player to go.
+void SevenSagesSariasSongOnVanillaBehavior(GIVanillaBehavior id, bool* should, va_list originalArgs) {
+    if (id != VB_NAVI_ASK_TO_TALK_AFTER_SARIAS_SONG) {
+        return;
+    }
+    *should = false;
+}
+
 } // namespace
 
 static void RegisterSevenSagesSariasSong() {
-    COND_HOOK(OnSariasSongFullyDeclined, IS_RANDO, SevenSagesSariasSongFullyDeclined);
+    COND_HOOK(OnOcarinaSongAction, IS_RANDO, SevenSagesSariasSongPlayed);
+    COND_HOOK(OnVanillaBehavior, IS_RANDO, SevenSagesSariasSongOnVanillaBehavior);
     COND_HOOK(OnGameFrameUpdate, IS_RANDO, SevenSagesSariasSongFrameUpdate);
 }
 

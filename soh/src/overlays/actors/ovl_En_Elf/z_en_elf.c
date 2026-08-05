@@ -1329,10 +1329,6 @@ void func_80A05208(Actor* thisx, PlayState* play) {
                 this->actor.update = func_80A052F4;
                 break;
             case 1: // no
-                // Seven Sages: declined both "talk to Saria?" and this "talk to Navi instead?"
-                // follow-up - the one point that means the player took neither vanilla option
-                // Saria's Song offers, not just "closed a textbox."
-                GameInteractor_ExecuteOnSariasSongFullyDeclined();
                 Message_CloseTextbox(play);
                 this->actor.update = func_80A053F0;
                 func_80A01C38(this, 0);

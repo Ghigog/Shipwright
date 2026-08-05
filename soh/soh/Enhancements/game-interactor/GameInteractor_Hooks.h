@@ -32,7 +32,6 @@ void GameInteractor_ExecuteOnSetDoAction(uint16_t action);
 void GameInteractor_ExecuteOnPlayerSfx(u16 sfxId);
 void GameInteractor_ExecuteOnOcarinaSongAction();
 void GameInteractor_ExecuteOnWarpSongDeclined();
-void GameInteractor_ExecuteOnSariasSongFullyDeclined();
 void GameInteractor_ExecuteOnOcarinaNote(uint8_t note, float modulator, int8_t bend);
 bool GameInteractor_ShouldActorInit(void* actor);
 void GameInteractor_ExecuteOnActorInit(void* actor);

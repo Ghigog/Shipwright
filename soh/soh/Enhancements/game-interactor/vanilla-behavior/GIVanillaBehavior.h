@@ -1698,6 +1698,21 @@ typedef enum {
     // true
     // ```
     // #### `args`
+    // - None
+    //
+    // ### Note:
+    // Playing Saria's Song makes Navi force a textbox asking "Do you want to talk to Saria?" and,
+    // if that is declined, "Talk to Navi instead?" (`z_message_PAL.c`'s `sLastPlayedSong ==
+    // OCARINA_SONG_SARIAS` handling, which sets a negative `player->naviTextId` to force the
+    // dialog). Overriding this to false skips the whole prompt chain; the song's other vanilla
+    // effects (Sacred Forest Meadow maze door, NPC reactions) are separate and unaffected.
+    VB_NAVI_ASK_TO_TALK_AFTER_SARIAS_SONG,
+
+    // #### `result`
+    // ```c
+    // true
+    // ```
+    // #### `args`
     // - `*ElfMsg`
     VB_NAVI_TALK,
 

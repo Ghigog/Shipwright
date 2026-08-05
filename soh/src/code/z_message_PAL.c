@@ -4687,8 +4687,10 @@ void Message_Update(PlayState* play) {
                     //       before it reaches this point after playing Saria's song, the song will be "stored".
                     //       Later, if the ocarina has not been played and another textbox is closed, this handling
                     //       for Saria's song will be carried out.
-                    player->naviTextId = -0xE0;
-                    player->naviActor->flags |= 0x10000;
+                    if (GameInteractor_Should(VB_NAVI_ASK_TO_TALK_AFTER_SARIAS_SONG, true)) {
+                        player->naviTextId = -0xE0;
+                        player->naviActor->flags |= 0x10000;
+                    }
                 }
                 if (msgCtx->ocarinaAction == OCARINA_ACTION_FREE_PLAY_DONE &&
                     (play->msgCtx.ocarinaMode == OCARINA_MODE_01 || play->msgCtx.ocarinaMode == OCARINA_MODE_0B)) {

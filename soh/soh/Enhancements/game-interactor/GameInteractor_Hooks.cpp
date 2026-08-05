@@ -118,10 +118,6 @@ void GameInteractor_ExecuteOnWarpSongDeclined() {
     GameInteractor::Instance->ExecuteHooks<GameInteractor::OnWarpSongDeclined>();
 }
 
-void GameInteractor_ExecuteOnSariasSongFullyDeclined() {
-    GameInteractor::Instance->ExecuteHooks<GameInteractor::OnSariasSongFullyDeclined>();
-}
-
 void GameInteractor_ExecuteOnOcarinaNote(uint8_t note, float modulator, int8_t bend) {
     GameInteractor::Instance->ExecuteHooks<GameInteractor::OnOcarinaNote>(note, modulator, bend);
 }
