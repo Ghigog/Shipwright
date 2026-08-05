@@ -7,6 +7,7 @@
 #include "z_bg_hidan_curtain.h"
 #include "objects/gameplay_keep/gameplay_keep.h"
 #include "soh/Enhancements/game-interactor/GameInteractor_Hooks.h"
+#include "soh/Enhancements/SevenSages/SevenSagesTunics.h"
 
 #define FLAGS ACTOR_FLAG_UPDATE_CULLING_DISABLED
 
@@ -216,11 +217,11 @@ void BgHidanCurtain_Update(Actor* thisx, PlayState* play2) {
     } else {
         if (this->collider.base.atFlags & AT_HIT) {
             this->collider.base.atFlags &= ~AT_HIT;
-            // Seven Sages: Nayru's Love passes through instead of being shoved back by this. The
+            // Seven Sages: fire protection (Nayru's Love or Red Tunic) passes through instead of being shoved back. The
             // "NoDamage" name means this knockback is the only player-facing effect of a touch here -
             // damage itself routes through the normal AT/AC pipeline Nayru's Love's existing
             // invincibility already covers, so this is the missing piece, not a duplicate fix.
-            if (!(IS_RANDO && gSaveContext.nayrusLoveTimer != 0)) {
+            if (!SevenSagesFireProtectionActive()) {
                 Actor_SetPlayerKnockbackLargeNoDamage(play, &this->actor, 5.0f, this->actor.yawTowardsPlayer, 1.0f);
             }
         }
@@ -243,9 +244,9 @@ void BgHidanCurtain_Update(Actor* thisx, PlayState* play2) {
             // player stayed overlapping it, with no invulnerability window since that's normally
             // granted as a side effect of the knockback call we're skipping. Not submitting AT at all
             // is the actual "disable this hazard entirely" fix - no touch, no damage, no knockback,
-            // full stop. OC is still submitted so the shield turning off mid-overlap (e.g. running out
+            // full stop. OC is still submitted so protection ending mid-overlap (e.g. running out
             // of magic) still gets Link pushed back out rather than left stuck inside.
-            if (!(IS_RANDO && gSaveContext.nayrusLoveTimer != 0)) {
+            if (!SevenSagesFireProtectionActive()) {
                 CollisionCheck_SetAT(play, &play->colChkCtx, &this->collider.base);
             }
             CollisionCheck_SetOC(play, &play->colChkCtx, &this->collider.base);

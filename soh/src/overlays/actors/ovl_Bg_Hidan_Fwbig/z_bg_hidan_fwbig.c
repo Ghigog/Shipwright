@@ -9,6 +9,7 @@
 #include "objects/gameplay_keep/gameplay_keep.h"
 #include "objects/object_hidan_objects/object_hidan_objects.h"
 #include "soh/Enhancements/game-interactor/GameInteractor_Hooks.h"
+#include "soh/Enhancements/SevenSages/SevenSagesTunics.h"
 
 #define FLAGS ACTOR_FLAG_UPDATE_CULLING_DISABLED
 
@@ -225,10 +226,10 @@ void BgHidanFwbig_Update(Actor* thisx, PlayState* play) {
 
     if (this->collider.base.atFlags & AT_HIT) {
         this->collider.base.atFlags &= ~AT_HIT;
-        // Seven Sages: Nayru's Love passes through instead of being knocked back - see the matching
+        // Seven Sages: fire protection (Nayru's Love or Red Tunic) passes through instead of being knocked back - see the matching
         // comment in z_bg_hidan_curtain.c for why this is the missing piece, not OC1. The lower-on-
         // touch state transition below is left untouched, unrelated to the shield.
-        if (!(IS_RANDO && gSaveContext.nayrusLoveTimer != 0)) {
+        if (!SevenSagesFireProtectionActive()) {
             Actor_SetPlayerKnockbackLargeNoDamage(play, &this->actor, 5.0f, this->actor.world.rot.y, 1.0f);
         }
         if (this->direction != 0) {
@@ -249,10 +250,10 @@ void BgHidanFwbig_Update(Actor* thisx, PlayState* play) {
             Actor_PlaySfx_Flagged(&this->actor, NA_SE_EV_FLAME_OF_FIRE - SFX_FLAG);
         }
         BgHidanFwbig_MoveCollider(this, play);
-        // Seven Sages: don't submit the AT collider while the shield's active - see the matching
-        // comment in z_bg_hidan_curtain.c. OC stays submitted so the shield expiring mid-overlap
+        // Seven Sages: don't submit the AT collider while fire protection is active - see the matching
+        // comment in z_bg_hidan_curtain.c. OC stays submitted so protection ending mid-overlap
         // still pushes Link back out instead of leaving him stuck inside.
-        if (!(IS_RANDO && gSaveContext.nayrusLoveTimer != 0)) {
+        if (!SevenSagesFireProtectionActive()) {
             CollisionCheck_SetAT(play, &play->colChkCtx, &this->collider.base);
         }
         CollisionCheck_SetOC(play, &play->colChkCtx, &this->collider.base);

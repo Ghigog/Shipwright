@@ -6,6 +6,7 @@
 
 #include "z_bg_hidan_firewall.h"
 #include "objects/object_hidan_objects/object_hidan_objects.h"
+#include "soh/Enhancements/SevenSages/SevenSagesTunics.h"
 
 #define FLAGS 0
 
@@ -182,9 +183,9 @@ void BgHidanFirewall_Update(Actor* thisx, PlayState* play) {
 
     if (this->collider.base.atFlags & AT_HIT) {
         this->collider.base.atFlags &= ~AT_HIT;
-        // Seven Sages: Nayru's Love passes through instead of being knocked back - see the matching
+        // Seven Sages: fire protection (Nayru's Love or Red Tunic) passes through instead of being knocked back - see the matching
         // comment in z_bg_hidan_curtain.c for why this is the missing piece, not OC1.
-        if (!(IS_RANDO && gSaveContext.nayrusLoveTimer != 0)) {
+        if (!SevenSagesFireProtectionActive()) {
             BgHidanFirewall_Collide(this, play);
         }
     }
@@ -192,10 +193,10 @@ void BgHidanFirewall_Update(Actor* thisx, PlayState* play) {
     this->actionFunc(this, play);
     if (this->actionFunc == BgHidanFirewall_Erupt) {
         BgHidanFirewall_ColliderFollowPlayer(this, play);
-        // Seven Sages: don't submit the AT collider while the shield's active - see the matching
-        // comment in z_bg_hidan_curtain.c. OC stays submitted so the shield expiring mid-overlap
+        // Seven Sages: don't submit the AT collider while fire protection is active - see the matching
+        // comment in z_bg_hidan_curtain.c. OC stays submitted so protection ending mid-overlap
         // still pushes Link back out instead of leaving him stuck inside.
-        if (!(IS_RANDO && gSaveContext.nayrusLoveTimer != 0)) {
+        if (!SevenSagesFireProtectionActive()) {
             CollisionCheck_SetAT(play, &play->colChkCtx, &this->collider.base);
         }
         CollisionCheck_SetOC(play, &play->colChkCtx, &this->collider.base);

@@ -23,6 +23,7 @@
  * "pass through fire" means.
  */
 #include "soh/Enhancements/game-interactor/GameInteractor_Hooks.h"
+#include "soh/Enhancements/SevenSages/SevenSagesTunics.h"
 #include "soh/ShipInit.hpp"
 
 extern "C" {
@@ -41,7 +42,11 @@ void SetFireWallPassable(Collider* collider) {
     if (!GameInteractor::IsSaveLoaded(true)) {
         return;
     }
-    if (gSaveContext.nayrusLoveTimer != 0) {
+    // Widened 2026-08-05 from "Nayru's Love is up" to the shared fire-protection
+    // predicate, so the Red Tunic grants the same passthrough. See
+    // SevenSagesTunics.h - the condition lives in one place now rather than
+    // being duplicated per hazard.
+    if (SevenSagesFireProtectionActive()) {
         collider->ocFlags1 &= ~OC1_ON;
     } else {
         collider->ocFlags1 |= OC1_ON;

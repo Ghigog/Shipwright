@@ -32,6 +32,7 @@
 #include "soh/OTRGlobals.h"
 #include "soh/ResourceManagerHelpers.h"
 #include "soh/Enhancements/savestate_serialize.h"
+#include "soh/Enhancements/SevenSages/SevenSagesTunics.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -4535,6 +4536,16 @@ void func_80837C0C(PlayState* play, Player* this, s32 damageResponseType, f32 sp
     LinkAnimationHeader* anim = NULL;
     LinkAnimationHeader** sp28;
 
+    // Seven Sages: the Blue Tunic is specified as including immunity to ice traps, so frost protection
+    // downgrades a freeze to an ordinary hit - Link still takes the damage, he just never goes in the
+    // block of ice. This is the one place worth patching because every freeze source funnels through
+    // here: enemy ice contact (HIT_SPECIAL_EFFECT_ICE), the vanilla ice trap chest, and randomizer ice
+    // traps, which reach this via GameInteractor::RawAction::FreezePlayer. Downgrading rather than
+    // returning early keeps the damage, the invincibility window and the hit sound intact.
+    if ((damageResponseType == PLAYER_HIT_RESPONSE_FROZEN) && SevenSagesFrostProtectionActive()) {
+        damageResponseType = PLAYER_HIT_RESPONSE_NONE;
+    }
+
     if (this->stateFlags1 & PLAYER_STATE1_HANGING_OFF_LEDGE) {
         func_80837B60(this);
     }
@@ -4856,6 +4867,16 @@ s32 func_808382DC(Player* this, PlayState* play) {
 
                 if (ac->flags & ACTOR_FLAG_SFX_FOR_PLAYER_BODY_HIT) {
                     Player_PlaySfx(this, NA_SE_PL_BODY_HIT);
+                }
+
+                // Seven Sages: the Red Tunic is specified as *complete* fire resistance, so a fire
+                // attack landing on Link does nothing at all rather than doing reduced damage. Handled
+                // before the response-type chain below because the vanilla chain has no fire branch:
+                // fire hits fall through to the generic "no special response" case, so there is no
+                // later point where fire is still distinguishable from an ordinary hit.
+                if ((this->actor.colChkInfo.acHitEffect == HIT_SPECIAL_EFFECT_FIRE) &&
+                    SevenSagesFireProtectionActive()) {
+                    return 0;
                 }
 
                 if (this->stateFlags1 & PLAYER_STATE1_IN_WATER) {
@@ -5225,16 +5246,17 @@ s32 Player_HandleExitsAndVoids(PlayState* play, Player* this, CollisionPoly* pol
         } else {
             if (play->transitionTrigger == TRANS_TRIGGER_OFF) {
 
-                // Seven Sages: Nayru's Love lets Link walk across lava (floorProperty 5) instead of
-                // sinking and respawning nearby. Shadow Temple's sinking-sand trap shares the same
-                // floorProperty value, so it's excluded by scene rather than letting the shield
-                // trivialize that puzzle too. floorProperty 12 (the other value this block handles)
-                // is an unrelated exit/void mechanism, untouched here.
-                u8 nayruBypassesLava = IS_RANDO && (this->floorProperty == 5) &&
-                                       (gSaveContext.nayrusLoveTimer != 0) &&
-                                       (play->sceneNum != SCENE_SHADOW_TEMPLE);
+                // Seven Sages: fire protection (Nayru's Love or the Red Tunic) lets Link walk across
+                // lava (floorProperty 5) instead of sinking and respawning nearby. Shadow Temple's
+                // sinking-sand trap shares the same floorProperty value, so it's excluded by scene
+                // rather than letting either source trivialize that puzzle too. floorProperty 12 (the
+                // other value this block handles) is an unrelated exit/void mechanism, untouched here.
+                // Widened from Nayru's-Love-only 2026-08-05; see SevenSagesTunics.h.
+                u8 fireProtectionBypassesLava = (this->floorProperty == 5) &&
+                                                SevenSagesFireProtectionActive() &&
+                                                (play->sceneNum != SCENE_SHADOW_TEMPLE);
 
-                if (!nayruBypassesLava &&
+                if (!fireProtectionBypassesLava &&
                     ((this->actor.world.pos.y < -4000.0f) ||
                      (((this->floorProperty == 5) || (this->floorProperty == 12)) &&
                       ((sYDistToFloor < 100.0f) || (this->fallDistance > 400.0f) ||
