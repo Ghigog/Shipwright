@@ -6696,8 +6696,11 @@ void Interface_Update(PlayState* play) {
             sEnvHazard = PLAYER_ENV_HAZARD_NONE;
         }
     } else if ((Player_GetEnvironmentalHazard(play) >= 2) && (Player_GetEnvironmentalHazard(play) < 5)) {
+        // Seven Sages: Nayru's Love pauses the drowning timer too, same reasoning as the hot-room
+        // case just above - same underlying timer system, gated on Zora Tunic instead of Goron.
         if (CUR_EQUIP_VALUE(EQUIP_TYPE_TUNIC) == EQUIP_VALUE_TUNIC_ZORA ||
-            CVarGetInteger(CVAR_CHEAT("SuperTunic"), 0) != 0) {
+            CVarGetInteger(CVAR_CHEAT("SuperTunic"), 0) != 0 ||
+            (IS_RANDO && gSaveContext.nayrusLoveTimer != 0)) {
             sEnvHazard = PLAYER_ENV_HAZARD_NONE;
         }
     }
