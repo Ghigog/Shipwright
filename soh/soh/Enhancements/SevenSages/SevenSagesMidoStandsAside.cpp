@@ -24,8 +24,14 @@
  * That is a strict superset of what the generator modelled, which is the additive-only case the
  * project's 2026-08-03 decision explicitly covers (docs/item-ability-overhaul.md).
  */
+#include "soh/OTRGlobals.h"
 #include "soh/ShipInit.hpp"
 #include "soh/Enhancements/game-interactor/GameInteractor.h"
+
+extern "C" {
+#include "z64.h"       // IS_RANDO
+#include "variables.h" // gSaveContext, which IS_RANDO reads
+}
 
 namespace {
 
