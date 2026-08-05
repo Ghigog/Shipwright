@@ -249,7 +249,12 @@ void BgHidanFwbig_Update(Actor* thisx, PlayState* play) {
             Actor_PlaySfx_Flagged(&this->actor, NA_SE_EV_FLAME_OF_FIRE - SFX_FLAG);
         }
         BgHidanFwbig_MoveCollider(this, play);
-        CollisionCheck_SetAT(play, &play->colChkCtx, &this->collider.base);
+        // Seven Sages: don't submit the AT collider while the shield's active - see the matching
+        // comment in z_bg_hidan_curtain.c. OC stays submitted so the shield expiring mid-overlap
+        // still pushes Link back out instead of leaving him stuck inside.
+        if (!(IS_RANDO && gSaveContext.nayrusLoveTimer != 0)) {
+            CollisionCheck_SetAT(play, &play->colChkCtx, &this->collider.base);
+        }
         CollisionCheck_SetOC(play, &play->colChkCtx, &this->collider.base);
     }
 }

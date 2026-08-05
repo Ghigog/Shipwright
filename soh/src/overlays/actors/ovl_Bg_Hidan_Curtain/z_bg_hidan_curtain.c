@@ -237,7 +237,17 @@ void BgHidanCurtain_Update(Actor* thisx, PlayState* play2) {
         this->alpha = 255.0f * riseProgress;
         if (this->alpha > 50) {
             this->collider.dim.height = hcParams->height * riseProgress;
-            CollisionCheck_SetAT(play, &play->colChkCtx, &this->collider.base);
+            // Seven Sages: while Nayru's Love is active, don't even submit the AT collider - clearing
+            // OC1 (SevenSagesNayrusLoveFireWalls.cpp) and skipping the knockback call above stops the
+            // shove, but the AT touch still registered and applied real fire damage every frame a
+            // player stayed overlapping it, with no invulnerability window since that's normally
+            // granted as a side effect of the knockback call we're skipping. Not submitting AT at all
+            // is the actual "disable this hazard entirely" fix - no touch, no damage, no knockback,
+            // full stop. OC is still submitted so the shield turning off mid-overlap (e.g. running out
+            // of magic) still gets Link pushed back out rather than left stuck inside.
+            if (!(IS_RANDO && gSaveContext.nayrusLoveTimer != 0)) {
+                CollisionCheck_SetAT(play, &play->colChkCtx, &this->collider.base);
+            }
             CollisionCheck_SetOC(play, &play->colChkCtx, &this->collider.base);
             if (gSaveContext.sceneLayer <= 3) {
                 Actor_PlaySfx_Flagged(&this->actor, NA_SE_EV_FIRE_PILLAR_S - SFX_FLAG);
