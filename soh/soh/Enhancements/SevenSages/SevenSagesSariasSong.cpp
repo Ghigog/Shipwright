@@ -3,10 +3,15 @@
  *
  * docs/item-ability-overhaul.md: climb any surface for 20 seconds. Costs 24 magic (the
  * system-wide "songs cost magic" rule) via the shared deferred-request helper
- * (SevenSagesSongMagic.h) built for Song of Time. No proximity guard needed here, same
- * reasoning as Epona's Song - this doesn't intercept or replace any vanilla Saria's Song
- * trigger (calling Saria, opening the Sacred Forest Meadow maze door), it only additionally
- * starts the climb buff alongside whatever vanilla already does.
+ * (SevenSagesSongMagic.h) built for Song of Time.
+ *
+ * Re-scoped 2026-08-05: only fires on OnSariasSongFullyDeclined, not on every play of the song.
+ * Playing Saria's Song in vanilla forces Navi to ask "talk to Saria?" and, if declined, "talk to
+ * Navi instead?" (En_Elf's func_80A052F4/func_80A05208 state chain in z_en_elf.c). Saying yes to
+ * either question takes the OG vanilla effect and should not also grant the buff - same mutual-
+ * exclusion shape as the warp songs' Yes/No prompt (see SevenSagesMinuetOfForest.cpp). Only
+ * declining both, the new hook's one firing point, means the player wants the mod's bonus
+ * instead of the vanilla option.
  *
  * Rather than new climbable-surface logic, this toggles the existing "ClimbEverything" cheat
  * (see Cheats/ClimbEverything.cpp) on for the buff's duration and back off when it expires -
@@ -47,8 +52,6 @@
 #include "soh/Enhancements/SevenSages/SevenSagesSongMagic.h"
 #include "soh/Enhancements/game-interactor/GameInteractor_Hooks.h"
 
-extern "C" PlayState* gPlayState;
-
 namespace {
 
 constexpr s16 SARIAS_SONG_MAGIC_COST = 24;
@@ -62,11 +65,8 @@ void SetClimbEverything(s32 value) {
     ShipInit::Init(CVAR_CHEAT("ClimbEverything"));
 }
 
-void SevenSagesSariasSongPlayed() {
+void SevenSagesSariasSongFullyDeclined() {
     if (!GameInteractor::IsSaveLoaded(true)) {
-        return;
-    }
-    if (gPlayState->msgCtx.lastPlayedSong != OCARINA_SONG_SARIAS) {
         return;
     }
 
@@ -93,7 +93,7 @@ void SevenSagesSariasSongFrameUpdate() {
 } // namespace
 
 static void RegisterSevenSagesSariasSong() {
-    COND_HOOK(OnOcarinaSongAction, IS_RANDO, SevenSagesSariasSongPlayed);
+    COND_HOOK(OnSariasSongFullyDeclined, IS_RANDO, SevenSagesSariasSongFullyDeclined);
     COND_HOOK(OnGameFrameUpdate, IS_RANDO, SevenSagesSariasSongFrameUpdate);
 }
 
