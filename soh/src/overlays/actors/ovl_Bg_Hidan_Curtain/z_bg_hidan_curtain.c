@@ -216,7 +216,13 @@ void BgHidanCurtain_Update(Actor* thisx, PlayState* play2) {
     } else {
         if (this->collider.base.atFlags & AT_HIT) {
             this->collider.base.atFlags &= ~AT_HIT;
-            Actor_SetPlayerKnockbackLargeNoDamage(play, &this->actor, 5.0f, this->actor.yawTowardsPlayer, 1.0f);
+            // Seven Sages: Nayru's Love passes through instead of being shoved back by this. The
+            // "NoDamage" name means this knockback is the only player-facing effect of a touch here -
+            // damage itself routes through the normal AT/AC pipeline Nayru's Love's existing
+            // invincibility already covers, so this is the missing piece, not a duplicate fix.
+            if (!(IS_RANDO && gSaveContext.nayrusLoveTimer != 0)) {
+                Actor_SetPlayerKnockbackLargeNoDamage(play, &this->actor, 5.0f, this->actor.yawTowardsPlayer, 1.0f);
+            }
         }
         if ((this->type == 4) || (this->type == 5)) {
             this->actor.world.pos.y = (2.0f * this->actor.home.pos.y) - hcParams->riseDist - this->actor.world.pos.y;

@@ -225,7 +225,12 @@ void BgHidanFwbig_Update(Actor* thisx, PlayState* play) {
 
     if (this->collider.base.atFlags & AT_HIT) {
         this->collider.base.atFlags &= ~AT_HIT;
-        Actor_SetPlayerKnockbackLargeNoDamage(play, &this->actor, 5.0f, this->actor.world.rot.y, 1.0f);
+        // Seven Sages: Nayru's Love passes through instead of being knocked back - see the matching
+        // comment in z_bg_hidan_curtain.c for why this is the missing piece, not OC1. The lower-on-
+        // touch state transition below is left untouched, unrelated to the shield.
+        if (!(IS_RANDO && gSaveContext.nayrusLoveTimer != 0)) {
+            Actor_SetPlayerKnockbackLargeNoDamage(play, &this->actor, 5.0f, this->actor.world.rot.y, 1.0f);
+        }
         if (this->direction != 0) {
             this->actionFunc = BgHidanFwbig_Lower;
         }

@@ -182,7 +182,11 @@ void BgHidanFirewall_Update(Actor* thisx, PlayState* play) {
 
     if (this->collider.base.atFlags & AT_HIT) {
         this->collider.base.atFlags &= ~AT_HIT;
-        BgHidanFirewall_Collide(this, play);
+        // Seven Sages: Nayru's Love passes through instead of being knocked back - see the matching
+        // comment in z_bg_hidan_curtain.c for why this is the missing piece, not OC1.
+        if (!(IS_RANDO && gSaveContext.nayrusLoveTimer != 0)) {
+            BgHidanFirewall_Collide(this, play);
+        }
     }
 
     this->actionFunc(this, play);
