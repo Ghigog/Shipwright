@@ -14,12 +14,56 @@ namespace {
 // to matter in practice; exists so a pending request can't theoretically hang forever.
 constexpr s32 PENDING_REQUEST_FRAME_LIMIT = 60;
 
+// Safety cap for the release watch below - the natural drain (2/frame) finishes in well under 60
+// frames for any cost this overhaul uses (24 is the largest, ~12 frames). Generous margin over that.
+constexpr s32 RELEASE_WATCH_FRAME_LIMIT = 120;
+
 bool sPending = false;
 s32 sPendingFrames = 0;
 s16 sPendingCost = 0;
 std::function<void()> sPendingOnSuccess;
 
+// Armed once a charge succeeds, to release the meter as soon as the real drain finishes instead of
+// leaving it stuck - see the release-watch comment below for the full reasoning.
+bool sReleaseWatchActive = false;
+s32 sReleaseWatchFrames = 0;
+s16 sReleaseWatchTarget = 0;
+
 void SevenSagesSongMagicFrameUpdate() {
+    if (sReleaseWatchActive) {
+        // Magic_RequestChange's MAGIC_CONSUME_NOW leaves the real vanilla drain running -
+        // gSaveContext.magic ticks down 2/frame toward magicTarget, the same animated countdown
+        // Din's Fire/Farore's Wind/arrows already show, instead of the meter silently teleporting to
+        // its new value. But MAGIC_STATE_METER_FLASH_1/2/3 (what the drain lands in once finished)
+        // has no exit of its own - confirmed by reading z_parameter.c's state machine directly, not
+        // assumed - so something has to call Magic_Reset() once it gets there, which is what this
+        // watch is for.
+        if (gSaveContext.magicState == MAGIC_STATE_METER_FLASH_1 ||
+            gSaveContext.magicState == MAGIC_STATE_METER_FLASH_2 ||
+            gSaveContext.magicState == MAGIC_STATE_METER_FLASH_3) {
+            Magic_Reset(gPlayState);
+            sReleaseWatchActive = false;
+        } else if (gSaveContext.magicState == MAGIC_STATE_IDLE) {
+            // The drain got cut short before finishing on its own - most likely a scene transition
+            // fired mid-countdown (warp songs do exactly this) and z_play.c's own scene-load path
+            // already called Magic_Reset for unrelated reasons, jumping straight to idle without
+            // ever passing through a flash state this watch would otherwise catch. The animated
+            // countdown only ever *decrements* gSaveContext.magic; it doesn't independently
+            // guarantee reaching magicTarget if interrupted, so correct it directly here rather than
+            // let an interrupted warp song undercharge.
+            if (gSaveContext.magic != sReleaseWatchTarget) {
+                gSaveContext.magic = sReleaseWatchTarget;
+            }
+            sReleaseWatchActive = false;
+        } else if (++sReleaseWatchFrames >= RELEASE_WATCH_FRAME_LIMIT) {
+            // Never observed in practice (see the frame budget comment above) - same defensive
+            // stance as the pending-request cap below rather than risk hanging forever.
+            gSaveContext.magic = sReleaseWatchTarget;
+            Magic_Reset(gPlayState);
+            sReleaseWatchActive = false;
+        }
+    }
+
     if (!sPending) {
         return;
     }
@@ -50,12 +94,12 @@ void SevenSagesSongMagicFrameUpdate() {
 
     // Magic_RequestChange doesn't apply the deduction itself - MAGIC_CONSUME_NOW only arms
     // magicTarget and moves to MAGIC_STATE_CONSUME_SETUP, then drains gSaveContext.magic toward
-    // that target by 2/frame over several frames of normal gameplay. Callers whose effect
-    // triggers a scene transition (e.g. warp songs) would lose that drain the same way Song of
-    // Time originally did, so fast-forward it here unconditionally rather than trust every caller
-    // to remember why.
-    gSaveContext.magic = gSaveContext.magicTarget;
-    gSaveContext.magicState = MAGIC_STATE_IDLE;
+    // that target by 2/frame over several frames of normal gameplay. Arm the release watch to
+    // reclaim the meter once that finishes (or correct it if interrupted) instead of fast-forwarding
+    // it here - see the release-watch block above.
+    sReleaseWatchActive = true;
+    sReleaseWatchFrames = 0;
+    sReleaseWatchTarget = gSaveContext.magicTarget;
 
     if (onSuccess) {
         onSuccess();

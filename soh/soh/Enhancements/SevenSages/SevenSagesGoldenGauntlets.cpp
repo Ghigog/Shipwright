@@ -113,6 +113,34 @@ void ChargeForBypass() {
     SevenSagesRequestSongMagic(DoorMagicCost(), nullptr);
 }
 
+// The three approach checks below re-run every frame the player stands where they could interact
+// with the door - that's why CanForceDoor has to stay side-effect free (see its own comment), and
+// the same constraint applies to feedback: playing NA_SE_SY_ERROR unconditionally there would spam
+// it every frame of just standing still. Fires once on the rising edge (the frame the player has the
+// right gauntlets but not enough magic starts being true) and stays silent while it continues being
+// true, matching how a held button doesn't replay a UI error sound every frame in the rest of the
+// game. Scoped to "has the gauntlets but can't afford it" specifically - a player without the
+// gauntlets at all gets the normal locked-door refusal with no new sound, since this bypass was
+// never relevant to them.
+//
+// One flag per call site rather than one shared flag: a player could plausibly stand between a boss
+// door and an ordinary door in some geometry, and each needs its own edge to fire correctly.
+//
+// `lockIsRelevant` handles the difference between the three call sites: Door_Shutter's two hooks are
+// only ever invoked by their caller when the player is already confirmed short a boss/small key, so
+// they always pass true. En_Door's VB_NOT_HAVE_SMALL_KEY is invoked more generally with *should
+// already encoding whether a key is missing, so that caller passes *should through directly - without
+// it, this would evaluate "insufficient" (and update the edge tracker) even while standing at a door
+// the player already has the key for.
+void PlayInsufficientMagicSoundOnRisingEdge(bool* wasInsufficientLastFrame, u8 requiredTier, bool lockIsRelevant) {
+    bool isInsufficientNow = lockIsRelevant && CanUseGauntlets(requiredTier) && !CanForceDoor(requiredTier);
+    if (isInsufficientNow && !*wasInsufficientLastFrame) {
+        Audio_PlaySoundGeneral(NA_SE_SY_ERROR, &gSfxDefaultPos, 4, &gSfxDefaultFreqAndVolScale,
+                               &gSfxDefaultFreqAndVolScale, &gSfxDefaultReverb);
+    }
+    *wasInsufficientLastFrame = isInsufficientNow;
+}
+
 void SevenSagesGauntletsBossDoorOpened(uint16_t mapIndex) {
     if (!GameInteractor::IsSaveLoaded(true)) {
         return;
@@ -136,6 +164,8 @@ static void RegisterSevenSagesGoldenGauntlets() {
 
     COND_VB_SHOULD(VB_BOSS_DOOR_REQUIRE_BOSS_KEY, IS_RANDO, {
         [[maybe_unused]] Actor* door = va_arg(args, Actor*);
+        static bool sWasInsufficientLastFrame = false;
+        PlayInsufficientMagicSoundOnRisingEdge(&sWasInsufficientLastFrame, STRENGTH_GOLDEN_GAUNTLETS, true);
         if (CanForceDoor(STRENGTH_GOLDEN_GAUNTLETS)) {
             *should = false;
         }
@@ -143,6 +173,8 @@ static void RegisterSevenSagesGoldenGauntlets() {
 
     COND_VB_SHOULD(VB_DOOR_SHUTTER_REQUIRE_SMALL_KEY, IS_RANDO, {
         [[maybe_unused]] Actor* door = va_arg(args, Actor*);
+        static bool sWasInsufficientLastFrame = false;
+        PlayInsufficientMagicSoundOnRisingEdge(&sWasInsufficientLastFrame, STRENGTH_SILVER_GAUNTLETS, true);
         if (CanForceDoor(STRENGTH_SILVER_GAUNTLETS)) {
             *should = false;
         }
@@ -165,6 +197,14 @@ static void RegisterSevenSagesGoldenGauntlets() {
     // they just had to be registered for.
     COND_VB_SHOULD(VB_NOT_HAVE_SMALL_KEY, IS_RANDO, {
         [[maybe_unused]] Actor* door = va_arg(args, Actor*);
+        // Called unconditionally (not nested under `if (*should)`) so the rising-edge tracker inside
+        // sees every call this hook makes, including the "*should already false" ones - otherwise a
+        // player who has the key at one door, then lacks it and magic at a later one, could see a
+        // stale "already insufficient" edge state and miss the sound on their first real refusal.
+        // The helper itself only makes noise when *should being true would matter, so this is a
+        // no-op in the "already has a key" case.
+        static bool sWasInsufficientLastFrame = false;
+        PlayInsufficientMagicSoundOnRisingEdge(&sWasInsufficientLastFrame, STRENGTH_SILVER_GAUNTLETS, *should);
         // Only flip a refusal, never manufacture one. *should already encodes "the player is out
         // of keys", and LockOverworldDoors registers for this same hook with its own meaning.
         if (*should && CanForceDoor(STRENGTH_SILVER_GAUNTLETS)) {

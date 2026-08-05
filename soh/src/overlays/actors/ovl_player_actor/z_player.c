@@ -5961,22 +5961,6 @@ void func_8083AF44(PlayState* play, Player* this, s32 magicSpell) {
     GameInteractor_Should(VB_PLAYER_MODIFY_MAGIC_SPELL_COST, true, this, &magicSpellCost);
     Magic_RequestChange(play, magicSpellCost, MAGIC_CONSUME_WAIT_PREVIEW);
 
-    // Seven Sages: Nayru's Love is a one-shot cost, not an ongoing drain - the shield's own timer
-    // (nayrusLoveTimer) already tracks its ~20 second duration independently of the magic system,
-    // so there's nothing left to spend after this point. But MAGIC_CONSUME_WAIT_PREVIEW only arms
-    // magicTarget and leaves magicState mid-sequence (METER_FLASH_2, then whatever
-    // Player_Action_808507F4 drives it through) - the actual gSaveContext.magic deduction and
-    // return to MAGIC_STATE_IDLE otherwise only happens over several frames of normal gameplay,
-    // during which every other magic-consuming action (including SevenSagesRequestSongMagic's own
-    // wait-for-idle, capped at 1 second) reads the meter as busy and refuses. Forcing the deduction
-    // and idle state immediately, same fast-forward SevenSagesSongMagic.cpp already does for songs,
-    // is what makes the meter usable again right away instead of appearing locked for the shield's
-    // whole duration.
-    if (IS_RANDO && (this->itemAction == PLAYER_IA_NAYRUS_LOVE)) {
-        gSaveContext.magic = gSaveContext.magicTarget;
-        gSaveContext.magicState = MAGIC_STATE_IDLE;
-    }
-
     u8 isFastFarores = Player_IsFastMagicSpell(this);
 
     if (isFastFarores) {
