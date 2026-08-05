@@ -6687,8 +6687,12 @@ void Interface_Update(PlayState* play) {
     sEnvHazard = Player_GetEnvironmentalHazard(play);
 
     if (sEnvHazard == PLAYER_ENV_HAZARD_HOTROOM) {
+        // Seven Sages: Nayru's Love pauses the hot-room life timer the same way Goron Tunic already
+        // does, rather than just reducing damage - the shield is meant to make hazards non-issues,
+        // and this timer kills outright at zero regardless of any per-hit damage immunity.
         if (CUR_EQUIP_VALUE(EQUIP_TYPE_TUNIC) == EQUIP_VALUE_TUNIC_GORON ||
-            CVarGetInteger(CVAR_CHEAT("SuperTunic"), 0) != 0) {
+            CVarGetInteger(CVAR_CHEAT("SuperTunic"), 0) != 0 ||
+            (IS_RANDO && gSaveContext.nayrusLoveTimer != 0)) {
             sEnvHazard = PLAYER_ENV_HAZARD_NONE;
         }
     } else if ((Player_GetEnvironmentalHazard(play) >= 2) && (Player_GetEnvironmentalHazard(play) < 5)) {
