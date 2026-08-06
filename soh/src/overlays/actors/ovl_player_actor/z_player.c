@@ -570,9 +570,18 @@ static s32 sFloorType = 0;
 //
 // Counting them is exact and needs nothing from the physics. Step 0 gets no glide, and each push
 // after it adds an even share until RAMP_STEPS, which is full stride from then on. At 3 steps and a
-// 20-tick maximum: 0, 6, 13, 20, 20, ... The counter resets whenever skating stops, so every fresh
-// run builds from a standstill again.
-#define SEVEN_SAGES_SKATE_RAMP_STEPS 3
+// 20-tick maximum: 0, 2, 5, 8, 11, 14, 17, 20, 20, ... The counter resets whenever skating stops, so
+// every fresh run builds from a standstill again.
+#define SEVEN_SAGES_SKATE_RAMP_STEPS 7
+
+// Below this linearVelocity Link counts as standing still and the ramp resets.
+//
+// A movement test is required, not decorative: the standing/turning action still calls
+// func_8084029C every tick with a positive arg1 (REG(35)/1000), so "is the animation advancing" is
+// true while Link is stationary. Without this the skating branch keeps running on the spot, the
+// reset in the else branch never fires, and a run resumed after stopping starts at full stride -
+// which is exactly what the first stride-count build did.
+#define SEVEN_SAGES_SKATE_MIN_SPEED 0.5f
 static s32 sSevenSagesSkateHoldFrames = 0; // ticks left in the current glide
 static s32 sSevenSagesSkateStepIndex = 0;  // pushes taken since this run began, capped at RAMP_STEPS
 static f32 sWaterSpeedFactor = 1.0f;    // Set to 0.5f in water, 1.0f otherwise. Influences different speed values.
@@ -8327,7 +8336,8 @@ void func_8084029C(Player* this, f32 arg1) {
     // Deliberately placed *above* the sfx block, not below it: zeroing arg1 first means the footstep
     // sound and the PLAYER_STATE2_FOOTSTEP flag are not re-triggered on every held frame, which they
     // would be if the phase were frozen while arg1 still looked like motion.
-    if (SevenSagesHoverBootsActive(this) && (this->actor.bgCheckFlags & BGCHECKFLAG_GROUND) && (arg1 > 0.0f)) {
+    if (SevenSagesHoverBootsActive(this) && (this->actor.bgCheckFlags & BGCHECKFLAG_GROUND) && (arg1 > 0.0f) &&
+        (this->linearVelocity > SEVEN_SAGES_SKATE_MIN_SPEED)) {
         // Slowing the step is done here rather than through REG(38) because that reg only scales the
         // speed-dependent term of the rate - `1.2 + (REG(38)/1000) * temp2` - so no value of it can
         // express a clean multiple of the whole cycle. Applied before the crossing checks so that
@@ -8350,7 +8360,8 @@ void func_8084029C(Player* this, f32 arg1) {
         }
     } else {
         // Reset on any break in skating - airborne, stopped, or boots off - so the next run builds
-        // from a standstill rather than resuming at full stride.
+        // from a standstill rather than resuming at full stride. Standing still is the case that
+        // matters most and the one that needs SEVEN_SAGES_SKATE_MIN_SPEED to be detected at all.
         sSevenSagesSkateHoldFrames = 0;
         sSevenSagesSkateStepIndex = 0;
     }
