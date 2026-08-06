@@ -3840,6 +3840,34 @@ typedef enum {
     // - `f32*` (the damage, modifiable)
     // - `u32` (the attacker's toucher dmgFlags)
     VB_MODIFY_RESOLVED_DAMAGE,
+
+    // #### `result`
+    // ```c
+    // true
+    // ```
+    // Seven Sages: fired once per EnGirlA (shop item) actor init, after basePrice has been
+    // assigned from either the item table or the rando's shop-item identity, and before it is
+    // used for the displayed price, the affordability check, or the deduction - all three read
+    // this same field, so patching it here covers all three together. Fires at scene load (shop
+    // entry), not at the point of sale, so a mask put on while already standing in the shop will
+    // not retroactively update prices already on display.
+    // #### `args`
+    // - `*Actor` (the EnGirlA shop-item actor)
+    // - `s16*` (basePrice, modifiable)
+    VB_MODIFY_SHOP_PRICE,
+
+    // #### `result`
+    // ```c
+    // true
+    // ```
+    // Seven Sages: fired in Item_DropCollectibleRandom once dropQuantity has been looked up from
+    // sDropQuantities and before the spawn loop consumes it. Covers the ~47 enemy/grass actors
+    // that go through this path. Does NOT cover Item_DropCollectible (pots and other fixed single
+    // drops) - that path has no quantity to scale, since it spawns exactly one item per call.
+    // #### `args`
+    // - `*Actor` (fromActor, may be NULL)
+    // - `s16*` (dropQuantity, modifiable)
+    VB_MODIFY_RANDOM_DROP_QUANTITY,
 } GIVanillaBehavior;
 
 #endif

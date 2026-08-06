@@ -1345,6 +1345,7 @@ void EnGirlA_WaitForObject(EnGirlA* this, PlayState* play) {
             } else {
                 this->basePrice = itemEntry->price;
             }
+            GameInteractor_Should(VB_MODIFY_SHOP_PRICE, true, &this->actor, &this->basePrice);
             this->itemCount = itemEntry->count;
             this->hiliteFunc = itemEntry->hiliteFunc;
             this->giDrawId = itemEntry->giDrawId;
@@ -1373,6 +1374,7 @@ void EnGirlA_WaitForObject(EnGirlA* this, PlayState* play) {
                     ((shopItemIdentity.identity.randomizerInf - RAND_INF_SHOP_ITEMS_KF_SHOP_ITEM_1) + NUM_SHOP_ITEMS);
                 this->getItemId = getItemEntry.getItemId;
                 this->basePrice = shopItemIdentity.itemPrice;
+                GameInteractor_Should(VB_MODIFY_SHOP_PRICE, true, &this->actor, &this->basePrice);
                 this->giDrawId = getItemEntry.gid;
 
                 // Correct the rotation for spiritual stones, but only if mysterious shuffle isn't on, else it's obvious
@@ -1392,6 +1394,7 @@ void EnGirlA_WaitForObject(EnGirlA* this, PlayState* play) {
             this->itemGiveFunc = itemEntry->itemGiveFunc;
             this->buyEventFunc = itemEntry->buyEventFunc;
             this->basePrice = itemEntry->price;
+            GameInteractor_Should(VB_MODIFY_SHOP_PRICE, true, &this->actor, &this->basePrice);
             this->itemCount = itemEntry->count;
             this->hiliteFunc = itemEntry->hiliteFunc;
             this->giDrawId = itemEntry->giDrawId;

@@ -1750,6 +1750,7 @@ void Item_DropCollectibleRandom(PlayState* play, Actor* fromActor, Vec3f* spawnP
 
     if (dropId != 0xFF && (!CVarGetInteger(CVAR_ENHANCEMENT("NoHeartDrops"), 0) || dropId != ITEM00_HEART)) {
         dropQuantity = sDropQuantities[params + dropTableIndex];
+        GameInteractor_Should(VB_MODIFY_RANDOM_DROP_QUANTITY, true, fromActor, &dropQuantity);
         while (dropQuantity > 0) {
             if (!param8000) {
                 dropId = func_8001F404(dropId);
