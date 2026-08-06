@@ -39,7 +39,8 @@ void SevenSagesPreludeOfLightDeclined() {
         return;
     }
 
-    SevenSagesRequestSongMagic(PRELUDE_MAGIC_COST, []() { sBuffFramesRemaining = PRELUDE_BUFF_FRAMES; });
+    SevenSagesRequestSongMagic(
+        PRELUDE_MAGIC_COST, []() { sBuffFramesRemaining = PRELUDE_BUFF_FRAMES; }, kNotAnOcarinaPerformance);
 }
 
 void SevenSagesPreludeOfLightFrameUpdate() {

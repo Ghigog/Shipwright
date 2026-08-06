@@ -11807,7 +11807,18 @@ void Player_UpdateBodyBurn(PlayState* play, Player* this) {
             dmgCooldown = 7;
         }
 
-        if ((dmgCooldown & play->gameplayFrames) == 0) {
+        // Seven Sages: fire protection (Red Tunic, Goron Mask or Nayru's Love) stops the burning
+        // damage tick. The flames themselves are left running on purpose - bodyIsBurning /
+        // bodyFlameTimers are cosmetic and documented as deliberately untouched - but this tick is
+        // real damage, once every 8 frames for as long as any body part is alight.
+        //
+        // This is what "lava still hurts" was, found by playtest 2026-08-06. The lava work up in
+        // Player_UpdateCommon only stopped Link *sinking* into it, and the fire-hit-effect immunity
+        // only covers attacks that land as HIT_SPECIAL_EFFECT_FIRE; neither reaches an ignition,
+        // so standing on lava in a Red Tunic still burned Link down at 1 HP per 8 frames. The spec
+        // said damage was prevented and the flames were cosmetic - the flames were, the damage
+        // never was.
+        if ((dmgCooldown & play->gameplayFrames) == 0 && !SevenSagesFireProtectionActive()) {
             Player_InflictDamage(play, -1);
         }
     } else {

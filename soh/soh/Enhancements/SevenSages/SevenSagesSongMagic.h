@@ -18,9 +18,24 @@
 // Detected off msgCtx.ocarinaAction, which vanilla sets to one of the CHECK_*/recording actions
 // for exactly these and to FREE_PLAY(_DONE) otherwise.
 //
-// Pass false from a caller that is not an ocarina performance at all - the Golden Gauntlets door
-// bypass is the only one - where ocarinaAction still holds a stale value from whenever the ocarina
-// was last used and would otherwise refuse the charge based on something the player did earlier.
+// Pass kNotAnOcarinaPerformance from a caller that is not a live ocarina performance, where
+// ocarinaAction holds some other value and would otherwise refuse the charge based on something
+// unrelated. Two kinds of caller need it:
+//
+//   - the Golden Gauntlets door bypass, where ocarinaAction is simply stale from whenever the
+//     ocarina was last used;
+//   - **every warp song's declined-prompt handler.** These fire from OnWarpSongDeclined, which is
+//     raised while a *textbox* is up, and Message_StartTextbox sets ocarinaAction to 0xFFFF
+//     (z_message_PAL.c:2864). That is neither FREE_PLAY nor FREE_PLAY_DONE, so the actor guard
+//     below saw a warp-song decline as "played at an actor" and silently dropped cost and effect
+//     for all six warp songs. Found by playtest 2026-08-06 (Requiem and Nocturne both dead);
+//     regression from 87486fd7d, which added the guard on 2026-08-05, after all six had passed.
+//
+// The guard is not merely bypassed for warp songs, it is inapplicable to them: a warp prompt is
+// only ever raised by free play, so a decline cannot be a performance aimed at Mido, Darunia, the
+// frogs or a scarecrow. The songs that CAN be aimed at those - Sun's, Saria's, Epona's, Storms,
+// Lullaby, Song of Time - still pass the default and still get the guard.
+constexpr bool kNotAnOcarinaPerformance = false;
 //
 // Call SevenSagesRequestSongMagic from an OnOcarinaSongAction handler once a song is recognized
 // and any song-specific guards (proximity, etc.) have passed. onSuccess runs once the magic state

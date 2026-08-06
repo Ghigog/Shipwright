@@ -22,6 +22,7 @@
 #include "soh/ResourceManagerHelpers.h"
 #include "soh/Enhancements/gameplaystats.h"
 #include "soh/ObjectExtension/ActorMaximumHealth.h"
+#include "soh/Enhancements/SevenSages/SevenSagesTunics.h"
 
 #include "message_data_static.h"
 extern MessageTableEntry* sNesMessageEntryTablePtr;
@@ -6687,20 +6688,22 @@ void Interface_Update(PlayState* play) {
     sEnvHazard = Player_GetEnvironmentalHazard(play);
 
     if (sEnvHazard == PLAYER_ENV_HAZARD_HOTROOM) {
-        // Seven Sages: Nayru's Love pauses the hot-room life timer the same way Goron Tunic already
-        // does, rather than just reducing damage - the shield is meant to make hazards non-issues,
-        // and this timer kills outright at zero regardless of any per-hit damage immunity.
-        if (CUR_EQUIP_VALUE(EQUIP_TYPE_TUNIC) == EQUIP_VALUE_TUNIC_GORON ||
-            CVarGetInteger(CVAR_CHEAT("SuperTunic"), 0) != 0 ||
-            (IS_RANDO && gSaveContext.nayrusLoveTimer != 0)) {
+        // Seven Sages: the hot-room life timer is paused by any source of fire protection, not just
+        // the Goron Tunic - the timer kills outright at zero regardless of any per-hit damage
+        // immunity, so a source that "protects from fire" has to reach it too.
+        //
+        // Widened from tunic-or-Nayru's-Love to the shared predicate 2026-08-06: the Goron Mask was
+        // added to SevenSagesFireProtectionActive() but these two timers were never converted, so a
+        // masked child still burned down in Death Mountain Crater. Found by playtest.
+        if (SevenSagesFireProtectionActive() || CUR_EQUIP_VALUE(EQUIP_TYPE_TUNIC) == EQUIP_VALUE_TUNIC_GORON ||
+            CVarGetInteger(CVAR_CHEAT("SuperTunic"), 0) != 0) {
             sEnvHazard = PLAYER_ENV_HAZARD_NONE;
         }
     } else if ((Player_GetEnvironmentalHazard(play) >= 2) && (Player_GetEnvironmentalHazard(play) < 5)) {
-        // Seven Sages: Nayru's Love pauses the drowning timer too, same reasoning as the hot-room
-        // case just above - same underlying timer system, gated on Zora Tunic instead of Goron.
-        if (CUR_EQUIP_VALUE(EQUIP_TYPE_TUNIC) == EQUIP_VALUE_TUNIC_ZORA ||
-            CVarGetInteger(CVAR_CHEAT("SuperTunic"), 0) != 0 ||
-            (IS_RANDO && gSaveContext.nayrusLoveTimer != 0)) {
+        // Seven Sages: the drowning timer, same reasoning and same 2026-08-06 widening as the
+        // hot-room case above - the frost predicate is what carries the Zora Mask.
+        if (SevenSagesFrostProtectionActive() || CUR_EQUIP_VALUE(EQUIP_TYPE_TUNIC) == EQUIP_VALUE_TUNIC_ZORA ||
+            CVarGetInteger(CVAR_CHEAT("SuperTunic"), 0) != 0) {
             sEnvHazard = PLAYER_ENV_HAZARD_NONE;
         }
     }

@@ -39,7 +39,7 @@ void SevenSagesBoleroOfFireDeclined() {
         if (INV_CONTENT(ITEM_BOMBCHU) != ITEM_NONE) {
             Inventory_ChangeAmmo(ITEM_BOMBCHU, RESTOCK_AMOUNT);
         }
-    });
+    }, kNotAnOcarinaPerformance);
 }
 
 } // namespace

@@ -49,7 +49,7 @@ void SevenSagesSerenadeOfWaterDeclined() {
         // second trickle on top, same refresh-not-stack pattern every other song uses.
         sRegenFramesRemaining = SERENADE_REGEN_FRAMES;
         sRegenAccumulator = 0;
-    });
+    }, kNotAnOcarinaPerformance);
 }
 
 void SevenSagesSerenadeOfWaterFrameUpdate() {

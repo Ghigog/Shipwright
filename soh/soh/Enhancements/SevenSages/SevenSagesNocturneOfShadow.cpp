@@ -56,7 +56,8 @@ void SevenSagesNocturneOfShadowDeclined() {
         return;
     }
 
-    SevenSagesRequestSongMagic(NOCTURNE_MAGIC_COST, []() { sBuffFramesRemaining = NOCTURNE_BUFF_FRAMES; });
+    SevenSagesRequestSongMagic(
+        NOCTURNE_MAGIC_COST, []() { sBuffFramesRemaining = NOCTURNE_BUFF_FRAMES; }, kNotAnOcarinaPerformance);
 }
 
 void SevenSagesNocturneOfShadowFrameUpdate() {

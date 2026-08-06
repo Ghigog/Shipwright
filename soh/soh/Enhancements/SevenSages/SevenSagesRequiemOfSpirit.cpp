@@ -69,7 +69,8 @@ void SevenSagesRequiemOfSpiritDeclined() {
         return;
     }
 
-    SevenSagesRequestSongMagic(REQUIEM_MAGIC_COST, []() { sBuffFramesRemaining = REQUIEM_BUFF_FRAMES; });
+    SevenSagesRequestSongMagic(
+        REQUIEM_MAGIC_COST, []() { sBuffFramesRemaining = REQUIEM_BUFF_FRAMES; }, kNotAnOcarinaPerformance);
 }
 
 void SevenSagesRequiemOfSpiritFrameUpdate() {
