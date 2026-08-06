@@ -580,7 +580,12 @@ static s32 sFloorType = 0;
 // to settle, which is the "gradually gets longer as I build up speed" this is meant to be. It is a
 // deliberate lie about how fast Link is going, and the honest version was tried first and does not
 // work. Lower = longer, more gradual build; higher = closer to raw velocity.
-#define SEVEN_SAGES_SKATE_SPEED_LERP 0.06f
+#define SEVEN_SAGES_SKATE_SPEED_LERP 0.35f
+
+// Acceleration per tick while skating, replacing vanilla's 2.0 in Player_Action_8084193C. At 0.35 the
+// climb to 7.43 takes ~21 ticks, a little over a second, which is long enough for three or four
+// footfalls to land at visibly different speeds - so the glide ramp has something real to track.
+#define SEVEN_SAGES_SKATE_ACCEL 0.35f
 static s32 sSevenSagesSkateHeldFrames = 0; // ticks the current glide has run so far
 static s32 sSevenSagesSkateGliding = false;
 static f32 sSevenSagesSkateSpeed = 0.0f; // lagged linearVelocity; see SEVEN_SAGES_SKATE_SPEED_LERP
@@ -9012,7 +9017,17 @@ void Player_Action_8084193C(Player* this, PlayState* play) {
         }
 
         speedTarget *= 0.9f;
-        Math_AsymStepToF(&this->linearVelocity, speedTarget, 2.0f, 3.0f);
+        // Seven Sages: the Hover Boots take much longer to get up to speed. Vanilla's 2.0 per tick
+        // covers 0 to the boots' 7.43 top speed in about four ticks - a fifth of a second - which is
+        // why the skating glide ramp had nothing to ramp over: Link is at full speed before the
+        // second footfall lands.
+        //
+        // Slowing the acceleration is what makes that ramp *honest* rather than a smoothing trick,
+        // and it is the right physics for the fantasy anyway: skates are slow to get going, and the
+        // speed they reach is the reward for it. Deceleration is untouched, so stopping still feels
+        // the same.
+        Math_AsymStepToF(&this->linearVelocity, speedTarget,
+                         SevenSagesHoverBootsActive(this) ? SEVEN_SAGES_SKATE_ACCEL : 2.0f, 3.0f);
         Math_ScaledStepToS(&this->yaw, yawTarget, temp3 * 0.1f);
     }
 }

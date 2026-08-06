@@ -180,18 +180,21 @@ const char* kKeatonShopGreeting =
 // saying it out loud. The welcome is unmissable. It also leaves every talk-to-owner line free for
 // NPC hints, so the two features no longer contend for a textbox at all.
 //
-// Identified by actor state plus text ID:
+// Identified by text ID, with one state exclusion:
 //
-//   - stateFlag is still OSSAN_STATE_IDLE. The player opens this textbox itself (Player_StartTalking)
-//     during its own update; the shop only leaves IDLE on its *next* update, when
-//     EnOssan_State_Idle's Actor_ProcessTalkRequest consumes ACTOR_FLAG_TALK. So IDLE at hook time is
-//     exactly "this is the opening greeting". It also excludes the re-greet after a purchase
-//     (z_en_ossan.c:1781 reopens the same textId from CONTINUE_SHOPPING_PROMPT), which is wanted -
-//     once per visit, not after every transaction.
+//   - textId matches the shop's own actor.textId, set by EnOssan_SetupHelloDialog. This is the whole
+//     positive test.
 //
-//   - textId matches the shop's own actor.textId, set by EnOssan_SetupHelloDialog. Needed because
-//     an idle shopkeeper is idle for the whole time the player is in the room, so state alone would
-//     match any other textbox opened in a shop scene.
+//   - stateFlag is not OSSAN_STATE_TALKING_TO_SHOPKEEPER. Needed because the adult, Talon and Ingo
+//     shops answer *both* messages with 0x9E - EnOssan_TalkDefaultShopkeeper reuses the hello text -
+//     so text ID alone would swallow their talk-to-owner line and with it their NPC hint.
+//
+// An earlier version instead required stateFlag == OSSAN_STATE_IDLE, reasoning that the player opens
+// this textbox during its own update and the shop only leaves IDLE on its next one. A probe says
+// otherwise: at hook time the state is already OSSAN_STATE_START_CONVERSATION. The actor update
+// order was assumed rather than checked, and it cost two playtest rounds. Excluding the one state
+// that must not match, rather than naming the one that must, does not depend on getting that
+// ordering right.
 //
 // Scanning the actor list rather than going through `player->talkActor`: that route rests on the
 // player holding ACTOR_FLAG_TALK, and Player_UpdateCommon (z_player.c:12360) nulls talkActor on any
@@ -210,7 +213,8 @@ EnOssan* FindShopOwnerMidWelcome(uint16_t textId) {
         }
 
         EnOssan* ossan = (EnOssan*)actor;
-        if (ossan->actor.params != OSSAN_TYPE_MASK && ossan->actor.textId == textId) {
+        if (ossan->actor.params != OSSAN_TYPE_MASK && ossan->actor.textId == textId &&
+            ossan->stateFlag != OSSAN_STATE_TALKING_TO_SHOPKEEPER) {
             return ossan;
         }
     }
