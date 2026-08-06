@@ -516,8 +516,13 @@ static const SageDefinition sSageDefinitions[] = {
       { { RSK_STARTING_MEGATON_HAMMER, 1 },
         { RSK_STARTING_BOW, 1 },
         { RSK_STARTING_LIGHT_ARROWS, 1 },
-        { RSK_STARTING_MAGIC_METER, 1 } },
-      4,
+        { RSK_STARTING_MAGIC_METER, 1 },
+        // The Stone of Agony, added 2026-08-06. Rauru is the sage who built the Temple of Time and
+        // hid the Sacred Realm behind it, so the item that senses what is hidden belongs to him.
+        // Note this is a real RSK_STARTING_* setting like the rest of the kit, not a direct item
+        // grant - so the generator sees it, excludes it from the pool, and the spoiler log agrees.
+        { RSK_STARTING_STONE_OF_AGONY, 1 } },
+      5,
       {},
       0,
       {},
