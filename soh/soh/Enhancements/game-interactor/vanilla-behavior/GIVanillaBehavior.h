@@ -3862,12 +3862,36 @@ typedef enum {
     // ```
     // Seven Sages: fired in Item_DropCollectibleRandom once dropQuantity has been looked up from
     // sDropQuantities and before the spawn loop consumes it. Covers the ~47 enemy/grass actors
-    // that go through this path. Does NOT cover Item_DropCollectible (pots and other fixed single
-    // drops) - that path has no quantity to scale, since it spawns exactly one item per call.
+    // that go through this path. For pots and other fixed single drops see
+    // VB_MODIFY_FIXED_DROP_QUANTITY below.
     // #### `args`
     // - `*Actor` (fromActor, may be NULL)
     // - `s16*` (dropQuantity, modifiable)
     VB_MODIFY_RANDOM_DROP_QUANTITY,
+
+    // #### `result`
+    // ```c
+    // true
+    // ```
+    // Seven Sages: fired in Item_DropCollectible, the fixed single-drop path used by pots, crates,
+    // bushes and ~29 other actors. Unlike the random path above there is no quantity in vanilla to
+    // scale - the function spawns exactly one item - so the hook supplies one, defaulting to 1, and
+    // the spawn is looped that many times. The function's return value is unchanged: it is always
+    // the *first* actor spawned, so the callers that use it are unaffected however many extras
+    // follow.
+    //
+    // **Only fired when the drop is a genuine fixed drop**, i.e. not on the internal `params|0x8000`
+    // calls Item_DropCollectibleRandom makes into this function. Those have already been scaled by
+    // VB_MODIFY_RANDOM_DROP_QUANTITY, and scaling them again would compound the two.
+    //
+    // Deciding *which* item types may be multiplied is left to the handler, not done here - the
+    // caller has no idea whether a given drop is a consumable or a unique. A handler must exclude
+    // at minimum small keys, heart pieces, heart containers and the ITEM00_SOH_GIVE_ITEM_ENTRY*
+    // types that carry randomizer checks.
+    // #### `args`
+    // - `s16` (the ITEM00_* type being dropped)
+    // - `s16*` (quantity, modifiable, defaults to 1)
+    VB_MODIFY_FIXED_DROP_QUANTITY,
 
     // #### `result`
     // ```c

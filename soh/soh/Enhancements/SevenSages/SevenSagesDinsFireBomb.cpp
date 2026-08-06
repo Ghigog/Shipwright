@@ -34,12 +34,23 @@ namespace {
 // Same flag En_Bom's explosion collider touches breakables with (z_en_bom.c's sJntSphElementsInit).
 constexpr uint32_t DMG_FLAG_EXPLOSIVE = 0x00000008;
 
+// Bombable *boulders* don't check that bit. Obj_Bombiwa (the brown boulder) gates on
+// `toucher.dmgFlags & 0x40000040` (z_obj_bombiwa.c:130), so Din's Fire passed straight through one
+// even with DMG_FLAG_EXPLOSIVE set - reported by playtest 2026-08-06.
+//
+// **Only bit 6 is added, deliberately, and 0x40000000 must not be.** The header comment above turns
+// on CollisionCheck_ApplyDamage indexing an actor's damage table by the *highest* set bit of the
+// attacker's dmgFlags: 0x40 is bit 6, safely below the existing 0x00020000 (bit 17), so every enemy
+// still resolves through the same fire-damage entry and a fire-immune enemy stays immune. Bit 30
+// would become the new highest bit and silently re-point every enemy's damage-table lookup.
+constexpr uint32_t DMG_FLAG_BOMBABLE_BOULDER = 0x00000040;
+
 void OnMagicFireInit(void* actorPtr) {
     if (!GameInteractor::IsSaveLoaded(true)) {
         return;
     }
     MagicFire* magicFire = static_cast<MagicFire*>(actorPtr);
-    magicFire->collider.info.toucher.dmgFlags |= DMG_FLAG_EXPLOSIVE;
+    magicFire->collider.info.toucher.dmgFlags |= DMG_FLAG_EXPLOSIVE | DMG_FLAG_BOMBABLE_BOULDER;
 }
 
 } // namespace

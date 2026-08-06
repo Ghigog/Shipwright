@@ -11,18 +11,45 @@
  * of dropId selection, it doubles whatever was chosen - rupees and hearts included - with no
  * special-casing needed here.
  *
- * **This does NOT cover Item_DropCollectible** (pots and ~29 other fixed single-drop actors,
- * e.g. z_obj_tsubo.c:92). That function spawns exactly one item and returns a single actor
- * pointer some callers depend on, so "doubling" it means spawning a second item per call, which
- * needs a restructure of a function with 29 call sites rather than a one-line multiply. Deferred
- * pending a closer look at whether any of those callers actually use the return value in a way a
- * second spawn would disturb.
+ * **Pots and other fixed drops are covered too** as of 2026-08-06, through the new
+ * VB_MODIFY_FIXED_DROP_QUANTITY fired from Item_DropCollectible (pots, crates, bushes, ~29 callers).
+ * That function had no quantity to scale because it spawns exactly one item, so the hook supplies
+ * one and the spawn is looped.
+ *
+ * The worry that deferred this - that callers depend on the single returned actor - was resolved by
+ * keeping the return value exactly as it was: it is always the *first* spawn, and the extras are
+ * spawned and let go, so no caller can observe the difference. Vanilla already randomizes each
+ * drop's launch angle, which scatters the extras without any added offset.
+ *
+ * Two things stop this being a blunt multiply. The hook is not fired for the internal
+ * `params|0x8000` calls Item_DropCollectibleRandom makes into the same function, which have already
+ * been scaled once and would otherwise compound to 4x. And IsDuplicableDrop below refuses the item
+ * types where a duplicate would be a genuine bug rather than a bonus - keys, heart pieces and
+ * containers, fairies, and the ITEM00_SOH_GIVE_ITEM_ENTRY* types that carry randomizer checks.
  *
  * **Half price** hooks VB_MODIFY_SHOP_PRICE, fired from all three basePrice assignment sites in
  * EnGirlA_Init (z_en_girla.c) - the randomized-item override, the BetterBombchuShopping/normal
  * item-table branch, and the non-rando branch - so it covers every EnGirlA shop (Bazaar, Kakariko,
  * Zora shops, the Happy Mask Shop when RSK_MASK_QUEST opens it, etc.) from one patched field, since
  * basePrice is what both the price tag and the affordability/deduction checks read.
+ *
+ * **The price follows the mask on and off while standing in the shop** (2026-08-06). Init alone was
+ * not enough: basePrice is assigned once at scene load, so equipping the mask at the counter left
+ * every tag at full price. The player's framing for wanting this is haggling, and it is the natural
+ * reading anyway - a mask you can put on and take off should do something when you do.
+ *
+ * Patching at the point of *use* was not an option: basePrice is read from more than twenty
+ * affordability sites in z_en_girla.c plus the tag rendering plus the deduction, and they are not
+ * funnelled through anything. So the field itself is kept correct instead. The VB hook records each
+ * shop actor's undiscounted price as it is assigned, and a per-actor update hook re-derives
+ * basePrice from that record every frame.
+ *
+ * Recording the full price rather than toggling in place is deliberate: halving is integer division,
+ * so a 105-rupee item halves to 52 and doubling that back gives 104. Re-deriving from the stored
+ * original means the price is exact in both directions however many times the mask goes on and off.
+ *
+ * The record is keyed by Actor* and cleared on scene init and play teardown, so a pointer can never
+ * outlive its actor and be reused by a later shop.
  *
  * Medigoron and the carpet salesman are not EnGirlA and have their own hardcoded "gSaveContext.
  * rupees < 200" affordability checks with existing rando-only hooks
@@ -39,6 +66,9 @@
 #include "macros.h"
 #include "variables.h"
 #include "soh/Enhancements/game-interactor/GameInteractor_Hooks.h"
+#include "overlays/actors/ovl_En_GirlA/z_en_girla.h"
+
+#include <unordered_map>
 
 extern "C" PlayState* gPlayState;
 
@@ -49,21 +79,94 @@ bool IsWearingKeatonMask() {
     return player != nullptr && player->currentMask == PLAYER_MASK_KEATON;
 }
 
+// Undiscounted price per shop actor, captured as EnGirlA_Init assigns it. See the header comment:
+// this exists so the discount can be re-derived exactly rather than toggled in place, which integer
+// division would make lossy.
+std::unordered_map<Actor*, s16> sFullPrices;
+
+s16 DiscountedPrice(s16 fullPrice) {
+    return IsWearingKeatonMask() ? (s16)(fullPrice / 2) : fullPrice;
+}
+
+void OnShopItemUpdate(void* actorPtr) {
+    if (!GameInteractor::IsSaveLoaded(true)) {
+        return;
+    }
+
+    EnGirlA* shopItem = static_cast<EnGirlA*>(actorPtr);
+    auto entry = sFullPrices.find(&shopItem->actor);
+    if (entry == sFullPrices.end()) {
+        return;
+    }
+
+    shopItem->basePrice = DiscountedPrice(entry->second);
+}
+
+void ForgetShopPrices() {
+    sFullPrices.clear();
+}
+
+// May this ITEM00_* type be duplicated by the mask? The spec's "resource" is generous - rupees and
+// hearts count, not just ammo - so this is an exclusion list rather than an allowlist, and it errs
+// towards refusing anything that isn't obviously a consumable.
+//
+// Duplicating any of these would be a real bug, not just odd:
+//   - SMALL_KEY duplicates a dungeon key, which the key counter and the logic solver both track.
+//   - HEART_PIECE / HEART_CONTAINER are unique progression, and heart pieces additionally feed
+//     Sun's Song's temporary-heart cap through the lifetime counter.
+//   - SOH_GIVE_ITEM_ENTRY / _GI are how SoH delivers a randomizer *check* as a collectible, so
+//     doubling one duplicates a check - the same class of failure as gauntlet case 57.
+//   - FLEXIBLE spawns En_Elf (a fairy) down a different branch entirely, not an EnItem00 at all.
+//   - SOH_DUMMY is a placeholder with no pickup.
+// Shields and tunics are excluded as equipment rather than resources: a second one is inert.
+bool IsDuplicableDrop(s16 item00Type) {
+    switch (item00Type) {
+        case ITEM00_SMALL_KEY:
+        case ITEM00_HEART_PIECE:
+        case ITEM00_HEART_CONTAINER:
+        case ITEM00_FLEXIBLE:
+        case ITEM00_SOH_DUMMY:
+        case ITEM00_SOH_GIVE_ITEM_ENTRY:
+        case ITEM00_SOH_GIVE_ITEM_ENTRY_GI:
+        case ITEM00_SHIELD_DEKU:
+        case ITEM00_SHIELD_HYLIAN:
+        case ITEM00_TUNIC_ZORA:
+        case ITEM00_TUNIC_GORON:
+            return false;
+        default:
+            return true;
+    }
+}
+
 } // namespace
 
 static void RegisterSevenSagesKeaton() {
     COND_VB_SHOULD(VB_MODIFY_SHOP_PRICE, IS_RANDO, {
-        [[maybe_unused]] Actor* shopActor = va_arg(args, Actor*);
+        Actor* shopActor = va_arg(args, Actor*);
         s16* basePrice = va_arg(args, s16*);
-        if (IsWearingKeatonMask()) {
-            *basePrice = *basePrice / 2;
-        }
+        // Record before discounting, so what is stored is always the undiscounted price even when
+        // the mask is already on at scene load.
+        sFullPrices[shopActor] = *basePrice;
+        *basePrice = DiscountedPrice(*basePrice);
     });
+
+    COND_ID_HOOK(OnActorUpdate, ACTOR_EN_GIRLA, IS_RANDO, OnShopItemUpdate);
+    COND_HOOK(OnSceneInit, IS_RANDO, [](int16_t sceneNum) { ForgetShopPrices(); });
+    COND_HOOK(OnPlayDestroy, IS_RANDO, ForgetShopPrices);
 
     COND_VB_SHOULD(VB_MODIFY_RANDOM_DROP_QUANTITY, IS_RANDO, {
         [[maybe_unused]] Actor* fromActor = va_arg(args, Actor*);
         s16* dropQuantity = va_arg(args, s16*);
         if (IsWearingKeatonMask()) {
+            *dropQuantity *= 2;
+        }
+    });
+
+    COND_VB_SHOULD(VB_MODIFY_FIXED_DROP_QUANTITY, IS_RANDO, {
+        // va_arg promotes s16 to int; read it as int and narrow, or this reads garbage.
+        s16 item00Type = (s16)va_arg(args, int);
+        s16* dropQuantity = va_arg(args, s16*);
+        if (IsWearingKeatonMask() && IsDuplicableDrop(item00Type)) {
             *dropQuantity *= 2;
         }
     });

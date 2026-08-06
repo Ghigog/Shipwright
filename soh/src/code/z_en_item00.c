@@ -1594,22 +1594,47 @@ EnItem00* Item_DropCollectible(PlayState* play, Vec3f* spawnPos, s16 params) {
         }
 
         if (params != -1) {
-            spawnedActor = (EnItem00*)Actor_Spawn(&play->actorCtx, play, ACTOR_EN_ITEM00, spawnPos->x, spawnPos->y,
-                                                  spawnPos->z, 0, 0, 0, params | param8000 | param3F00);
-            if ((spawnedActor != NULL) && !param8000) {
-                spawnedActor->actor.velocity.y = !param4000 ? 8.0f : -2.0f;
-                spawnedActor->actor.speedXZ = 2.0f;
-                spawnedActor->actor.gravity = -0.9f;
-                spawnedActor->actor.world.rot.y = Rand_CenteredFloat(65536.0f);
-                Actor_SetScale(&spawnedActor->actor, 0.0f);
-                EnItem00_SetupAction(spawnedActor, func_8001E304);
-                spawnedActor->unk_15A = 220;
-                if ((spawnedActor->actor.params != ITEM00_SMALL_KEY) &&
-                    (spawnedActor->actor.params != ITEM00_HEART_PIECE) &&
-                    (spawnedActor->actor.params != ITEM00_HEART_CONTAINER)) {
-                    spawnedActor->actor.room = -1;
+            // Seven Sages: vanilla spawns exactly one item here. The Keaton Mask doubles fixed drops
+            // (pots, crates, bushes) as well as the random ones, so the spawn is looped instead.
+            //
+            // Only asked for genuine fixed drops: Item_DropCollectibleRandom calls back into this
+            // function with params|0x8000 once per item it has *already* scaled through
+            // VB_MODIFY_RANDOM_DROP_QUANTITY, and multiplying those again would compound the two.
+            //
+            // `spawnedActor` deliberately keeps the FIRST spawn, so this function's return value is
+            // byte-for-byte what it always was for every one of its ~29 callers - the extras are
+            // spawned and let go.
+            s16 dropCount = 1;
+            s16 dropIndex;
+
+            if (!param8000) {
+                GameInteractor_Should(VB_MODIFY_FIXED_DROP_QUANTITY, true, (s16)(params & 0x00FF), &dropCount);
+            }
+
+            for (dropIndex = 0; dropIndex < dropCount; dropIndex++) {
+                EnItem00* thisDrop =
+                    (EnItem00*)Actor_Spawn(&play->actorCtx, play, ACTOR_EN_ITEM00, spawnPos->x, spawnPos->y,
+                                           spawnPos->z, 0, 0, 0, params | param8000 | param3F00);
+                if (spawnedActor == NULL) {
+                    spawnedActor = thisDrop;
                 }
-                spawnedActor->actor.flags |= ACTOR_FLAG_UPDATE_CULLING_DISABLED;
+                if ((thisDrop != NULL) && !param8000) {
+                    thisDrop->actor.velocity.y = !param4000 ? 8.0f : -2.0f;
+                    thisDrop->actor.speedXZ = 2.0f;
+                    thisDrop->actor.gravity = -0.9f;
+                    // Vanilla already randomizes this, which is what scatters the extras rather than
+                    // stacking them in one spot - no extra positional offset needed.
+                    thisDrop->actor.world.rot.y = Rand_CenteredFloat(65536.0f);
+                    Actor_SetScale(&thisDrop->actor, 0.0f);
+                    EnItem00_SetupAction(thisDrop, func_8001E304);
+                    thisDrop->unk_15A = 220;
+                    if ((thisDrop->actor.params != ITEM00_SMALL_KEY) &&
+                        (thisDrop->actor.params != ITEM00_HEART_PIECE) &&
+                        (thisDrop->actor.params != ITEM00_HEART_CONTAINER)) {
+                        thisDrop->actor.room = -1;
+                    }
+                    thisDrop->actor.flags |= ACTOR_FLAG_UPDATE_CULLING_DISABLED;
+                }
             }
         }
     }

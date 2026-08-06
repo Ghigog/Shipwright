@@ -4735,6 +4735,19 @@ int func_8083816C(s32 arg0) {
     return (arg0 == 4) || (arg0 == 7) || (arg0 == 12);
 }
 
+/**
+ * Seven Sages: is Link currently over a surface the Hover Boots hover *over* rather than stand on -
+ * water, the two sand/quicksand floor types, or lava/void?
+ *
+ * This condition has always lived inside Player_UpdateHoverBoots as its `canHoverOnGround` local;
+ * it is lifted out here so the end-of-hover jump can ask the same question, and so there is one
+ * definition rather than two copies that can drift.
+ */
+s32 Player_HoverBootsOverHoverableSurface(Player* this) {
+    return (this->currentBoots == PLAYER_BOOTS_HOVER) &&
+           ((this->actor.yDistToWater >= 0.0f) || (func_80838144(sFloorType) >= 0) || func_8083816C(sFloorType));
+}
+
 void func_8083819C(Player* this, PlayState* play) {
     if (GameInteractor_Should(VB_BURN_SHIELD, this->currentShield == PLAYER_SHIELD_DEKU, this)) {
         Actor_Spawn(&play->actorCtx, play, ACTOR_ITEM_SHIELD, this->actor.world.pos.x, this->actor.world.pos.y,
@@ -5885,11 +5898,21 @@ void func_8083AA10(Player* this, PlayState* play) {
                 // than a second, competing jump.
                 //
                 // GROUND_LEAVE is tested here too, but inverted, and it is what makes this "the end of
-                // a hover" rather than "any airborne frame in Hover Boots". Its one frame of life is
-                // exactly the frame Link steps off a ledge, which is the one case that reaches here
-                // with a zero timer without ever having hovered - stepping off a surface the boots
-                // hover *over* (water, sand, lava), where the timer is never rearmed. Vanilla drops
-                // him there and so do we.
+                // a hover" rather than "any airborne frame in Hover Boots".
+                //
+                // **GROUND_LEAVE alone was not enough**, corrected 2026-08-06 after playtest. The
+                // intent was always that Link should *not* get this jump over a surface the boots
+                // hover over - water, sand, lava - and GROUND_LEAVE was used as a proxy for that on
+                // the reasoning that its single frame of life is the frame he steps off such a
+                // surface. It only covers that one frame. Hovering out across water or lava and
+                // letting the timer expire mid-flight arrives here many frames later with
+                // GROUND_LEAVE long gone, so the jump fired over both - reported from Zora's River
+                // and from Fire Temple's lava.
+                //
+                // Player_HoverBootsOverHoverableSurface asks the real question directly, using the
+                // same condition Player_UpdateHoverBoots uses to decide the boots are hovering in the
+                // first place. Over ordinary ground it is false and the jump is unchanged, so running
+                // off a solid ledge still jumps.
                 //
                 // 55.0f is not a new constant: it is the same control-stick magnitude
                 // Player_ProcessControlStick uses to decide a direction is being held at all.
@@ -5903,7 +5926,7 @@ void func_8083AA10(Player* this, PlayState* play) {
                 // not firing. The animation pick is func_8083A4A8's, and so is the auto-jump voice clip
                 // - this is a jump Link did not ask for, and it should sound like one.
                 if (SevenSagesHoverBootsActive(this) && !(this->actor.bgCheckFlags & BGCHECKFLAG_GROUND_LEAVE) &&
-                    (sControlStickMagnitude >= 55.0f)) {
+                    !Player_HoverBootsOverHoverableSurface(this) && (sControlStickMagnitude >= 55.0f)) {
                     s16 hoverJumpYawDiff = this->yaw - this->actor.shape.rot.y;
                     LinkAnimationHeader* hoverJumpAnim = ((ABS(hoverJumpYawDiff) < 0x1000) &&
                                                           (this->linearVelocity > 4.0f))
@@ -11267,9 +11290,7 @@ s32 Player_UpdateHoverBoots(Player* this) {
         this->hoverBootsTimer = 0;
     }
 
-    canHoverOnGround =
-        (this->currentBoots == PLAYER_BOOTS_HOVER) &&
-        ((this->actor.yDistToWater >= 0.0f) || (func_80838144(sFloorType) >= 0) || func_8083816C(sFloorType));
+    canHoverOnGround = Player_HoverBootsOverHoverableSurface(this);
 
     if (canHoverOnGround && (this->actor.bgCheckFlags & BGCHECKFLAG_GROUND) && (this->hoverBootsTimer != 0)) {
         this->actor.bgCheckFlags &= ~1;

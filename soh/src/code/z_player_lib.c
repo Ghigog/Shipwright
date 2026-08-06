@@ -525,6 +525,29 @@ void Player_SetBootData(PlayState* play, Player* this) {
         REG(27) = 2000;
         REG(45) = normalBootRegs[9];
         REG(48) = 370;
+
+        // The remaining foot-slide, reported 2026-08-06. REG(48) above only picks *which* animation
+        // plays (walk below the threshold, run above); REG(38) is what scales the run cycle's
+        // playback rate with velocity, via `1.2 + (REG(38)/1000) * (speed - REG(48)/100)`. The Iron
+        // Boots row sets it to 0, so the cycle is pinned at a flat 1.2 however fast Link moves -
+        // correct for vanilla's 3.0 cap, badly wrong now he runs at 6.0. Taking the ordinary boots'
+        // value is the same "moves like ordinary boots" rule as the three regs above.
+        REG(38) = normalBootRegs[7];
+    }
+
+    // Seven Sages: the Hover Boots' skating look, requested 2026-08-06. This is the exact inverse of
+    // the Iron Boots fix directly above and uses the same single reg: pinning REG(38) to 0 holds the
+    // run cycle at a flat 1.2 playback rate while the boots carry Link along at ~7.4, so his feet
+    // under-rotate against the ground and he reads as gliding rather than sprinting. The Hover Boots
+    // row ships 600, which scales the cycle *up* with speed and is why they currently look like
+    // ordinary running.
+    //
+    // 0 is not an invented number - it is the Iron Boots row's own value, i.e. literally the
+    // animation behaviour the Iron Boots had before the fix above took it away. Pairs with the
+    // reduced-but-not-eliminated slipperiness (SevenSagesHoverBootsSlipGripFactor), which is what
+    // makes the glide feel driven rather than merely mistimed.
+    if (SevenSagesHoverBootsActive(this)) {
+        REG(38) = 0;
     }
 
     if (play->roomCtx.curRoom.behaviorType1 == ROOM_BEHAVIOR_TYPE1_2) {
