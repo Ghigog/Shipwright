@@ -196,7 +196,8 @@ void func_80AFCD60(EnSkb* this) {
     if (IS_DAY && !CVarGetInteger(CVAR_ENHANCEMENT("RandomizedEnemies"), 0)) {
         func_80AFCF48(this);
     } else if (Actor_IsFacingPlayer(&this->actor, 0x11C7) &&
-               (this->actor.xzDistToPlayer < (60.0f + (this->actor.params * 6.0f)))) {
+               (this->actor.xzDistToPlayer < (60.0f + (this->actor.params * 6.0f))) &&
+               GameInteractor_Should(VB_UNDEAD_DETECT_PLAYER, true, &this->actor)) {
         func_80AFD33C(this);
     } else {
         func_80AFD0A4(this);
@@ -296,7 +297,8 @@ void EnSkb_Advance(EnSkb* this, PlayState* play) {
         !CVarGetInteger(CVAR_ENHANCEMENT("RandomizedEnemies"), 0)) {
         func_80AFCF48(this);
     } else if (Actor_IsFacingPlayer(&this->actor, 0x11C7) &&
-               (this->actor.xzDistToPlayer < (60.0f + (this->actor.params * 6.0f)))) {
+               (this->actor.xzDistToPlayer < (60.0f + (this->actor.params * 6.0f))) &&
+               GameInteractor_Should(VB_UNDEAD_DETECT_PLAYER, true, &this->actor)) {
         func_80AFD33C(this);
     }
 }

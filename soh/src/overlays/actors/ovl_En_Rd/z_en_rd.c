@@ -253,7 +253,8 @@ void EnRd_Idle(EnRd* this, PlayState* play) {
 
         this->isMourning = 0;
 
-        if (this->actor.xzDistToPlayer <= 150.0f && func_8002DDE4(play)) {
+        if (this->actor.xzDistToPlayer <= 150.0f && func_8002DDE4(play) &&
+            GameInteractor_Should(VB_UNDEAD_DETECT_PLAYER, true, &this->actor)) {
             // Add a height check to redeads/gibdos freeze when Enemy Randomizer is on.
             // Without the height check, redeads/gibdos can freeze the player from insane distances in
             // vertical rooms (like the first room in Deku Tree), making these rooms nearly unplayable.

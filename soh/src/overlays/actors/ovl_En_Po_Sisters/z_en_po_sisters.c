@@ -611,7 +611,11 @@ void func_80ADA4A8(EnPoSisters* this, PlayState* play) {
     if (Animation_OnFrame(&this->skelAnime, 0.0f) && this->unk_19A != 0) {
         this->unk_19A--;
     }
-    if (this->unk_19A == 0 || this->actor.xzDistToPlayer < 200.0f) {
+    // Skull Mask suppresses only the proximity half - the unk_19A timer half stays untouched so
+    // this required Forest Temple elevator fight can never stall waiting on a detection that will
+    // never come (see docs/item-ability-overhaul.md, Masks, Skull Mask).
+    if (this->unk_19A == 0 ||
+        (this->actor.xzDistToPlayer < 200.0f && GameInteractor_Should(VB_UNDEAD_DETECT_PLAYER, true, &this->actor))) {
         func_80AD93C4(this);
     }
 }
@@ -622,7 +626,8 @@ void func_80ADA530(EnPoSisters* this, PlayState* play) {
     if (Animation_OnFrame(&this->skelAnime, 0.0f) && this->unk_19A != 0) {
         this->unk_19A--;
     }
-    if (this->actor.xzDistToPlayer < 200.0f && fabsf(this->actor.yDistToPlayer + 5.0f) < 30.0f) {
+    if (this->actor.xzDistToPlayer < 200.0f && fabsf(this->actor.yDistToPlayer + 5.0f) < 30.0f &&
+        GameInteractor_Should(VB_UNDEAD_DETECT_PLAYER, true, &this->actor)) {
         func_80AD943C(this);
     } else if (this->unk_19A == 0 && Math_StepToF(&this->actor.speedXZ, 0.0f, 0.2f) != 0) {
         func_80AD9368(this);
@@ -650,7 +655,8 @@ void func_80ADA6A0(EnPoSisters* this, PlayState* play) {
     } else {
         Math_ScaledStepToS(&this->actor.world.rot.y, this->actor.yawTowardsPlayer, 0x71C);
     }
-    if (this->actor.xzDistToPlayer < 160.0f && fabsf(this->actor.yDistToPlayer + 5.0f) < 30.0f) {
+    if (this->actor.xzDistToPlayer < 160.0f && fabsf(this->actor.yDistToPlayer + 5.0f) < 30.0f &&
+        GameInteractor_Should(VB_UNDEAD_DETECT_PLAYER, true, &this->actor)) {
         func_80AD944C(this);
     } else if (this->actor.xzDistToPlayer > 240.0f) {
         func_80AD93C4(this);

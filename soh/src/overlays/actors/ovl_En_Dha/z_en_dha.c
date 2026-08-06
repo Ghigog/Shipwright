@@ -8,6 +8,7 @@
 #include "overlays/actors/ovl_En_Dh/z_en_dh.h"
 #include "objects/object_dh/object_dh.h"
 #include "soh/ResourceManagerHelpers.h"
+#include "soh/Enhancements/game-interactor/GameInteractor_Hooks.h"
 
 #define FLAGS (ACTOR_FLAG_ATTENTION_ENABLED | ACTOR_FLAG_HOSTILE | ACTOR_FLAG_UPDATE_CULLING_DISABLED)
 
@@ -212,7 +213,7 @@ void EnDha_Wait(EnDha* this, PlayState* play) {
         playerPos.y += 56.0f;
     }
 
-    if (this->actor.xzDistToPlayer <= 100.0f) {
+    if ((this->actor.xzDistToPlayer <= 100.0f) && GameInteractor_Should(VB_UNDEAD_DETECT_PLAYER, true, &this->actor)) {
         this->handAngle.y = this->handAngle.x = this->limbAngleY = 0;
 
         if (Math_Vec3f_DistXYZ(&playerPos, &this->handPos[0]) <= 12.0f) {

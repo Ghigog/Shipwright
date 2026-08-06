@@ -339,7 +339,8 @@ void EnTest_ChooseRandomAction(EnTest* this, PlayState* play) {
         case 5:
         case 6:
             if ((this->actor.xzDistToPlayer < 220.0f) && (this->actor.xzDistToPlayer > 170.0f) &&
-                Actor_IsFacingPlayer(&this->actor, 0x71C) && Actor_IsTargeted(play, &this->actor)) {
+                Actor_IsFacingPlayer(&this->actor, 0x71C) && Actor_IsTargeted(play, &this->actor) &&
+                GameInteractor_Should(VB_UNDEAD_DETECT_PLAYER, true, &this->actor)) {
                 EnTest_SetupJumpslash(this);
                 break;
             }
@@ -398,7 +399,8 @@ void EnTest_ChooseAction(EnTest* this, PlayState* play) {
             if (((play->gameplayFrames % 2) != 0) && (this->actor.params != STALFOS_TYPE_CEILING)) {
                 this->actor.world.rot.y = this->actor.yawTowardsPlayer;
                 EnTest_SetupJumpBack(this);
-            } else if ((this->actor.xzDistToPlayer < 220.0f) && (this->actor.xzDistToPlayer > 170.0f)) {
+            } else if ((this->actor.xzDistToPlayer < 220.0f) && (this->actor.xzDistToPlayer > 170.0f) &&
+                       GameInteractor_Should(VB_UNDEAD_DETECT_PLAYER, true, &this->actor)) {
                 if (Actor_IsFacingPlayer(&this->actor, 0x71C) && !Actor_IsTargeted(play, &this->actor)) {
                     EnTest_SetupJumpslash(this);
                 }
@@ -406,7 +408,8 @@ void EnTest_ChooseAction(EnTest* this, PlayState* play) {
                 EnTest_SetupWalkAndBlock(this);
             }
         } else {
-            if (this->actor.xzDistToPlayer < 110.0f) {
+            if ((this->actor.xzDistToPlayer < 110.0f) &&
+                GameInteractor_Should(VB_UNDEAD_DETECT_PLAYER, true, &this->actor)) {
                 if (Rand_ZeroOne() > 0.2f) {
                     if (player->stateFlags1 & PLAYER_STATE1_HOSTILE_LOCK_ON) {
                         if (this->actor.isTargeted) {

@@ -265,7 +265,8 @@ void EnDh_Walk(EnDh* this, PlayState* play) {
     }
     if (this->actor.xzDistToPlayer <= 100.0f) {
         this->actor.speedXZ = 0.0f;
-        if (Actor_IsFacingPlayer(&this->actor, 60 * 0x10000 / 360)) {
+        if (Actor_IsFacingPlayer(&this->actor, 60 * 0x10000 / 360) &&
+            GameInteractor_Should(VB_UNDEAD_DETECT_PLAYER, true, &this->actor)) {
             EnDh_SetupAttack(this);
         }
     } else if (--this->timer == 0) {
@@ -340,7 +341,8 @@ void EnDh_Attack(EnDh* this, PlayState* play) {
             }
             break;
         case 3:
-            if ((this->actor.xzDistToPlayer <= 100.0f) && (Actor_IsFacingPlayer(&this->actor, 60 * 0x10000 / 360))) {
+            if ((this->actor.xzDistToPlayer <= 100.0f) && (Actor_IsFacingPlayer(&this->actor, 60 * 0x10000 / 360)) &&
+                GameInteractor_Should(VB_UNDEAD_DETECT_PLAYER, true, &this->actor)) {
                 Animation_Change(&this->skelAnime, &object_dh_Anim_004658, 1.0f, 20.0f,
                                  Animation_GetLastFrame(&object_dh_Anim_004658), ANIMMODE_ONCE, -6.0f);
                 this->actionState = 0;
@@ -423,7 +425,8 @@ void EnDh_Damage(EnDh* this, PlayState* play) {
         this->actor.world.rot.y = this->actor.shape.rot.y;
         if (this->retreat) {
             EnDh_SetupRetreat(this, play);
-        } else if ((this->actor.xzDistToPlayer <= 105.0f) && Actor_IsFacingPlayer(&this->actor, 60 * 0x10000 / 360)) {
+        } else if ((this->actor.xzDistToPlayer <= 105.0f) && Actor_IsFacingPlayer(&this->actor, 60 * 0x10000 / 360) &&
+                   GameInteractor_Should(VB_UNDEAD_DETECT_PLAYER, true, &this->actor)) {
             f32 frames = Animation_GetLastFrame(&object_dh_Anim_004658);
 
             EnDh_SetupAttack(this);

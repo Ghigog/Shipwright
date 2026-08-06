@@ -3868,6 +3868,21 @@ typedef enum {
     // - `*Actor` (fromActor, may be NULL)
     // - `s16*` (dropQuantity, modifiable)
     VB_MODIFY_RANDOM_DROP_QUANTITY,
+
+    // #### `result`
+    // ```c
+    // true
+    // ```
+    // Seven Sages: whether an undead actor's player-detection check should fire. Same shape as
+    // VB_GUARD_DETECT_PLAYER - vanilla has no shared "is this undead" detection code, every actor
+    // inlines its own distance/facing test, so this sits on each one individually. Covers En_Rd
+    // (ReDead/Gibdo), En_Skb (Stalchild), En_Wallmas (Wallmaster), En_Test (Stalfos), En_Dh (Dead
+    // Hand), En_Dha (Dead Hand's hands), En_Poh (graveyard Poe), En_Po_Sisters (Forest Temple Poe
+    // Sisters), and En_Po_Field's attack path only (not its appear/fade bands, which are a
+    // separate check and stay untouched so Big Poes remain farmable).
+    // #### `args`
+    // - `*Actor` (the undead actor)
+    VB_UNDEAD_DETECT_PLAYER,
 } GIVanillaBehavior;
 
 #endif

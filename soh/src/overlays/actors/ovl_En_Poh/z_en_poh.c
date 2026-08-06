@@ -488,7 +488,7 @@ void func_80ADEAC4(EnPoh* this, PlayState* play) {
         this->unk_198--;
     }
     EnPoh_MoveTowardsPlayerHeight(this, play);
-    if (this->actor.xzDistToPlayer < 200.0f) {
+    if (this->actor.xzDistToPlayer < 200.0f && GameInteractor_Should(VB_UNDEAD_DETECT_PLAYER, true, &this->actor)) {
         func_80ADE1BC(this);
     } else if (this->unk_198 == 0) {
         EnPoh_SetupIdle(this);
@@ -506,7 +506,8 @@ void EnPoh_Idle(EnPoh* this, PlayState* play) {
     }
     func_80ADEA5C(this);
     EnPoh_MoveTowardsPlayerHeight(this, play);
-    if (this->actor.xzDistToPlayer < 200.0f && this->unk_198 < 19) {
+    if (this->actor.xzDistToPlayer < 200.0f && this->unk_198 < 19 &&
+        GameInteractor_Should(VB_UNDEAD_DETECT_PLAYER, true, &this->actor)) {
         func_80ADE1BC(this);
     } else if (this->unk_198 == 0) {
         if (Rand_ZeroOne() < 0.1f) {
@@ -541,7 +542,8 @@ void func_80ADEC9C(EnPoh* this, PlayState* play) {
     if (this->actor.xzDistToPlayer > 280.0f) {
         EnPoh_SetupIdle(this);
     } else if (this->unk_198 == 0 && this->actor.xzDistToPlayer < 140.0f &&
-               !Player_IsFacingActor(&this->actor, 0x2AAA, play)) {
+               !Player_IsFacingActor(&this->actor, 0x2AAA, play) &&
+               GameInteractor_Should(VB_UNDEAD_DETECT_PLAYER, true, &this->actor)) {
         EnPoh_SetupAttack(this);
     }
     if (this->lightColor.a == 255) {

@@ -344,7 +344,8 @@ void EnWallmas_Drop(EnWallmas* this, PlayState* play) {
 
     if (!Player_InCsMode(play) && !(player->stateFlags2 & PLAYER_STATE2_MOVING_DYNAPOLY) &&
         (player->invincibilityTimer >= 0) && (this->actor.xzDistToPlayer < 30.0f) &&
-        (this->actor.yDistToPlayer < -5.0f) && (-(f32)(player->cylinder.dim.height + 10) < this->actor.yDistToPlayer)) {
+        (this->actor.yDistToPlayer < -5.0f) && (-(f32)(player->cylinder.dim.height + 10) < this->actor.yDistToPlayer) &&
+        GameInteractor_Should(VB_UNDEAD_DETECT_PLAYER, true, &this->actor)) {
         EnWallmas_SetupTakePlayer(this, play);
     }
 }
