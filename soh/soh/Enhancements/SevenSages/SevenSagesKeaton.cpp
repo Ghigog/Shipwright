@@ -60,6 +60,15 @@
  * **Not yet covered, deliberately deferred**: bombchu bowling, the two shooting galleries, and
  * Granny's potion shop. Each is a separate price site not yet located in the codebase. Flagging
  * here rather than silently claiming full "every vendor" coverage.
+ *
+ * **The shopkeeper says so** (2026-08-06). The discount is otherwise silent - the tags just read
+ * lower - so talking to a shop's owner while wearing the mask replaces their line with a
+ * half-price greeting. Chosen over per-item custom text precisely because it costs one message
+ * instead of one per shop item, and it lands at the moment the player is deciding whether to buy.
+ *
+ * The full-price *dialogue* of Medigoron and the carpet salesman still says 200 rupees even though
+ * the gate is halved, and they are not EnOssan so this greeting does not reach them either. Both
+ * are the same pre-existing limitation of those two VB hooks, noted above.
  */
 #include "soh/ShipInit.hpp"
 #include "functions.h"
@@ -67,6 +76,10 @@
 #include "variables.h"
 #include "soh/Enhancements/game-interactor/GameInteractor_Hooks.h"
 #include "overlays/actors/ovl_En_GirlA/z_en_girla.h"
+#include "overlays/actors/ovl_En_Ossan/z_en_ossan.h"
+
+#include "SevenSagesKeaton.h"
+#include "soh/Enhancements/custom-message/CustomMessageManager.h"
 
 #include <unordered_map>
 
@@ -138,9 +151,66 @@ bool IsDuplicableDrop(s16 item00Type) {
     }
 }
 
+// The greeting itself. `&` is a line break once AutoFormat has run; the budget is roughly three
+// lines of 35 characters, which is a readability guideline rather than a correctness one - see
+// docs/custom-text-safety.md in the seven-sages repo.
+//
+// Phrased as the shopkeeper choosing to give the discount rather than as a system notice, since it
+// arrives in their voice and every other line in the shop is in character. One line covers every
+// EnOssan shop; per-shop variants would be nice and are not worth the table.
+const char* kKeatonShopGreeting = "Hey, nice mask!&Tell you what - everything in here&is half price for you today.";
+
+// True only while an EnOssan is delivering its talk-to-owner line.
+//
+// EnOssan_ChooseTalkToOwner() sets stateFlag *before* calling into sShopkeeperTalkOwner[], so by the
+// time that function's Message_ContinueTextbox reaches an OnOpenText hook the flag already reads
+// OSSAN_STATE_TALKING_TO_SHOPKEEPER. Every other shop message - purchase prompts, refusals, milk
+// fanfare - is sent by a helper that sets its state *after* the textbox call, so none of them can be
+// mistaken for this one. That matters: those carry choice control codes, and replacing one with a
+// plain message softlocks the shop.
+//
+// Same predicate as IsShopOwnerTalking() in SevenSagesNpcHints.cpp, deliberately duplicated rather
+// than shared - it is six lines, and hoisting it into a header would make one feature's delivery
+// detail part of another's interface.
+bool IsShopOwnerTalking() {
+    Player* player = GET_PLAYER(gPlayState);
+    if (player == nullptr || player->talkActor == nullptr || player->talkActor->id != ACTOR_EN_OSSAN) {
+        return false;
+    }
+    return ((EnOssan*)player->talkActor)->stateFlag == OSSAN_STATE_TALKING_TO_SHOPKEEPER;
+}
+
+void SpeakShopGreeting(uint16_t* textId, bool* loadFromMessageTable) {
+    if (!SevenSagesKeatonClaimsShopGreeting()) {
+        return;
+    }
+
+    CustomMessage msg(kKeatonShopGreeting);
+    // AutoFormat() before LoadIntoFont() is mandatory - it is what appends the terminator and turns
+    // `&` into a real line break. Skipping it leaves the message unterminated and Message_Decode
+    // runs off the end of the buffer, crashing later in Interface_Draw. See docs/custom-text-safety.md.
+    msg.AutoFormat();
+    // A shop owner's line has to end with the EVENT control code, not the plain END that AutoFormat
+    // appends. EnOssan_State_TalkingToShopkeeper only advances on Message_GetState() ==
+    // TEXT_STATE_EVENT, and the message system will not close the box itself either because the shop
+    // sets YREG(31) while browsing - so END here leaves the textbox up with every input dead. 0x0B is
+    // also a decoder stop byte, so the swap is safe. Spelled out because message_data_fmt.h is not in
+    // this TU and CustomMessageManager.h #undefs the MESSAGE_* macros it would provide.
+    constexpr char kMessageEvent = '\x0B';
+    msg.Replace(CustomMessage::MESSAGE_END(), std::string(1, kMessageEvent));
+    msg.LoadIntoFont();
+    *loadFromMessageTable = false;
+}
+
 } // namespace
 
+bool SevenSagesKeatonClaimsShopGreeting() {
+    return IS_RANDO && gPlayState != nullptr && IsWearingKeatonMask() && IsShopOwnerTalking();
+}
+
 static void RegisterSevenSagesKeaton() {
+    COND_HOOK(OnOpenText, IS_RANDO, SpeakShopGreeting);
+
     COND_VB_SHOULD(VB_MODIFY_SHOP_PRICE, IS_RANDO, {
         Actor* shopActor = va_arg(args, Actor*);
         s16* basePrice = va_arg(args, s16*);

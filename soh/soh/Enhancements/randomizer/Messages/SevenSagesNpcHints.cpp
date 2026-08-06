@@ -19,6 +19,7 @@
 #include <soh/OTRGlobals.h>
 #include "soh/Enhancements/randomizer/randomizer.h"
 #include "soh/Enhancements/game-interactor/GameInteractor.h"
+#include "soh/Enhancements/SevenSages/SevenSagesKeaton.h"
 
 #include <spdlog/spdlog.h>
 
@@ -262,6 +263,13 @@ bool IsShopOwnerTalking() {
 
 RandomizerHint FindHintForTextId(uint16_t textId) {
     if (!IsShopOwnerTalking()) {
+        return RH_NONE;
+    }
+    // The Keaton Mask rewrites this same line into its half-price greeting, and both are OnOpenText
+    // hooks, so one of them has to stand down or the winner is whichever registered last. The mask
+    // takes it: the hint is still one mask-removal away, and OnRandoHintRevealed must not fire for a
+    // hint the player never got to read. See SevenSagesKeaton.h.
+    if (SevenSagesKeatonClaimsShopGreeting()) {
         return RH_NONE;
     }
     for (const NpcHintTextId& entry : npcHintTextIds) {
