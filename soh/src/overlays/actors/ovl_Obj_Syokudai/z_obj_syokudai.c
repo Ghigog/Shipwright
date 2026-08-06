@@ -9,6 +9,7 @@
 #include "objects/gameplay_keep/gameplay_keep.h"
 #include "objects/object_syokudai/object_syokudai.h"
 #include "soh/Enhancements/game-interactor/GameInteractor_Hooks.h"
+#include "soh/Enhancements/SevenSages/SevenSagesDekuShieldFire.h"
 
 #define FLAGS (ACTOR_FLAG_UPDATE_CULLING_DISABLED | ACTOR_FLAG_HOOKSHOT_PULLS_PLAYER)
 
@@ -137,6 +138,10 @@ void ObjSyokudai_Update(Actor* thisx, PlayState* play2) {
     Vec3f tipToFlame;
     s32 pad;
     s32 pad2;
+    // Seven Sages: set when this frame's `interactionType < 0` came from a burning/burnable Deku
+    // Shield rather than from a Deku Stick, so the two ignition paths below know which one to
+    // light. See SevenSagesDekuShieldFire.h.
+    s32 sevenSagesShieldInRange = false;
 
     litTimeScale = torchCount;
     if (torchCount == 10) {
@@ -183,11 +188,36 @@ void ObjSyokudai_Update(Actor* thisx, PlayState* play2) {
             if ((SQ(tipToFlame.x) + SQ(tipToFlame.y) + SQ(tipToFlame.z)) < SQ(20.0f)) {
                 interactionType = -1;
             }
+        } else {
+            // Seven Sages: a Deku Shield reaches a torch the same way a stick's tip does. Kept
+            // below the stick branch so a player holding both keeps vanilla's behaviour exactly.
+            //
+            // The range is wider than the stick's 20 units because the two are not measuring the
+            // same thing: the stick's is a distance to `meleeWeaponInfo[0].tip`, the actual point
+            // of the flame, whereas this measures to the *limb* the shield hangs off, which sits
+            // inside Link with the shield's face some way out from it.
+            Vec3f shieldPos;
+            if (SevenSagesDekuShieldFlamePos(&shieldPos.x, &shieldPos.y, &shieldPos.z)) {
+                Math_Vec3f_Diff(&shieldPos, &this->actor.world.pos, &tipToFlame);
+                tipToFlame.y -= 67.0f;
+                if ((SQ(tipToFlame.x) + SQ(tipToFlame.y) + SQ(tipToFlame.z)) < SQ(45.0f)) {
+                    interactionType = -1;
+                    sevenSagesShieldInRange = true;
+                }
+            }
         }
         if (interactionType != 0) {
             if (this->litTimer != 0) {
                 if (interactionType < 0) {
-                    if (player->unk_860 == 0) {
+                    if (sevenSagesShieldInRange) {
+                        // Seven Sages: a lit torch lights the shield. No timer to top up, unlike
+                        // the stick below - the shield's flame has no burn-out.
+                        if (SevenSagesDekuShieldIgnite()) {
+                            Audio_PlaySoundGeneral(NA_SE_EV_FLAME_IGNITION, &this->actor.projectedPos, 4,
+                                                   &gSfxDefaultFreqAndVolScale, &gSfxDefaultFreqAndVolScale,
+                                                   &gSfxDefaultReverb);
+                        }
+                    } else if (player->unk_860 == 0) {
                         player->unk_860 = 210;
                         Audio_PlaySoundGeneral(NA_SE_EV_FLAME_IGNITION, &this->actor.projectedPos, 4,
                                                &gSfxDefaultFreqAndVolScale, &gSfxDefaultFreqAndVolScale,
@@ -205,10 +235,14 @@ void ObjSyokudai_Update(Actor* thisx, PlayState* play2) {
                 if ((0 <= this->litTimer) && (this->litTimer < (50 * litTimeScale + 100)) && (torchType != 0)) {
                     this->litTimer = 50 * litTimeScale + 100;
                 }
-            } else if ((torchType != 0) && (((interactionType > 0) && (dmgFlags & 0x20800)) ||
-                                            ((interactionType < 0) && (player->unk_860 != 0)))) {
+                // Seven Sages: the unlit-torch case asks whether the player is carrying a flame.
+                // For the shield that is its own lit state; for the stick it stays the stick timer.
+            } else if ((torchType != 0) &&
+                       (((interactionType > 0) && (dmgFlags & 0x20800)) ||
+                        ((interactionType < 0) && (sevenSagesShieldInRange ? SevenSagesDekuShieldIsAflame()
+                                                                           : (player->unk_860 != 0))))) {
 
-                if ((interactionType < 0) && (player->unk_860 < 200)) {
+                if ((interactionType < 0) && !sevenSagesShieldInRange && (player->unk_860 < 200)) {
                     player->unk_860 = 200;
                 }
                 if (torchCount == 0) {

@@ -7,6 +7,7 @@
 #include "z_bg_ydan_sp.h"
 #include "objects/object_ydan_objects/object_ydan_objects.h"
 #include "soh/ResourceManagerHelpers.h"
+#include "soh/Enhancements/SevenSages/SevenSagesDekuShieldFire.h"
 
 #define FLAGS 0
 
@@ -409,6 +410,18 @@ void BgYdanSp_WallWebIdle(BgYdanSp* this, PlayState* play) {
             OnePointCutscene_Init(play, 3020, 40, &this->dyna.actor, CAM_ID_MAIN);
             Math_Vec3f_Copy(&this->dyna.actor.home.pos, &player->meleeWeaponInfo[0].tip);
             BgYdanSp_BurnWeb(this, play);
+        }
+    } else if (SevenSagesDekuShieldIsAflame()) {
+        // Seven Sages: a burning Deku Shield burns the web, same test against the shield's position
+        // as the branch above runs against the stick's tip. See SevenSagesDekuShieldFire.h.
+        Vec3f shieldPos;
+        if (SevenSagesDekuShieldFlamePos(&shieldPos.x, &shieldPos.y, &shieldPos.z)) {
+            Actor_WorldToActorCoords(&this->dyna.actor, &sp30, &shieldPos);
+            if (fabsf(sp30.x) < 100.0f && sp30.z < 1.0f && sp30.y < 200.0f) {
+                OnePointCutscene_Init(play, 3020, 40, &this->dyna.actor, CAM_ID_MAIN);
+                Math_Vec3f_Copy(&this->dyna.actor.home.pos, &shieldPos);
+                BgYdanSp_BurnWeb(this, play);
+            }
         }
     }
     CollisionCheck_SetAC(play, &play->colChkCtx, &this->trisCollider.base);
