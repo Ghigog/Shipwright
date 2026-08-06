@@ -39,6 +39,12 @@ constexpr float STUN_RADIUS = 120.0f;
 // caught by it.
 constexpr float STUN_HEIGHT = 80.0f;
 
+// The breaker field's reach, separate from the stun's purely so it stays tunable on its own - this
+// is the knob to turn if the collateral described below reads as too generous in play. Same value
+// for now, so "what got stunned" and "what got smashed" are one mental model rather than two.
+constexpr float BREAK_RADIUS = STUN_RADIUS;
+constexpr float BREAK_HEIGHT = STUN_HEIGHT;
+
 } // namespace
 
 bool SevenSagesHammerCountsAsExplosive(const Actor* attacker) {
@@ -65,5 +71,30 @@ void SevenSagesHammerShockwave(PlayState* play, float x, float y, float z) {
     // Visual NONE because EffectSsBlast_SpawnWhiteShockwave has already been spawned at this exact
     // position by the caller; a second indicator on top of it would only muddy the strike.
     SevenSagesSpawnAoeField(play, x, y, z, STUN_RADIUS, STUN_HEIGHT, 1, SEVEN_SAGES_AOE_DMG_STUN, 0,
+                            SEVEN_SAGES_AOE_VISUAL_NONE);
+
+    // A SECOND field, carrying the explosive bit, so the shockwave also smashes pots, bushes and
+    // crates the way a bomb does.
+    //
+    // It has to be a second field rather than another bit on the one above, and that is forced by
+    // how damage resolves rather than being a style choice. CollisionCheck_ApplyDamage
+    // (z_collision_check.c:3014) indexes an actor's DMG_ENTRY table by the position of the HIGHEST
+    // set bit in the attacker's dmgFlags. The Deku Nut bit is bit 0 - the lowest there is - so ANY
+    // other bit set alongside it wins, and the field stops being a stun at all: OR-ing the
+    // explosive bit in would silently convert the stun into bomb damage. Nothing else can share a
+    // collider with a stun. (This is the mirror image of Din's Fire, where OR-ing the explosive bit
+    // in was safe precisely because its fire bit 17 stays higher.)
+    //
+    // Breakables do not care, because they have no damage table: their AC bumper is a pure
+    // eligibility gate on dmgFlags, and pots (Obj_Tsubo, 0x4FC1FFFE), bushes (En_Kusa, 0x4FC00758)
+    // and crates all accept the explosive bit. Note pots deliberately clear bit 0, so the stun
+    // field could never have broken one no matter how it was tuned.
+    //
+    // ACCEPTED CONSEQUENCE: an enemy inside the radius takes its own bomb-table damage from this
+    // field, on top of being stunned by the one above. There is no way to aim a collider at
+    // scenery and not at enemies - the AT/AC type flags don't separate them, and 0 damage here is
+    // ignored for anything that has a damage table. So "the shockwave smashes pots" and "the
+    // shockwave deals bomb damage" are the same feature; BREAK_RADIUS is the dial.
+    SevenSagesSpawnAoeField(play, x, y, z, BREAK_RADIUS, BREAK_HEIGHT, 1, DMG_FLAG_EXPLOSIVE, 0,
                             SEVEN_SAGES_AOE_VISUAL_NONE);
 }
