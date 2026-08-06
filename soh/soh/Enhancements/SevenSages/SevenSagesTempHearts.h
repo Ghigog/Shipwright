@@ -4,8 +4,8 @@
  * Seven Sages - Phase 6: the Sun's Song temporary-heart pool.
  *
  * Split out from SevenSagesSunsSong.cpp because the health bookkeeping has to run every frame and
- * has to be reachable from two places outside the song itself: SaveManager (to strip the hearts
- * when the game saves) and z_lifemeter.c (to draw them in a different colour). C linkage throughout
+ * has to be reachable from two places outside the song itself: SaveManager (to keep the hearts out
+ * of the save file) and z_lifemeter.c (to draw them in a different colour). C linkage throughout
  * so the C side can call in.
  */
 
@@ -18,9 +18,16 @@ extern "C" {
 // to be used. Grants nothing if the pool is already at cap.
 void SevenSagesGrantTempHearts(void);
 
-// Drop every temporary heart immediately, restoring the player's own capacity and clamping health
-// into it. Called when the game saves, so temporary hearts never reach the save file.
-void SevenSagesStripTempHearts(void);
+// Save round-trip. SaveManager::SaveFile calls Suspend immediately before it snapshots gSaveContext
+// and Restore immediately after, so the file on disk holds the player's own health and capacity
+// while the live buff survives the save untouched.
+//
+// These must stay paired and must not be separated by a frame: SaveSection's memcpy of gSaveContext
+// happens synchronously on the calling thread (only the write-out is threaded), so the snapshot is
+// already taken by the time SaveSection returns and Restore is safe there. Suspend on its own would
+// silently end the buff, which is the bug this pair replaced.
+void SevenSagesSuspendTempHeartsForSave(void);
+void SevenSagesRestoreTempHeartsAfterSave(void);
 
 // Heart index at which the temporary hearts begin, or -1 when none are held. HealthMeter_Draw uses
 // this to colour the topmost filled hearts differently from the player's real ones.

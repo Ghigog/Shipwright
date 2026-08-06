@@ -1242,10 +1242,14 @@ void SaveManager::SaveSection(int fileNum, int sectionID, bool threaded) {
 }
 
 void SaveManager::SaveFile(int fileNum) {
-    // Seven Sages: Sun's Song's temporary hearts must never reach the save file, so they are
-    // dropped here - before SaveSection snapshots gSaveContext. Saving genuinely ends that buff.
-    SevenSagesStripTempHearts();
+    // Seven Sages: Sun's Song's temporary hearts must never reach the save file, but saving must not
+    // end the buff either - this path is reached by the Autosave enhancement and a rando hook as
+    // well as the pause-menu prompt, so ending it here made the hearts vanish at moments the player
+    // never asked to save at. SaveSection's memcpy of gSaveContext runs synchronously on this
+    // thread, so the snapshot is complete by the time it returns and the pool can go straight back.
+    SevenSagesSuspendTempHeartsForSave();
     SaveSection(fileNum, SECTION_ID_BASE, true);
+    SevenSagesRestoreTempHeartsAfterSave();
 }
 
 void SaveManager::SaveGlobal() {

@@ -19,9 +19,17 @@
  * 2. A spent temporary heart is gone for good. The capacity shrinks as the pool drains, so there is
  *    no empty slot left for a fairy/potion/heart pickup to refill. Healing is separately clamped to
  *    the player's own capacity so it can never creep into temporary space.
- * 3. They never reach the save file. SevenSagesStripTempHearts() runs from SaveManager::SaveFile
- *    before gSaveContext is snapshotted - so saving genuinely ends the buff, which is the intended
- *    behaviour and not just a serialisation detail.
+ * 3. They never reach the save file, but saving does not end them. SaveManager::SaveFile suspends
+ *    the pool immediately before gSaveContext is snapshotted and restores it immediately after, so
+ *    the file holds the player's own health and capacity while the live buff carries on. Only
+ *    reloading a file clears the pool, through OnLoadGame.
+ *
+ *    This started out as a plain strip-on-save, on the reading that "saving ends the buff" was
+ *    intended. Playtesting 2026-08-06 rejected that: SoH reaches SaveManager::SaveFile from the
+ *    Autosave enhancement, BetterSaveMenu and a rando hook as well as the vanilla pause-menu
+ *    prompt, so in practice the hearts evaporated at arbitrary moments - including right after
+ *    declining the save prompt, because an autosave had fired nearby. A buff that ends on an
+ *    invisible background write is indistinguishable from a bug.
  *
  * Capacity is rounded up to a whole heart because HealthMeter_Draw derives its slot count with
  * `healthCapacity / FULL_HEART_HEALTH` (integer division, z_lifemeter.c:397). A capacity of twelve
@@ -46,6 +54,10 @@ constexpr s16 QUARTER_HEART_HEALTH = FULL_HEART_HEALTH / 4;
 s16 sTempHealth = 0;        // temporary health still unspent
 s16 sPermanentHealth = 0;   // the player's own health, excluding sTempHealth
 s16 sPermanentCapacity = 0; // the player's own capacity, excluding any temporary inflation
+
+// Holds sTempHealth across the save snapshot; non-zero only between Suspend and Restore, which run
+// back to back within one SaveManager::SaveFile call and never span a frame.
+s16 sSuspendedTempHealth = 0;
 
 s16 Smaller(s16 a, s16 b) {
     return a < b ? a : b;
@@ -136,14 +148,28 @@ extern "C" void SevenSagesGrantTempHearts(void) {
     ApplyCapacity();
 }
 
-extern "C" void SevenSagesStripTempHearts(void) {
+extern "C" void SevenSagesSuspendTempHeartsForSave(void) {
+    sSuspendedTempHealth = sTempHealth;
     if (sTempHealth <= 0) {
         return;
     }
 
+    // Deliberately keeps sPermanentHealth/sPermanentCapacity - Restore measures against them, and
+    // no frame runs in between for SevenSagesTempHeartsFrameUpdate to reconcile them away.
     gSaveContext.health = Smaller(sPermanentHealth, sPermanentCapacity);
     gSaveContext.healthCapacity = sPermanentCapacity;
-    ClearState();
+    sTempHealth = 0;
+}
+
+extern "C" void SevenSagesRestoreTempHeartsAfterSave(void) {
+    if (sSuspendedTempHealth <= 0) {
+        return;
+    }
+
+    sTempHealth = sSuspendedTempHealth;
+    sSuspendedTempHealth = 0;
+    gSaveContext.health = (s16)(sPermanentHealth + sTempHealth);
+    ApplyCapacity();
 }
 
 extern "C" int SevenSagesTempHeartStartIndex(void) {
