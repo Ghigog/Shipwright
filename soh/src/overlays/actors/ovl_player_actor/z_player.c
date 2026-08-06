@@ -34,6 +34,7 @@
 #include "soh/Enhancements/savestate_serialize.h"
 #include "soh/Enhancements/SevenSages/SevenSagesTunics.h"
 #include "soh/Enhancements/SevenSages/SevenSagesBoots.h"
+#include "soh/Enhancements/SevenSages/SevenSagesMegatonHammer.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -4506,6 +4507,11 @@ void func_80837948(PlayState* play, Player* this, s32 arg2) {
     } else {
         dmgFlags = D_80854488[temp][0];
     }
+
+    // Seven Sages: a Megaton Hammer swing also carries the explosive bit, so it clears the AC
+    // eligibility gate on breakables that test for a bomb specifically. See
+    // SevenSagesMegatonHammer.h - this cannot change the hammer's damage, only what it may touch.
+    dmgFlags = SevenSagesHammerMeleeDmgFlags(this, dmgFlags);
 
     func_80837918(this, 0, dmgFlags);
     func_80837918(this, 1, dmgFlags);
@@ -15448,6 +15454,9 @@ void Player_Action_808502D0(Player* this, PlayState* play) {
                     (sp2C > -40.0f) && (sp2C < 40.0f)) {
                     func_80842A28(play, this);
                     EffectSsBlast_SpawnWhiteShockwave(play, &shockwavePos, &zeroVec, &zeroVec);
+                    // Seven Sages: the stun rides on the shockwave, so the player sees what caused
+                    // it. See SevenSagesMegatonHammer.h.
+                    SevenSagesHammerShockwave(play, shockwavePos.x, shockwavePos.y, shockwavePos.z);
                 }
             }
         }

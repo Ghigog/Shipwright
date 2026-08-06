@@ -17,6 +17,7 @@
 
 #include "soh/ActorDB.h"
 #include "soh/OTRGlobals.h"
+#include "soh/Enhancements/SevenSages/SevenSagesMegatonHammer.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -3869,8 +3870,21 @@ Actor* Actor_GetCollidedExplosive(PlayState* play, Collider* collider) {
     // mouth door, and a handful of unrelated actors like Beamos/Bubble/Dead Hand/fake doors that
     // react to nearby explosives), Din's Fire now qualifies the same way a real bomb does. Treat it
     // as a permanent bomb the player carries that costs magic instead of a limited consumable.
-    if ((collider->acFlags & AC_HIT) &&
-        ((collider->ac->category == ACTORCAT_EXPLOSIVE) || (IS_RANDO && collider->ac->id == ACTOR_MAGIC_FIRE))) {
+    //
+    // The Megaton Hammer qualifies here too, for the same reason and by the same decision - the
+    // spec calls it "basically a melee bomb". See SevenSagesMegatonHammer.h; note the two Dodongo's
+    // Cavern actors here already registered the hammer's hit and were discarding it at the category
+    // test below, so this is the only thing that was in the way.
+    //
+    // The NULL check is not paranoia. `ac` is assigned from the attacking collider's actor
+    // (z_collision_check.c:1741, `ac->ac = at->actor`), and an AT collider is allowed to have no
+    // actor at all - CollisionCheck handles that case explicitly throughout, and our own AOE fields
+    // (SevenSagesAoeField.cpp) are exactly that: a collider with no owning actor. Bg_Ddan_Kd and
+    // Bg_Dodoago accept dmgFlags 0xFFCFFFFF, which includes the fire bit an elemental arrow's field
+    // carries, so a Fire Arrow landing near the Dodongo mouth reached this line with `ac` NULL.
+    if ((collider->acFlags & AC_HIT) && (collider->ac != NULL) &&
+        ((collider->ac->category == ACTORCAT_EXPLOSIVE) || (IS_RANDO && collider->ac->id == ACTOR_MAGIC_FIRE) ||
+         SevenSagesHammerCountsAsExplosive(collider->ac))) {
         collider->acFlags &= ~AC_HIT;
         return collider->ac;
     }
