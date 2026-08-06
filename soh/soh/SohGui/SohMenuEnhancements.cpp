@@ -380,6 +380,13 @@ void SohMenu::AddMenuEnhancements() {
         })
         .Options(CheckboxOptions().Tooltip("Allow Link to enter Jabu-Jabu without feeding him a fish."));
 
+    AddWidget(path, "Enrich World", WIDGET_SEPARATOR_TEXT);
+    AddWidget(path, "Extra Scenery", WIDGET_CVAR_CHECKBOX)
+        .CVar(CVAR_ENHANCEMENT("EnrichWorld"))
+        .Options(CheckboxOptions().Tooltip(
+            "Adds extra rocks, trees, bushes and flowers to the existing scenes, using only props "
+            "that already appear in each area."));
+
     // Skips & Speed-ups
     path.sidebarName = "Skips & Speed-ups";
     AddSidebarEntry("Enhancements", path.sidebarName, 3);

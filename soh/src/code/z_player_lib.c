@@ -540,11 +540,11 @@ void Player_SetBootData(PlayState* play, Player* this) {
     // good reason: a uniformly slow cycle makes Link look *slow*, not like he is gliding, even when
     // the movement underneath is fast.
     //
-    // The rhythm is what sells skating, so it moved to func_8084029C in z_player.c, which inserts a
-    // hold after each footfall - push, glide, push on the other foot. Each step wants to play at its
-    // ordinary speed for that to read, so the Hover Boots take the ordinary boots' rate here rather
-    // than their own row's 600, which scales the cycle up with speed and would race through each
-    // step before the pause landed.
+    // The rhythm is what sells skating, so it moved to func_8084029C in z_player.c, which draws each
+    // step out and then holds the cycle still - push, glide, push on the other foot. Both of those
+    // dials live there; this reg only sets the *base* rate they scale from, and the Hover Boots take
+    // the ordinary boots' row rather than their own 600, which scales the cycle up with speed and
+    // would fight the slowdown at exactly the speeds the boots are used at.
     if (SevenSagesHoverBootsActive(this)) {
         s16* normalBootRegs = sBootData[LINK_IS_ADULT ? PLAYER_BOOTS_KOKIRI : PLAYER_BOOTS_KOKIRI_CHILD];
 

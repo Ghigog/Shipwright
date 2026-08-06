@@ -535,9 +535,12 @@ static s16 sControlStickWorldYaw = 0;
 static s32 sUpperBodyIsBusy = false; // see `Player_UpdateUpperBody`
 static s32 sFloorType = 0;
 
-// Seven Sages: how long the Hover Boots hold the run cycle still after each footfall, so Link reads
-// as pushing off and then gliding rather than running. See func_8084029C.
-#define SEVEN_SAGES_SKATE_GLIDE_FRAMES 5
+// Seven Sages: the Hover Boots' skating rhythm - the step plays slowly, then the run cycle is held
+// still, so Link reads as pushing off and then gliding rather than running. See func_8084029C.
+// Both numbers were quartered/quadrupled from the first pass (0.25f from 1.0f, 20 from 5) on
+// 2026-08-06 playtest feedback; they are the two dials this effect has.
+#define SEVEN_SAGES_SKATE_STEP_RATE 0.25f
+#define SEVEN_SAGES_SKATE_GLIDE_FRAMES 20
 static s32 sSevenSagesSkateHoldFrames = 0;
 static f32 sWaterSpeedFactor = 1.0f;    // Set to 0.5f in water, 1.0f otherwise. Influences different speed values.
 static f32 sInvWaterSpeedFactor = 1.0f; // Inverse of `sWaterSpeedFactor` (1.0f / sWaterSpeedFactor)
@@ -8270,16 +8273,22 @@ void func_8084029C(Player* this, f32 arg1) {
     // tests for - so the animation's own step timing is available here rather than needing to be
     // guessed at.
     //
-    // Each step therefore plays at its ordinary speed and the cycle is then held still for a few
-    // frames, giving push - glide - push on the other foot. That is the difference from the first
-    // attempt, which only slowed the whole cycle down uniformly (REG(38) pinned to 0): moving fast
-    // with a uniformly slow cycle reads as Link being slow, not as gliding. The pause is what sells
-    // it, so the step keeps normal speed and the pause is inserted between steps.
+    // Each step is drawn out and the cycle is then held still, giving push - glide - push on the
+    // other foot. That structure is the difference from the first attempt, which only slowed the
+    // whole cycle down uniformly (REG(38) pinned to 0): a uniformly slow cycle reads as Link being
+    // slow, not as gliding. It is the *pause* that sells it, so the two are separate dials.
     //
     // Deliberately placed *above* the sfx block, not below it: zeroing arg1 first means the footstep
     // sound and the PLAYER_STATE2_FOOTSTEP flag are not re-triggered on every held frame, which they
     // would be if the phase were frozen while arg1 still looked like motion.
     if (SevenSagesHoverBootsActive(this) && (this->actor.bgCheckFlags & BGCHECKFLAG_GROUND) && (arg1 > 0.0f)) {
+        // Slowing the step is done here rather than through REG(38) because that reg only scales the
+        // speed-dependent term of the rate - `1.2 + (REG(38)/1000) * temp2` - so no value of it can
+        // express a clean multiple of the whole cycle. Applied before the crossing checks so that
+        // they and the sfx block below all measure against the same increment; scaling afterwards
+        // would desynchronise the footstep sound from the foot.
+        arg1 *= SEVEN_SAGES_SKATE_STEP_RATE;
+
         if (sSevenSagesSkateHoldFrames > 0) {
             sSevenSagesSkateHoldFrames--;
             arg1 = 0.0f;
