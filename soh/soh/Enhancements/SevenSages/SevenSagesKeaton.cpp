@@ -81,6 +81,8 @@
 #include "SevenSagesKeaton.h"
 #include "soh/Enhancements/custom-message/CustomMessageManager.h"
 
+#include <spdlog/spdlog.h>
+
 #include <unordered_map>
 
 extern "C" PlayState* gPlayState;
@@ -169,18 +171,45 @@ const char* kKeatonShopGreeting = "Hey, nice mask!&Tell you what - everything in
 // mistaken for this one. That matters: those carry choice control codes, and replacing one with a
 // plain message softlocks the shop.
 //
-// Same predicate as IsShopOwnerTalking() in SevenSagesNpcHints.cpp, deliberately duplicated rather
-// than shared - it is six lines, and hoisting it into a header would make one feature's delivery
-// detail part of another's interface.
-bool IsShopOwnerTalking() {
-    Player* player = GET_PLAYER(gPlayState);
-    if (player == nullptr || player->talkActor == nullptr || player->talkActor->id != ACTOR_EN_OSSAN) {
-        return false;
+// Found by scanning the actor list rather than through `player->talkActor`, which is what
+// SevenSagesNpcHints.cpp uses. That route rests on the player keeping ACTOR_FLAG_TALK for the whole
+// shop interaction - Player_UpdateCommon (z_player.c:12360) nulls talkActor on any frame the flag is
+// missing - and the shop itself never sets or clears that flag, so nothing in z_en_ossan.c
+// guarantees it. Never verified, and the 2026-08-06 playtest is consistent with it being wrong.
+//
+// The actor list has no such dependency: exactly one EnOssan can be in
+// OSSAN_STATE_TALKING_TO_SHOPKEEPER at a time, since the state belongs to the shop the player is
+// standing in. Scanning ACTORCAT_NPC costs a short walk once per textbox.
+//
+// The state test itself is sound and unchanged: EnOssan_ChooseTalkToOwner (z_en_ossan.c:744) assigns
+// stateFlag *before* dispatching through sShopkeeperTalkOwner[], so the flag is already set by the
+// time that function's Message_ContinueTextbox reaches this hook. Every other shop message sets its
+// state *after* the textbox call, so none can be mistaken for this one - which matters, because
+// those carry choice control codes and replacing one with a plain message softlocks the shop.
+EnOssan* FindShopOwnerMidOwnerLine() {
+    for (Actor* actor = gPlayState->actorCtx.actorLists[ACTORCAT_NPC].head; actor != nullptr; actor = actor->next) {
+        if (actor->id == ACTOR_EN_OSSAN && ((EnOssan*)actor)->stateFlag == OSSAN_STATE_TALKING_TO_SHOPKEEPER) {
+            return (EnOssan*)actor;
+        }
     }
-    return ((EnOssan*)player->talkActor)->stateFlag == OSSAN_STATE_TALKING_TO_SHOPKEEPER;
+    return nullptr;
+}
+
+bool IsShopOwnerTalking() {
+    return FindShopOwnerMidOwnerLine() != nullptr;
 }
 
 void SpeakShopGreeting(uint16_t* textId, bool* loadFromMessageTable) {
+    // TEMPORARY probe, added 2026-08-06 to settle why the greeting did not fire in playtest. Logs
+    // each half of the predicate separately, plus the old talkActor route, so one shop visit says
+    // which assumption was wrong. Remove once the greeting is confirmed working.
+    if (IS_RANDO && gPlayState != nullptr) {
+        Player* player = GET_PLAYER(gPlayState);
+        SPDLOG_INFO("[SevenSages] shop probe: textId=0x{:04X} mask={} ossanFound={} talkActor={}", *textId,
+                    IsWearingKeatonMask(), FindShopOwnerMidOwnerLine() != nullptr,
+                    (player != nullptr && player->talkActor != nullptr) ? player->talkActor->id : -1);
+    }
+
     if (!SevenSagesKeatonClaimsShopGreeting()) {
         return;
     }
