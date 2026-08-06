@@ -10,6 +10,7 @@
 #include "soh/Enhancements/game-interactor/GameInteractor_Hooks.h"
 #include "soh/Enhancements/randomizer/draw.h"
 #include "soh/ResourceManagerHelpers.h"
+#include "soh/Enhancements/SevenSages/SevenSagesBoots.h"
 
 #include <stdlib.h>
 
@@ -489,6 +490,42 @@ void Player_SetBootData(PlayState* play, Player* this) {
     IREG(68) = bootRegs[14];
     IREG(69) = bootRegs[15];
     MREG(95) = bootRegs[16];
+
+    // Seven Sages: the Iron Boots are specified as having no movement speed penalty at all, and this
+    // table is where vanilla's penalty actually lives - not in any one movement function. Three regs
+    // carry it, and all three are overwritten with the Kokiri Boots' values rather than with invented
+    // numbers, so "no penalty" means literally "moves like ordinary boots":
+    //
+    //   R_RUN_SPEED_LIMIT / REG(45) 300 -> 600  the headline halved run cap. Fixing it here rather
+    //                                           than at a movement hook is what makes *every* mode
+    //                                           uniform - forward, backwalk, sidestep and Z-target
+    //                                           strafe all clamp to `Player::unk_880`, which is
+    //                                           derived from this reg, and the jump/dive/swim
+    //                                           clamps read it directly.
+    //   REG(27)          500 -> 2000             turn rate, set above for the Iron Boots specifically.
+    //                                           Turning at a quarter speed reads as sluggishness just
+    //                                           as much as the speed cap does.
+    //   REG(48)          100 -> 370              the speed above which the run animation is driven by
+    //                                           velocity. Left at 100 the walk cycle stays pinned at
+    //                                           its slow rate while Link now moves at 6.0, so his
+    //                                           feet visibly slide. Cosmetic, but it is the tell.
+    //
+    // Deliberately NOT touched: REG(68), the gravity (-1.6 vs -1.0, and -0.4 in the underwater row).
+    // That is the *weight*, which is the whole point of the boots - sinking, staying planted, and
+    // the sunken-relic/deep-water puzzles all depend on it. Nor the IREG(66..69) jump table, which
+    // keeps Iron Boots jumps short.
+    //
+    // Placed before the hot-room override below so that override still wins, exactly as in vanilla.
+    if (SevenSagesIronBootsActive(this)) {
+        // Age-matched the same way the remap at the top of this function is: the child Kokiri row is
+        // its own, slower entry (550 vs 600), so "moves like ordinary boots" has to mean the ordinary
+        // boots for *this* Link rather than always the adult ones.
+        s16* normalBootRegs = sBootData[LINK_IS_ADULT ? PLAYER_BOOTS_KOKIRI : PLAYER_BOOTS_KOKIRI_CHILD];
+
+        REG(27) = 2000;
+        REG(45) = normalBootRegs[9];
+        REG(48) = 370;
+    }
 
     if (play->roomCtx.curRoom.behaviorType1 == ROOM_BEHAVIOR_TYPE1_2) {
         REG(45) = 500;

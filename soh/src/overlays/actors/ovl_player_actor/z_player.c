@@ -33,6 +33,7 @@
 #include "soh/ResourceManagerHelpers.h"
 #include "soh/Enhancements/savestate_serialize.h"
 #include "soh/Enhancements/SevenSages/SevenSagesTunics.h"
+#include "soh/Enhancements/SevenSages/SevenSagesBoots.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -4546,6 +4547,31 @@ void func_80837C0C(PlayState* play, Player* this, s32 damageResponseType, f32 sp
         damageResponseType = PLAYER_HIT_RESPONSE_NONE;
     }
 
+    // Seven Sages: the Iron Boots are specified as resisting all knockback, so a launching hit is
+    // downgraded to the ordinary standing flinch - Link takes the damage, the invincibility window
+    // and the hit sound, he just keeps his footing. Same downgrade-rather-than-skip shape as the
+    // freeze case above, and for the same reason.
+    //
+    // This is the right place rather than Actor_SetPlayerKnockback (z_actor.c), which looks like the
+    // single funnel and is the obvious first guess. Zeroing `knockbackType` there would be worse than
+    // wrong: the AC-hit branch that eventually calls this function is itself gated on
+    // `knockbackType != PLAYER_KNOCKBACK_NONE` and is where `knockbackDamage` gets added, so
+    // neutralising the type would hand out free *immunity* to every knockback attack instead of free
+    // footing.
+    //
+    // The paired speeds are zeroed alongside the type because they are read back: the launch branch
+    // assigns `speed`/`yVelocity` straight into linearVelocity and velocity.y, and if Link happens to
+    // be airborne when hit (that branch also fires on `!BGCHECKFLAG_GROUND`), Player_Action_8084377C
+    // re-reads `this->knockbackSpeed` on the following frames.
+    if (SevenSagesIronBootsActive(this) && ((damageResponseType == PLAYER_HIT_RESPONSE_KNOCKBACK_LARGE) ||
+                                            (damageResponseType == PLAYER_HIT_RESPONSE_KNOCKBACK_SMALL))) {
+        damageResponseType = PLAYER_HIT_RESPONSE_NONE;
+        speed = 0.0f;
+        yVelocity = 0.0f;
+        this->knockbackSpeed = 0.0f;
+        this->knockbackYVelocity = 0.0f;
+    }
+
     if (this->stateFlags1 & PLAYER_STATE1_HANGING_OFF_LEDGE) {
         func_80837B60(this);
     }
@@ -4653,7 +4679,15 @@ void func_80837C0C(PlayState* play, Player* this, s32 damageResponseType, f32 sp
                 Player_RequestRumble(this, 120, 20, 10, 0);
             } else {
                 Player_RequestRumble(this, 180, 20, 100, 0);
-                this->linearVelocity = 23.0f;
+                // Seven Sages: the second half of the Iron Boots' knockback resistance, and it is not
+                // optional. Downgrading the response type above routes a heavy hit here, into the
+                // standing flinch - but a flinch from 5+ damage still shoves Link backwards at 23.0,
+                // faster than he can run. Without this the "resistance" would have swapped one
+                // knockback for another. The animation choice below is left alone: Link should still
+                // visibly react to a big hit, he just should not travel.
+                if (!SevenSagesIronBootsActive(this)) {
+                    this->linearVelocity = 23.0f;
+                }
                 sp28 += 4;
             }
 
@@ -5835,6 +5869,49 @@ void func_8083AA10(Player* this, PlayState* play) {
                     if (GameInteractor_Should(VB_SET_STATIC_PREV_FLOOR_TYPE, true, this)) {
                         sPrevFloorProperty = 9;
                     }
+                    return;
+                }
+
+                // Seven Sages: end-of-hover jump. Reaching this line at all means Link is airborne and
+                // not already in a jump/fall action - the guards above see to that - so with the Hover
+                // Boots on and `hoverBootsTimer` now 0, the hover has just run out and vanilla's very
+                // next move is to drop him. The spec asks for a jump instead when a direction is held.
+                //
+                // Vanilla *does* have an auto-jump for walking off a ledge, twenty lines below, and it
+                // is unreachable for a hovering player twice over: it requires BGCHECKFLAG_GROUND_LEAVE,
+                // which is a one-frame flag long gone by the time the 19-frame hover expires, and it
+                // excludes `sPrevFloorProperty == 9`, which is the marker the hover branch above sets
+                // for itself. So this is the same idea placed where the hover actually ends rather
+                // than a second, competing jump.
+                //
+                // GROUND_LEAVE is tested here too, but inverted, and it is what makes this "the end of
+                // a hover" rather than "any airborne frame in Hover Boots". Its one frame of life is
+                // exactly the frame Link steps off a ledge, which is the one case that reaches here
+                // with a zero timer without ever having hovered - stepping off a surface the boots
+                // hover *over* (water, sand, lava), where the timer is never rearmed. Vanilla drops
+                // him there and so do we.
+                //
+                // 55.0f is not a new constant: it is the same control-stick magnitude
+                // Player_ProcessControlStick uses to decide a direction is being held at all.
+                //
+                // The jump strength is REG(69), the standing-jump height from the current boots' own
+                // row of sBootData - the same value vanilla's plain A-button jump uses. Deliberately
+                // *not* func_8083A4A8's IREG(66..69) ledge-jump curve, even though reusing that whole
+                // function would have been tidier: for the Hover Boots those regs are 540/270/25/0, so
+                // below 5.4 speed it produces a 0.25 hop and above it a 2.7 one, against ~7.5 for
+                // ordinary boots. A hop that small at the end of a hover reads as the mechanic failing,
+                // not firing. The animation pick is func_8083A4A8's, and so is the auto-jump voice clip
+                // - this is a jump Link did not ask for, and it should sound like one.
+                if (SevenSagesHoverBootsActive(this) && !(this->actor.bgCheckFlags & BGCHECKFLAG_GROUND_LEAVE) &&
+                    (sControlStickMagnitude >= 55.0f)) {
+                    s16 hoverJumpYawDiff = this->yaw - this->actor.shape.rot.y;
+                    LinkAnimationHeader* hoverJumpAnim = ((ABS(hoverJumpYawDiff) < 0x1000) &&
+                                                          (this->linearVelocity > 4.0f))
+                                                             ? &gPlayerAnim_link_normal_run_jump
+                                                             : &gPlayerAnim_link_normal_jump;
+
+                    func_80838940(this, hoverJumpAnim, REG(69) / 100.0f, play, NA_SE_VO_LI_AUTO_JUMP);
+                    this->av2.actionVar2 = 1;
                     return;
                 }
 
@@ -7275,6 +7352,18 @@ s32 Player_HandleSlopes(PlayState* play, Player* this, CollisionPoly* floorPoly)
     f32 slopeSlowdownSpeed;
     f32 slopeSlowdownSpeedStep;
     s16 velYawToDownwardSlope;
+
+    // Seven Sages: the Iron Boots are specified as walking on steep slopes without sliding. This is
+    // the *steep* slope - a poly whose SurfaceType floor effect is 1 - and it is a different
+    // mechanic from the icy floor (`sFloorType == 5`) that Player_UpdateCommon handles, which
+    // already excluded the Iron Boots in vanilla. Only this half was missing.
+    //
+    // The whole function is skipped rather than just the slide branch, so the boots also drop the
+    // `pushedSpeed` drag the other branch applies when moving parallel or uphill. Both halves are
+    // the slope refusing to be stood on, and the spec asks for standing on it.
+    if (SevenSagesIronBootsActive(this)) {
+        return false;
+    }
 
     if (!Player_InBlockingCsMode(play, this) && (Player_Action_SlideOnSlope != this->actionFunc) &&
         (SurfaceType_GetFloorEffect(&play->colCtx, floorPoly, this->actor.floorBgId) == 1)) {
@@ -11961,13 +12050,28 @@ void Player_UpdateCommon(Player* this, PlayState* play, Input* input) {
                 s16 sp6E = this->yaw;
                 s16 yawDiff = this->actor.world.rot.y - sp6E;
                 s32 pad;
+                // Seven Sages: the Hover Boots are specified as "slipperiness slightly reduced (not
+                // eliminated)". This block *is* the slipperiness - it decouples the actual velocity
+                // and facing (actor.speedXZ / actor.world.rot.y) from the intended ones
+                // (linearVelocity / yaw) and lets them chase at a fixed rate, so the two rates below
+                // are the whole feel of the slide. Scaling them is what "reduced but not eliminated"
+                // looks like; short-circuiting to the else branch would be "eliminated".
+                //
+                // The discriminator matters: this same block also runs for the icy floor type and for
+                // the slippery-floor cheat, and neither of those is the boots' slipperiness to fix.
+                // Hover Boots on ice should still get ice, so the grip factor is 1.0f whenever
+                // another source is in play. It is computed from the same two terms the `if` above
+                // tests, deliberately, so the two cannot drift.
+                f32 slipGrip = SevenSagesHoverBootsSlipGripFactor(
+                    this, (((this->actor.bgCheckFlags & BGCHECKFLAG_GROUND) && (sFloorType == 5)) ||
+                           GameInteractor_GetSlipperyFloorActive()));
 
                 if ((ABS(yawDiff) > 0x6000) && (this->actor.speedXZ != 0.0f)) {
                     sp70 = 0.0f;
                     sp6E += 0x8000;
                 }
 
-                if (Math_StepToF(&this->actor.speedXZ, sp70, 0.35f) && (sp70 == 0.0f)) {
+                if (Math_StepToF(&this->actor.speedXZ, sp70, 0.35f * slipGrip) && (sp70 == 0.0f)) {
                     this->actor.world.rot.y = this->yaw;
                 }
 
@@ -11975,7 +12079,7 @@ void Player_UpdateCommon(Player* this, PlayState* play, Input* input) {
                     s32 phi_v0;
 
                     phi_v0 = (fabsf(this->linearVelocity) * 700.0f) - (fabsf(this->actor.speedXZ) * 100.0f);
-                    phi_v0 = CLAMP(phi_v0, 0, 1350);
+                    phi_v0 = CLAMP(phi_v0, 0, (s32)(1350.0f * slipGrip));
 
                     Math_ScaledStepToS(&this->actor.world.rot.y, sp6E, phi_v0);
                 }
@@ -14767,7 +14871,12 @@ void Player_Action_SlideOnSlope(Player* this, PlayState* play) {
         xzSpeedIncrStep = SQ(xzSpeedTarget) * 0.015f;
         xzSpeedDecrStep = slopeNormal.y * 0.01f;
 
-        if (SurfaceType_GetFloorEffect(&play->colCtx, floorPoly, this->actor.floorBgId) != 1) {
+        // Seven Sages: pulling the Iron Boots on mid-slide brakes exactly the way stepping off the
+        // slope does, rather than riding the slide out. Player_HandleSlopes stops slides from
+        // starting; this is the one already running, which is otherwise unreachable from there
+        // because it explicitly excludes itself while this action is active.
+        if ((SurfaceType_GetFloorEffect(&play->colCtx, floorPoly, this->actor.floorBgId) != 1) ||
+            SevenSagesIronBootsActive(this)) {
             xzSpeedTarget = 0;
             xzSpeedDecrStep = slopeNormal.y * 10.0f;
         }
