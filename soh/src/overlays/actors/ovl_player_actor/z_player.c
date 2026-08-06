@@ -534,6 +534,11 @@ static s16 sControlStickAngle = 0;
 static s16 sControlStickWorldYaw = 0;
 static s32 sUpperBodyIsBusy = false; // see `Player_UpdateUpperBody`
 static s32 sFloorType = 0;
+
+// Seven Sages: how long the Hover Boots hold the run cycle still after each footfall, so Link reads
+// as pushing off and then gliding rather than running. See func_8084029C.
+#define SEVEN_SAGES_SKATE_GLIDE_FRAMES 5
+static s32 sSevenSagesSkateHoldFrames = 0;
 static f32 sWaterSpeedFactor = 1.0f;    // Set to 0.5f in water, 1.0f otherwise. Influences different speed values.
 static f32 sInvWaterSpeedFactor = 1.0f; // Inverse of `sWaterSpeedFactor` (1.0f / sWaterSpeedFactor)
 static u32 sTouchedWallFlags = 0;
@@ -8258,6 +8263,34 @@ void func_8084029C(Player* this, f32 arg1) {
         arg1 = -7.25;
     } else if (arg1 > 7.25f) {
         arg1 = 7.25f;
+    }
+
+    // Seven Sages: the Hover Boots' skating rhythm. `unk_868` is the run cycle's phase, 29 units
+    // long, and the two footfalls are the 10.0 and 24.0 crossings the sfx check just below already
+    // tests for - so the animation's own step timing is available here rather than needing to be
+    // guessed at.
+    //
+    // Each step therefore plays at its ordinary speed and the cycle is then held still for a few
+    // frames, giving push - glide - push on the other foot. That is the difference from the first
+    // attempt, which only slowed the whole cycle down uniformly (REG(38) pinned to 0): moving fast
+    // with a uniformly slow cycle reads as Link being slow, not as gliding. The pause is what sells
+    // it, so the step keeps normal speed and the pause is inserted between steps.
+    //
+    // Deliberately placed *above* the sfx block, not below it: zeroing arg1 first means the footstep
+    // sound and the PLAYER_STATE2_FOOTSTEP flag are not re-triggered on every held frame, which they
+    // would be if the phase were frozen while arg1 still looked like motion.
+    if (SevenSagesHoverBootsActive(this) && (this->actor.bgCheckFlags & BGCHECKFLAG_GROUND) && (arg1 > 0.0f)) {
+        if (sSevenSagesSkateHoldFrames > 0) {
+            sSevenSagesSkateHoldFrames--;
+            arg1 = 0.0f;
+        } else if (func_8084021C(this->unk_868, arg1, 29.0f, 10.0f) ||
+                   func_8084021C(this->unk_868, arg1, 29.0f, 24.0f)) {
+            // Armed on the crossing frame, so the step completes and its footstep sfx still plays;
+            // the hold starts from the next frame.
+            sSevenSagesSkateHoldFrames = SEVEN_SAGES_SKATE_GLIDE_FRAMES;
+        }
+    } else {
+        sSevenSagesSkateHoldFrames = 0;
     }
 
     if ((this->currentBoots == PLAYER_BOOTS_HOVER) && !(this->actor.bgCheckFlags & BGCHECKFLAG_GROUND) &&

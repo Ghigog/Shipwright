@@ -535,19 +535,20 @@ void Player_SetBootData(PlayState* play, Player* this) {
         REG(38) = normalBootRegs[7];
     }
 
-    // Seven Sages: the Hover Boots' skating look, requested 2026-08-06. This is the exact inverse of
-    // the Iron Boots fix directly above and uses the same single reg: pinning REG(38) to 0 holds the
-    // run cycle at a flat 1.2 playback rate while the boots carry Link along at ~7.4, so his feet
-    // under-rotate against the ground and he reads as gliding rather than sprinting. The Hover Boots
-    // row ships 600, which scales the cycle *up* with speed and is why they currently look like
-    // ordinary running.
+    // Seven Sages: the Hover Boots' skating look. The first attempt pinned REG(38) to 0, which holds
+    // the run cycle at a flat 1.2 rate however fast Link moves. That was rejected in playtest for a
+    // good reason: a uniformly slow cycle makes Link look *slow*, not like he is gliding, even when
+    // the movement underneath is fast.
     //
-    // 0 is not an invented number - it is the Iron Boots row's own value, i.e. literally the
-    // animation behaviour the Iron Boots had before the fix above took it away. Pairs with the
-    // reduced-but-not-eliminated slipperiness (SevenSagesHoverBootsSlipGripFactor), which is what
-    // makes the glide feel driven rather than merely mistimed.
+    // The rhythm is what sells skating, so it moved to func_8084029C in z_player.c, which inserts a
+    // hold after each footfall - push, glide, push on the other foot. Each step wants to play at its
+    // ordinary speed for that to read, so the Hover Boots take the ordinary boots' rate here rather
+    // than their own row's 600, which scales the cycle up with speed and would race through each
+    // step before the pause landed.
     if (SevenSagesHoverBootsActive(this)) {
-        REG(38) = 0;
+        s16* normalBootRegs = sBootData[LINK_IS_ADULT ? PLAYER_BOOTS_KOKIRI : PLAYER_BOOTS_KOKIRI_CHILD];
+
+        REG(38) = normalBootRegs[7];
     }
 
     if (play->roomCtx.curRoom.behaviorType1 == ROOM_BEHAVIOR_TYPE1_2) {

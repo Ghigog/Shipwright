@@ -61,8 +61,19 @@ static InitChainEntry sInitChain[] = {
 void ObjKibako2_InitCollider(Actor* thisx, PlayState* play) {
     ObjKibako2* this = (ObjKibako2*)thisx;
 
+    // Seven Sages: the large crate's bumper accepts 0x40000040 - the same mask the bombable boulders
+    // use, and like them it has no bit in common with the 0x8 explosive flag Din's Fire carries, so
+    // Din's Fire passed straight through one. Widened here rather than in the static initialiser so
+    // it stays scoped to rando.
+    //
+    // The *small* crate (Obj_Kibako) needs nothing: its bumper is already 0x4FC00748, which has bit
+    // 3 set, so it accepted Din's Fire all along. If small crates also fail to break, the cause is
+    // something other than this flag and should be chased separately.
     Collider_InitCylinder(play, &this->collider);
     Collider_SetCylinder(play, &this->collider, &this->dyna.actor, &sCylinderInit);
+    if (IS_RANDO) {
+        this->collider.info.bumper.dmgFlags |= 0x00000008;
+    }
     Collider_UpdateCylinder(&this->dyna.actor, &this->collider);
 }
 
