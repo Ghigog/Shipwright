@@ -37,6 +37,8 @@ extern "C" {
 #include "variables.h"
 }
 
+extern "C" PlayState* gPlayState;
+
 namespace {
 
 // Read from the save rather than from Player::currentTunic. z_parameter.c's
@@ -51,18 +53,27 @@ bool NayrusLoveActive() {
     return gSaveContext.nayrusLoveTimer != 0;
 }
 
+// Goron/Zora Masks grant the matching tunic's effect (Masks section,
+// docs/item-ability-overhaul.md, resolved 2026-08-05). Masks are child-only and tunics only
+// matter as adult-form protection in vanilla, but Nayru's Love and the mask both work at any
+// age, so this is the only route to fire/frost protection a child ever has.
+bool WearingMask(s32 mask) {
+    Player* player = GET_PLAYER(gPlayState);
+    return player != nullptr && player->currentMask == mask;
+}
+
 } // namespace
 
 bool SevenSagesFireProtectionActive(void) {
     if (!IS_RANDO || !GameInteractor::IsSaveLoaded(true)) {
         return false;
     }
-    return NayrusLoveActive() || WearingTunic(EQUIP_VALUE_TUNIC_GORON);
+    return NayrusLoveActive() || WearingTunic(EQUIP_VALUE_TUNIC_GORON) || WearingMask(PLAYER_MASK_GORON);
 }
 
 bool SevenSagesFrostProtectionActive(void) {
     if (!IS_RANDO || !GameInteractor::IsSaveLoaded(true)) {
         return false;
     }
-    return NayrusLoveActive() || WearingTunic(EQUIP_VALUE_TUNIC_ZORA);
+    return NayrusLoveActive() || WearingTunic(EQUIP_VALUE_TUNIC_ZORA) || WearingMask(PLAYER_MASK_ZORA);
 }
