@@ -537,9 +537,16 @@ static s32 sFloorType = 0;
 
 // Seven Sages: the Hover Boots' skating rhythm - the step plays slowly, then the run cycle is held
 // still, so Link reads as pushing off and then gliding rather than running. See func_8084029C.
-// Both numbers were quartered/quadrupled from the first pass (0.25f from 1.0f, 20 from 5) on
-// 2026-08-06 playtest feedback; they are the two dials this effect has.
-#define SEVEN_SAGES_SKATE_STEP_RATE 0.25f
+// The two dials went in opposite directions across three playtests, which is the useful record here:
+// the glide grew 5 -> 20 frames, while the step went 1.0f -> 0.25f (sluggish) -> 1.5f. A skating
+// push is *quick*; it is the glide after it that carries the length. Slowing the step read as Link
+// wading rather than gliding.
+//
+// Above 1.0f the scaled increment can exceed the 7.25 clamp applied further up func_8084029C. That
+// is deliberate and safe at this value: the footfall targets are 14 units apart and the increment
+// tops out near 10.9, so no crossing can be stepped over and no footstep can be silently lost.
+// Raising this much beyond 1.5f would need that clamp revisited.
+#define SEVEN_SAGES_SKATE_STEP_RATE 1.5f
 #define SEVEN_SAGES_SKATE_GLIDE_FRAMES 20
 static s32 sSevenSagesSkateHoldFrames = 0;
 static f32 sWaterSpeedFactor = 1.0f;    // Set to 0.5f in water, 1.0f otherwise. Influences different speed values.
