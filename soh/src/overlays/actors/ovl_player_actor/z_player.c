@@ -558,8 +558,12 @@ static s32 sFloorType = 0;
 #define SEVEN_SAGES_SKATE_STEP_RATE 1.0f
 #define SEVEN_SAGES_SKATE_GLIDE_MIN_FRAMES 0
 #define SEVEN_SAGES_SKATE_GLIDE_MAX_FRAMES 20
+// MAX_SPEED is the actual run cap, not a guess: R_RUN_SPEED_LIMIT ships 600 for ordinary boots and
+// linearVelocity is CLAMPed to it (z_player.c:7341), so 6.0 is as fast as Link goes on foot. It was
+// briefly set to 7.5, which put the top of the ramp past anything reachable and quietly capped the
+// glide at ~73% of MAX_FRAMES.
 #define SEVEN_SAGES_SKATE_GLIDE_MIN_SPEED 2.0f
-#define SEVEN_SAGES_SKATE_GLIDE_MAX_SPEED 7.5f
+#define SEVEN_SAGES_SKATE_GLIDE_MAX_SPEED 6.0f
 static s32 sSevenSagesSkateHeldFrames = 0; // frames the current glide has run so far
 static s32 sSevenSagesSkateGliding = false;
 static f32 sWaterSpeedFactor = 1.0f;    // Set to 0.5f in water, 1.0f otherwise. Influences different speed values.
@@ -8343,6 +8347,13 @@ void func_8084029C(Player* this, f32 arg1) {
             // footstep sfx still plays; the glide starts from the next frame.
             sSevenSagesSkateGliding = true;
             sSevenSagesSkateHeldFrames = 0;
+
+            // TEMPORARY probe, added 2026-08-06: the ramp was reported as full-length from the first
+            // step, and the speed range it maps over was assumed rather than measured. One footfall
+            // per line, so a single run down a straight path shows whether linearVelocity actually
+            // climbs gradually or snaps to the cap. Remove once the ramp is confirmed.
+            lusprintf(__FILE__, __LINE__, 2, "[SevenSages] skate push: speed=%.2f glideFrames=%d",
+                      this->linearVelocity, SevenSagesSkateGlideFrames(this->linearVelocity));
         }
     } else {
         sSevenSagesSkateGliding = false;
