@@ -69,6 +69,14 @@
  * Both doors play their usual unlock sound either way, so a bypass reads as "the door gave way"
  * rather than announcing itself. Whether that wants its own distinct feedback is a playtest
  * question, deliberately left alone for now.
+ *
+ * **Gerudo Mask grants the silver-lock half of this, and nothing else** (Masks section,
+ * docs/item-ability-overhaul.md, resolved 2026-08-05). It is deliberately narrower than Silver
+ * Gauntlets: no lift/throw, and no boss-door access - only small-key doors. Masks are child-only
+ * (AdultMasks is off in the preset) and CanUseGauntlets requires LINK_IS_ADULT, so the two paths
+ * to silver-lock access never overlap in practice; HasSilverLockAccess just ORs them so a child in
+ * the mask reaches the same four call sites an adult with Silver Gauntlets does, without touching
+ * the boss-door path, which stays gauntlets-only.
  */
 #include "soh/ShipInit.hpp"
 #include "functions.h"
@@ -97,15 +105,27 @@ bool CanUseGauntlets(u8 tier) {
     return LINK_IS_ADULT && CUR_UPG_VALUE(UPG_STRENGTH) >= tier;
 }
 
+// Silver-lock access has two independent routes: adult with Silver (or Golden) Gauntlets, or a
+// child wearing the Gerudo Mask. The mask grants only this - no lift/throw, no boss-door access -
+// so it is checked here and nowhere else in the file; every boss-door site still goes through
+// CanUseGauntlets(STRENGTH_GOLDEN_GAUNTLETS) directly.
+bool HasSilverLockAccess() {
+    if (CanUseGauntlets(STRENGTH_SILVER_GAUNTLETS)) {
+        return true;
+    }
+    Player* player = GET_PLAYER(gPlayState);
+    return player != nullptr && player->currentMask == PLAYER_MASK_GERUDO;
+}
+
 // Affordability only - no state touched. See the header comment for why these must stay pure.
-bool CanForceDoor(u8 requiredTier) {
+bool CanForceDoor(bool hasRequiredAccess) {
     const s16 cost = DoorMagicCost();
     // `cost > 0` is load-bearing, not defensive. With no magic meter at all magicLevel is 0, so
     // the cost computes to 0 and `magic >= cost` is 0 >= 0 - true. That made the bypass FREE for
     // anyone without a meter, which is every child sage and any adult before their first Great
     // Fairy. Having a meter and no magic in it was always refused correctly; having no meter was
     // the hole.
-    return GameInteractor::IsSaveLoaded(true) && CanUseGauntlets(requiredTier) && cost > 0 &&
+    return GameInteractor::IsSaveLoaded(true) && hasRequiredAccess && cost > 0 &&
            gSaveContext.magic >= cost;
 }
 
@@ -135,8 +155,8 @@ void ChargeForBypass() {
 // already encoding whether a key is missing, so that caller passes *should through directly - without
 // it, this would evaluate "insufficient" (and update the edge tracker) even while standing at a door
 // the player already has the key for.
-void PlayInsufficientMagicSoundOnRisingEdge(bool* wasInsufficientLastFrame, u8 requiredTier, bool lockIsRelevant) {
-    bool isInsufficientNow = lockIsRelevant && CanUseGauntlets(requiredTier) && !CanForceDoor(requiredTier);
+void PlayInsufficientMagicSoundOnRisingEdge(bool* wasInsufficientLastFrame, bool hasRequiredAccess, bool lockIsRelevant) {
+    bool isInsufficientNow = lockIsRelevant && hasRequiredAccess && !CanForceDoor(hasRequiredAccess);
     if (isInsufficientNow && !*wasInsufficientLastFrame) {
         Audio_PlaySoundGeneral(NA_SE_SY_ERROR, &gSfxDefaultPos, 4, &gSfxDefaultFreqAndVolScale,
                                &gSfxDefaultFreqAndVolScale, &gSfxDefaultReverb);
@@ -168,8 +188,8 @@ static void RegisterSevenSagesGoldenGauntlets() {
     COND_VB_SHOULD(VB_BOSS_DOOR_REQUIRE_BOSS_KEY, IS_RANDO, {
         [[maybe_unused]] Actor* door = va_arg(args, Actor*);
         static bool sWasInsufficientLastFrame = false;
-        PlayInsufficientMagicSoundOnRisingEdge(&sWasInsufficientLastFrame, STRENGTH_GOLDEN_GAUNTLETS, true);
-        if (CanForceDoor(STRENGTH_GOLDEN_GAUNTLETS)) {
+        PlayInsufficientMagicSoundOnRisingEdge(&sWasInsufficientLastFrame, CanUseGauntlets(STRENGTH_GOLDEN_GAUNTLETS), true);
+        if (CanForceDoor(CanUseGauntlets(STRENGTH_GOLDEN_GAUNTLETS))) {
             *should = false;
         }
     });
@@ -177,8 +197,8 @@ static void RegisterSevenSagesGoldenGauntlets() {
     COND_VB_SHOULD(VB_DOOR_SHUTTER_REQUIRE_SMALL_KEY, IS_RANDO, {
         [[maybe_unused]] Actor* door = va_arg(args, Actor*);
         static bool sWasInsufficientLastFrame = false;
-        PlayInsufficientMagicSoundOnRisingEdge(&sWasInsufficientLastFrame, STRENGTH_SILVER_GAUNTLETS, true);
-        if (CanForceDoor(STRENGTH_SILVER_GAUNTLETS)) {
+        PlayInsufficientMagicSoundOnRisingEdge(&sWasInsufficientLastFrame, HasSilverLockAccess(), true);
+        if (CanForceDoor(HasSilverLockAccess())) {
             *should = false;
         }
     });
@@ -188,7 +208,7 @@ static void RegisterSevenSagesGoldenGauntlets() {
         // *should is already false when the player has no key, which is only reachable via the
         // bypass above - the approach check would otherwise have refused. Suppressing the
         // decrement is the default's job; ours is to take the magic instead.
-        if (!*should && CanUseGauntlets(STRENGTH_SILVER_GAUNTLETS)) {
+        if (!*should && HasSilverLockAccess()) {
             ChargeForBypass();
         }
     });
@@ -207,10 +227,10 @@ static void RegisterSevenSagesGoldenGauntlets() {
         // The helper itself only makes noise when *should being true would matter, so this is a
         // no-op in the "already has a key" case.
         static bool sWasInsufficientLastFrame = false;
-        PlayInsufficientMagicSoundOnRisingEdge(&sWasInsufficientLastFrame, STRENGTH_SILVER_GAUNTLETS, *should);
+        PlayInsufficientMagicSoundOnRisingEdge(&sWasInsufficientLastFrame, HasSilverLockAccess(), *should);
         // Only flip a refusal, never manufacture one. *should already encodes "the player is out
         // of keys", and LockOverworldDoors registers for this same hook with its own meaning.
-        if (*should && CanForceDoor(STRENGTH_SILVER_GAUNTLETS)) {
+        if (*should && CanForceDoor(HasSilverLockAccess())) {
             *should = false;
         }
     });
@@ -222,7 +242,7 @@ static void RegisterSevenSagesGoldenGauntlets() {
         // suppressed or the count underflows to -1. Unlike Door_Shutter, this hook's default is a
         // plain `true`, so suppressing is our job here rather than the default's.
         if (gSaveContext.inventory.dungeonKeys[gSaveContext.mapIndex] <= 0 &&
-            CanUseGauntlets(STRENGTH_SILVER_GAUNTLETS)) {
+            HasSilverLockAccess()) {
             ChargeForBypass();
             // Set the unlock flag ourselves rather than moving vanilla's Flags_SetSwitch outside
             // its guard - that call sits inside the same `if`, and LockOverworldDoors relies on it
