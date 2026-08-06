@@ -62,9 +62,17 @@
  * here rather than silently claiming full "every vendor" coverage.
  *
  * **The shopkeeper says so** (2026-08-06). The discount is otherwise silent - the tags just read
- * lower - so talking to a shop's owner while wearing the mask replaces their line with a
- * half-price greeting. Chosen over per-item custom text precisely because it costs one message
- * instead of one per shop item, and it lands at the moment the player is deciding whether to buy.
+ * lower - so wearing the mask replaces the shopkeeper's *welcome*, the line every customer gets on
+ * walking up, with a half-price greeting. Chosen over per-item custom text because it costs one
+ * message instead of one per shop item, and it lands before the player has looked at a single price.
+ *
+ * It first went on the talk-to-owner line instead, which worked but was opt-in: browse straight to
+ * the shelves and you never learn the mask is doing anything. Moving it to the welcome makes it
+ * unmissable *and* leaves every talk-to-owner line free for NPC hints, so the two features no longer
+ * contend for a textbox and the arbitration between them could be deleted outright.
+ *
+ * The Happy Mask Shop is excluded - its welcome carries choice control codes. See
+ * FindShopOwnerMidWelcome for that and for how the greeting is identified.
  *
  * The full-price *dialogue* of Medigoron and the carpet salesman still says 200 rupees even though
  * the gate is halved, and they are not EnOssan so this greeting does not reach them either. Both
@@ -78,10 +86,7 @@
 #include "overlays/actors/ovl_En_GirlA/z_en_girla.h"
 #include "overlays/actors/ovl_En_Ossan/z_en_ossan.h"
 
-#include "SevenSagesKeaton.h"
 #include "soh/Enhancements/custom-message/CustomMessageManager.h"
-
-#include <spdlog/spdlog.h>
 
 #include <unordered_map>
 
@@ -160,57 +165,60 @@ bool IsDuplicableDrop(s16 item00Type) {
 // Phrased as the shopkeeper choosing to give the discount rather than as a system notice, since it
 // arrives in their voice and every other line in the shop is in character. One line covers every
 // EnOssan shop; per-shop variants would be nice and are not worth the table.
-const char* kKeatonShopGreeting = "Hey, nice mask!&Tell you what - everything in here&is half price for you today.";
+// Opens with a welcome because it *replaces* the welcome - the shopkeeper should not stop greeting
+// you just because you put a mask on.
+const char* kKeatonShopGreeting =
+    "Welcome!&Hey, nice mask - tell you what,&everything here is half price for you today.";
 
-// True only while an EnOssan is delivering its talk-to-owner line.
+// The shopkeeper's *welcome* - the line every customer gets on walking up - rather than the
+// talk-to-owner line reached by picking "talk" from the shop menu.
 //
-// EnOssan_ChooseTalkToOwner() sets stateFlag *before* calling into sShopkeeperTalkOwner[], so by the
-// time that function's Message_ContinueTextbox reaches an OnOpenText hook the flag already reads
-// OSSAN_STATE_TALKING_TO_SHOPKEEPER. Every other shop message - purchase prompts, refusals, milk
-// fanfare - is sent by a helper that sets its state *after* the textbox call, so none of them can be
-// mistaken for this one. That matters: those carry choice control codes, and replacing one with a
-// plain message softlocks the shop.
+// The talk-to-owner line was the first attempt and worked, but it is opt-in: a player who browses
+// straight to the shelves never learns the mask is doing anything, which is the whole point of
+// saying it out loud. The welcome is unmissable. It also leaves every talk-to-owner line free for
+// NPC hints, so the two features no longer contend for a textbox at all.
 //
-// Found by scanning the actor list rather than through `player->talkActor`, which is what
-// SevenSagesNpcHints.cpp uses. That route rests on the player keeping ACTOR_FLAG_TALK for the whole
-// shop interaction - Player_UpdateCommon (z_player.c:12360) nulls talkActor on any frame the flag is
-// missing - and the shop itself never sets or clears that flag, so nothing in z_en_ossan.c
-// guarantees it. Never verified, and the 2026-08-06 playtest is consistent with it being wrong.
+// Identified by actor state plus text ID:
 //
-// The actor list has no such dependency: exactly one EnOssan can be in
-// OSSAN_STATE_TALKING_TO_SHOPKEEPER at a time, since the state belongs to the shop the player is
-// standing in. Scanning ACTORCAT_NPC costs a short walk once per textbox.
+//   - stateFlag is still OSSAN_STATE_IDLE. The player opens this textbox itself (Player_StartTalking)
+//     during its own update; the shop only leaves IDLE on its *next* update, when
+//     EnOssan_State_Idle's Actor_ProcessTalkRequest consumes ACTOR_FLAG_TALK. So IDLE at hook time is
+//     exactly "this is the opening greeting". It also excludes the re-greet after a purchase
+//     (z_en_ossan.c:1781 reopens the same textId from CONTINUE_SHOPPING_PROMPT), which is wanted -
+//     once per visit, not after every transaction.
 //
-// The state test itself is sound and unchanged: EnOssan_ChooseTalkToOwner (z_en_ossan.c:744) assigns
-// stateFlag *before* dispatching through sShopkeeperTalkOwner[], so the flag is already set by the
-// time that function's Message_ContinueTextbox reaches this hook. Every other shop message sets its
-// state *after* the textbox call, so none can be mistaken for this one - which matters, because
-// those carry choice control codes and replacing one with a plain message softlocks the shop.
-EnOssan* FindShopOwnerMidOwnerLine() {
+//   - textId matches the shop's own actor.textId, set by EnOssan_SetupHelloDialog. Needed because
+//     an idle shopkeeper is idle for the whole time the player is in the room, so state alone would
+//     match any other textbox opened in a shop scene.
+//
+// Scanning the actor list rather than going through `player->talkActor`: that route rests on the
+// player holding ACTOR_FLAG_TALK, and Player_UpdateCommon (z_player.c:12360) nulls talkActor on any
+// frame the flag is missing, while z_en_ossan.c never sets or clears it. It happens to be valid at
+// this exact moment, but the actor list has no such dependency and does not need the argument.
+//
+// **The Happy Mask Shop is excluded on purpose.** EnOssan_State_StartConversation branches on
+// TEXT_STATE_CHOICE for OSSAN_TYPE_MASK (z_en_ossan.c:918), i.e. its welcome carries choice control
+// codes, and that same textId also drives the mask payback flow. Replacing it with a plain message
+// would delete the choice and break the shop - the exact trap documented for purchase prompts. Every
+// other shop's welcome is a plain EVENT-terminated line.
+EnOssan* FindShopOwnerMidWelcome(uint16_t textId) {
     for (Actor* actor = gPlayState->actorCtx.actorLists[ACTORCAT_NPC].head; actor != nullptr; actor = actor->next) {
-        if (actor->id == ACTOR_EN_OSSAN && ((EnOssan*)actor)->stateFlag == OSSAN_STATE_TALKING_TO_SHOPKEEPER) {
-            return (EnOssan*)actor;
+        if (actor->id != ACTOR_EN_OSSAN) {
+            continue;
+        }
+
+        EnOssan* ossan = (EnOssan*)actor;
+        if (ossan->stateFlag == OSSAN_STATE_IDLE && ossan->actor.params != OSSAN_TYPE_MASK &&
+            ossan->actor.textId == textId) {
+            return ossan;
         }
     }
     return nullptr;
 }
 
-bool IsShopOwnerTalking() {
-    return FindShopOwnerMidOwnerLine() != nullptr;
-}
-
 void SpeakShopGreeting(uint16_t* textId, bool* loadFromMessageTable) {
-    // TEMPORARY probe, added 2026-08-06 to settle why the greeting did not fire in playtest. Logs
-    // each half of the predicate separately, plus the old talkActor route, so one shop visit says
-    // which assumption was wrong. Remove once the greeting is confirmed working.
-    if (IS_RANDO && gPlayState != nullptr) {
-        Player* player = GET_PLAYER(gPlayState);
-        SPDLOG_INFO("[SevenSages] shop probe: textId=0x{:04X} mask={} ossanFound={} talkActor={}", *textId,
-                    IsWearingKeatonMask(), FindShopOwnerMidOwnerLine() != nullptr,
-                    (player != nullptr && player->talkActor != nullptr) ? player->talkActor->id : -1);
-    }
-
-    if (!SevenSagesKeatonClaimsShopGreeting()) {
+    if (!IS_RANDO || gPlayState == nullptr || !IsWearingKeatonMask() ||
+        FindShopOwnerMidWelcome(*textId) == nullptr) {
         return;
     }
 
@@ -232,10 +240,6 @@ void SpeakShopGreeting(uint16_t* textId, bool* loadFromMessageTable) {
 }
 
 } // namespace
-
-bool SevenSagesKeatonClaimsShopGreeting() {
-    return IS_RANDO && gPlayState != nullptr && IsWearingKeatonMask() && IsShopOwnerTalking();
-}
 
 static void RegisterSevenSagesKeaton() {
     COND_HOOK(OnOpenText, IS_RANDO, SpeakShopGreeting);
