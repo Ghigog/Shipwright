@@ -580,12 +580,16 @@ static s32 sFloorType = 0;
 // to settle, which is the "gradually gets longer as I build up speed" this is meant to be. It is a
 // deliberate lie about how fast Link is going, and the honest version was tried first and does not
 // work. Lower = longer, more gradual build; higher = closer to raw velocity.
-#define SEVEN_SAGES_SKATE_SPEED_LERP 0.35f
+#define SEVEN_SAGES_SKATE_SPEED_LERP 0.5f
 
-// Acceleration per tick while skating, replacing vanilla's 2.0 in Player_Action_8084193C. At 0.35 the
-// climb to 7.43 takes ~21 ticks, a little over a second, which is long enough for three or four
-// footfalls to land at visibly different speeds - so the glide ramp has something real to track.
-#define SEVEN_SAGES_SKATE_ACCEL 0.35f
+// Acceleration per tick while skating, replacing vanilla's 2.0 in Player_Action_8084193C. Vanilla
+// reaches the boots' 7.43 top speed in about four ticks; 0.12 takes ~62, a bit over three seconds.
+//
+// That is a long time by this game's standards and it is the point: the glide ramp can only show
+// what the physics gives it, and three seconds of building speed is what makes the glide visibly
+// grow step after step instead of snapping to full on the second footfall. This is the dial that
+// actually controls the effect - the frame counts only set its endpoints.
+#define SEVEN_SAGES_SKATE_ACCEL 0.12f
 static s32 sSevenSagesSkateHeldFrames = 0; // ticks the current glide has run so far
 static s32 sSevenSagesSkateGliding = false;
 static f32 sSevenSagesSkateSpeed = 0.0f; // lagged linearVelocity; see SEVEN_SAGES_SKATE_SPEED_LERP

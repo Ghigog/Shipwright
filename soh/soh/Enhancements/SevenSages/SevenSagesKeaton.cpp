@@ -88,8 +88,6 @@
 
 #include "soh/Enhancements/custom-message/CustomMessageManager.h"
 
-#include <spdlog/spdlog.h>
-
 #include <unordered_map>
 
 extern "C" PlayState* gPlayState;
@@ -222,20 +220,6 @@ EnOssan* FindShopOwnerMidWelcome(uint16_t textId) {
 }
 
 void SpeakShopGreeting(uint16_t* textId, bool* loadFromMessageTable) {
-    // TEMPORARY probe, 2026-08-06. Two attempts at identifying the welcome have missed, so this logs
-    // the raw state of every shopkeeper in the scene next to the textId being opened, rather than
-    // logging a verdict that already assumes the thing being tested. Remove once confirmed.
-    if (IS_RANDO && gPlayState != nullptr) {
-        for (Actor* actor = gPlayState->actorCtx.actorLists[ACTORCAT_NPC].head; actor != nullptr;
-             actor = actor->next) {
-            if (actor->id == ACTOR_EN_OSSAN) {
-                SPDLOG_INFO("[SevenSages] shop probe: opening=0x{:04X} ossanTextId=0x{:04X} params={} state={} mask={}",
-                            *textId, actor->textId, actor->params, ((EnOssan*)actor)->stateFlag,
-                            IsWearingKeatonMask());
-            }
-        }
-    }
-
     if (!IS_RANDO || gPlayState == nullptr || !IsWearingKeatonMask() ||
         FindShopOwnerMidWelcome(*textId) == nullptr) {
         return;
