@@ -1,12 +1,27 @@
 /**
- * Seven Sages - Phase 6: Mask of Truth. While worn, chests and grottos in the current scene are
- * marked with a floating gem drawn through walls.
+ * Seven Sages - Phase 6: world markers for things worth finding. A floating gem drawn through
+ * walls, over each marked object in the current scene.
+ *
+ * TWO ITEMS SHARE THIS RENDERER, and each one owns a different half of what it marks:
+ *
+ *   - Mask of Truth  -> chests  ("while worn, reveals all overworld chest positions")
+ *   - Stone of Agony -> grottos ("reveals all hidden grottos")
+ *
+ * That split is the resolution of a collision, recorded 2026-08-06. The Mask of Truth's scope was
+ * widened from chests to chests-and-grottos on 2026-08-05, apparently without noticing that the
+ * Stone of Agony's own spec line - written eleven days earlier - already claimed the grottos. Built
+ * as specified, the two items would have done the same job. On the author's call the widening is
+ * reverted and each item goes back to its own original spec line, which costs nothing here: the
+ * grotto walk simply moves behind a different gate, and the drawing is untouched and shared.
+ *
+ * The Mask of Truth is expected to gain a different second power later; this file is where its
+ * marking half lives when it does.
  *
  * Spec (docs/item-ability-overhaul.md, Masks, resolved 2026-08-05): reading (a) of three - world
- * markers on everything loaded in the current scene - widened from chests to include grottos,
- * everywhere, Hyrule Field's included. The other two readings (minimap dots; every chest in the
- * region regardless of load state) were priced and rejected: neither has any vanilla precedent to
- * build on, and the second needs static per-scene chest data that does not exist in this build.
+ * markers on everything loaded in the current scene. The other two readings (minimap dots; every
+ * chest in the region regardless of load state) were priced and rejected: neither has any vanilla
+ * precedent to build on, and the second needs static per-scene chest data that does not exist in
+ * this build.
  *
  * Enumeration is two actor-category walks and no new data at all:
  *
@@ -14,7 +29,7 @@
  *   - Grottos are Door_Ana, which lives in ACTORCAT_ITEMACTION alongside other things, so that walk
  *     is filtered by actor id.
  *
- * The grotto half is the better half, and the reason is how vanilla hides them. A hidden grotto is
+ * The grotto half is the more valuable half, and the reason is how vanilla hides them. A hidden grotto is
  * not spawned on reveal - it spawns with the room and sits in DoorAna_WaitClosed scaled to nothing
  * (`Actor_SetScale(&this->actor, 0)`, z_door_ana.c:73-86). So it is already in the actor list,
  * already at its final position, and simply invisible. Better still, the Song of Storms variants
@@ -27,7 +42,7 @@
  * Two things the spec is explicit about, both honoured here:
  *
  *   - Hidden and revealed grottos are marked IDENTICALLY. A different marker for "still hidden"
- *     would leak how it opens, which is a hint the mask was never meant to give.
+ *     would leak how it opens, which is a hint neither item was ever meant to give.
  *   - Opened chests keep their marker. The spec says positions, and a player who already looted a
  *     chest is not harmed by seeing where it was.
  *
@@ -36,7 +51,9 @@
  * grotto markers from reading as a field full of chests.
  *
  * The mask's two vanilla behaviours are untouched: gossip stones still read, and the Deku Scrub
- * reaction still runs through its own VB_DEKU_SCRUBS_REACT_TO_MASK_OF_TRUTH hook.
+ * reaction still runs through its own VB_DEKU_SCRUBS_REACT_TO_MASK_OF_TRUTH hook. The stone's is
+ * untouched too - Player_DetectRumbleSecrets still rumbles, and SevenSagesStoneOfAgony.cpp hangs
+ * its proximity sound off the same edge.
  */
 #include <vector>
 
@@ -138,23 +155,34 @@ void BuildMarkerMesh() {
     sMarkerMeshBuilt = true;
 }
 
+// The mask has to be actively worn. The stone is a quest item with no worn state, so simply
+// holding it is the condition - which also matches how vanilla already treats it for the rumble
+// (Player_DetectRumbleSecrets tests CHECK_QUEST_ITEM and nothing else).
 bool IsWearingMaskOfTruth() {
     Player* player = GET_PLAYER(gPlayState);
     return player != nullptr && player->currentMask == PLAYER_MASK_TRUTH;
 }
 
+bool HasStoneOfAgony() {
+    return CHECK_QUEST_ITEM(QUEST_STONE_OF_AGONY);
+}
+
 void CollectMarkers(std::vector<Marker>& markers) {
-    for (Actor* actor = gPlayState->actorCtx.actorLists[ACTORCAT_CHEST].head;
-         actor != NULL && markers.size() < (size_t)MAX_MARKERS; actor = actor->next) {
-        markers.push_back({ actor->world.pos, CHEST_COLOR });
+    if (IsWearingMaskOfTruth()) {
+        for (Actor* actor = gPlayState->actorCtx.actorLists[ACTORCAT_CHEST].head;
+             actor != NULL && markers.size() < (size_t)MAX_MARKERS; actor = actor->next) {
+            markers.push_back({ actor->world.pos, CHEST_COLOR });
+        }
     }
 
-    for (Actor* actor = gPlayState->actorCtx.actorLists[ACTORCAT_ITEMACTION].head;
-         actor != NULL && markers.size() < (size_t)MAX_MARKERS; actor = actor->next) {
-        // ACTORCAT_ITEMACTION is a mixed bag - Door_Ana shares it with dropped-item and effect
-        // actors - so unlike the chest walk this one has to filter.
-        if (actor->id == ACTOR_DOOR_ANA) {
-            markers.push_back({ actor->world.pos, GROTTO_COLOR });
+    if (HasStoneOfAgony()) {
+        for (Actor* actor = gPlayState->actorCtx.actorLists[ACTORCAT_ITEMACTION].head;
+             actor != NULL && markers.size() < (size_t)MAX_MARKERS; actor = actor->next) {
+            // ACTORCAT_ITEMACTION is a mixed bag - Door_Ana shares it with dropped-item and effect
+            // actors - so unlike the chest walk this one has to filter.
+            if (actor->id == ACTOR_DOOR_ANA) {
+                markers.push_back({ actor->world.pos, GROTTO_COLOR });
+            }
         }
     }
 }
@@ -165,10 +193,14 @@ void CollectMarkers(std::vector<Marker>& markers) {
 // reason SevenSagesAoeField.cpp documents at length: OPEN_DISPS/CLOSE_DISPS embed a forward
 // declaration of FrameInterpolation_RecordOpenChild/CloseChild, and a bare declaration textually
 // inside an anonymous namespace gets internal linkage, so the call fails to link.
-void SevenSagesMaskOfTruthDraw() {
-    if (!GameInteractor::IsSaveLoaded(true) || gPlayState == nullptr || !IsWearingMaskOfTruth()) {
+void SevenSagesSecretMarkersDraw() {
+    if (!GameInteractor::IsSaveLoaded(true) || gPlayState == nullptr) {
         return;
     }
+    // No item gate here on purpose - CollectMarkers applies one per walk, so a player holding only
+    // the stone gets grottos, only the mask gets chests, and both gets both. An early-out here
+    // would have to duplicate that condition and could drift from it.
+
 
     std::vector<Marker> markers;
     CollectMarkers(markers);
@@ -226,8 +258,8 @@ void SevenSagesMaskOfTruthDraw() {
     CLOSE_DISPS(gPlayState->state.gfxCtx);
 }
 
-static void RegisterSevenSagesMaskOfTruth() {
-    COND_HOOK(OnPlayDrawEnd, IS_RANDO, SevenSagesMaskOfTruthDraw);
+static void RegisterSevenSagesSecretMarkers() {
+    COND_HOOK(OnPlayDrawEnd, IS_RANDO, SevenSagesSecretMarkersDraw);
 }
 
-static RegisterShipInitFunc sevenSagesMaskOfTruthInitFunc(RegisterSevenSagesMaskOfTruth, { "IS_RANDO" });
+static RegisterShipInitFunc sevenSagesSecretMarkersInitFunc(RegisterSevenSagesSecretMarkers, { "IS_RANDO" });
