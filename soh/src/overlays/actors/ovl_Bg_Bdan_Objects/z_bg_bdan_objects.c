@@ -6,6 +6,7 @@
 
 #include "z_bg_bdan_objects.h"
 #include "objects/object_bdan_objects/object_bdan_objects.h"
+#include "soh/Enhancements/game-interactor/GameInteractor_Hooks.h"
 
 #define FLAGS ACTOR_FLAG_UPDATE_CULLING_DISABLED
 
@@ -175,7 +176,7 @@ void BgBdanObjects_Destroy(Actor* thisx, PlayState* play) {
 void BgBdanObjects_OctoPlatform_WaitForRutoToStartCutscene(BgBdanObjects* this, PlayState* play) {
     Player* player = GET_PLAYER(play);
 
-    if (BgBdanObjects_GetContactRu1(this, 0)) {
+    if (GameInteractor_Should(VB_JABU_OCTO_PLATFORM_BE_BOARDED, BgBdanObjects_GetContactRu1(this, 0), this)) {
         if (this->dyna.actor.xzDistToPlayer < 250.0f) {
             BgBdanObjects_SetContactRu1(this, 1);
             this->timer = 20;
@@ -234,7 +235,7 @@ void BgBdanObjects_OctoPlatform_WaitForRutoToAdvanceCutscene(BgBdanObjects* this
         }
     }
 
-    if (BgBdanObjects_GetContactRu1(this, 3)) {
+    if (GameInteractor_Should(VB_JABU_OCTO_PLATFORM_SPAWN_BIG_OCTO, BgBdanObjects_GetContactRu1(this, 3), this)) {
         Actor_SpawnAsChild(&play->actorCtx, &this->dyna.actor, play, ACTOR_EN_BIGOKUTA, this->dyna.actor.world.pos.x,
                            this->dyna.actor.world.pos.y + 140.0f, this->dyna.actor.world.pos.z, 0,
                            this->dyna.actor.shape.rot.y + 0x8000, 0, 0);

@@ -1572,6 +1572,46 @@ typedef enum {
 
     // #### `result`
     // ```c
+    // heldActor != NULL && heldActor->id == ACTOR_EN_RU1
+    // ```
+    // #### `args`
+    // - `*BgBdanSwitch`
+    //
+    // ### Note:
+    // The Jabu-Jabu weight switches in front of the forked corridor. Vanilla wants the player
+    // standing on the switch *and* holding Ruto specifically; this is only the held-actor half,
+    // already ANDed with `DynaPolyActor_IsPlayerOnTop`. Override it to change what counts as
+    // heavy enough without touching the standing-on-it half or the 6-frame settle.
+    VB_JABU_SWITCH_BE_WEIGHED_DOWN,
+
+    // #### `result`
+    // ```c
+    // BgBdanObjects_GetContactRu1(this, 0)
+    // ```
+    // #### `args`
+    // - `*BgBdanObjects`
+    //
+    // ### Note:
+    // The Big Octo platform's "Ruto is aboard" test. Vanilla has no weight mechanic here - Ruto
+    // signals the platform by writing `CAM_SET_NORMAL0` into its `cameraSetting` field, which this
+    // reads back. Still ANDed with vanilla's own `xzDistToPlayer < 250.0f` proximity check.
+    VB_JABU_OCTO_PLATFORM_BE_BOARDED,
+
+    // #### `result`
+    // ```c
+    // BgBdanObjects_GetContactRu1(this, 3)
+    // ```
+    // #### `args`
+    // - `*BgBdanObjects`
+    //
+    // ### Note:
+    // The second half of the same handshake, and the thing that actually spawns Big Octo: the
+    // raised platform waits for Ruto to write `CAM_SET_DUNGEON1` before `ACTOR_EN_BIGOKUTA` is
+    // spawned as its child. Overriding this is what lets the sequence finish without her.
+    VB_JABU_OCTO_PLATFORM_SPAWN_BIG_OCTO,
+
+    // #### `result`
+    // ```c
     // varies
     // ```
     // #### `args`
