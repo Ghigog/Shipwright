@@ -41,7 +41,7 @@ constexpr float HOVER_BOOTS_RUN_FACTOR = 1.35f;
 // into ~11, and its ~7.4 deg/frame turn ceiling into ~11 - still visibly icy.
 constexpr float HOVER_BOOTS_GRIP_FACTOR = 1.5f;
 
-bool WearingBoots(const Player* player, u8 boots) {
+bool WearingBoots(const Player* player, s8 boots) {
     if (!IS_RANDO || !GameInteractor::IsSaveLoaded(true)) {
         return false;
     }
