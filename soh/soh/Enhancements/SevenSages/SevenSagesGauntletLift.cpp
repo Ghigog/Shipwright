@@ -169,6 +169,12 @@ s16 sOwnedActorId = 0;
 LiftPhase sPhase = LIFT_PHASE_NONE;
 s16 sFlyFrames = 0;
 
+// Only the bits TakeOwnership actually turned on, so ReleaseOwnership can put the actor back exactly
+// as it found it. Not a constant mask: 169 enemy overlays touch ACTOR_FLAG_UPDATE_CULLING_DISABLED,
+// several of them setting it for their own reasons, and clearing it unconditionally would leave such
+// an enemy permanently culled when vanilla wants it always-updating.
+u32 sAddedFlags = 0;
+
 bool IsBoulder(const Actor* actor) {
     return actor->id == ACTOR_OBJ_BOMBIWA || actor->id == ACTOR_OBJ_HAMISHI;
 }
@@ -223,7 +229,8 @@ void TakeOwnership(Actor* actor) {
     // En_Ishi declares in its own ActorInit and what "pick up and throw" means. UPDATE_CULLING and
     // room -1 both mirror EnIshi_SetupLiftedUp: a carried actor follows Link out of the volume it
     // was spawned in, and must not be culled or room-despawned out of his hands.
-    actor->flags |= ACTOR_FLAG_THROW_ONLY | ACTOR_FLAG_UPDATE_CULLING_DISABLED;
+    sAddedFlags = ~actor->flags & (ACTOR_FLAG_THROW_ONLY | ACTOR_FLAG_UPDATE_CULLING_DISABLED);
+    actor->flags |= sAddedFlags;
     actor->room = -1;
 
     if (IsBoulder(actor)) {
@@ -234,12 +241,18 @@ void TakeOwnership(Actor* actor) {
 void ReleaseOwnership(Actor* actor) {
     if (actor != nullptr) {
         actor->freezeTimer = 0;
+        // A boulder is killed immediately after this and never notices, but a thrown enemy survives
+        // by design and would otherwise carry UPDATE_CULLING_DISABLED for the rest of its life -
+        // updating at any distance, never despawning with its culling volume. En_Ishi leaves the same
+        // flag set on release and gets away with it only because its rocks always shatter on landing.
+        actor->flags &= ~sAddedFlags;
         // Back into the room Link is standing in now, not the one it was picked up from - carrying
         // something through a door and dropping it there should leave it there.
         actor->room = gPlayState->roomCtx.curRoom.num;
     }
     sOwnedActor = nullptr;
     sOwnedActorId = 0;
+    sAddedFlags = 0;
     sPhase = LIFT_PHASE_NONE;
     sFlyFrames = 0;
 }
@@ -342,9 +355,11 @@ void OfferLifts(Player* player) {
 
 void SevenSagesGauntletLiftFrameUpdate() {
     if (gPlayState == nullptr || !GameInteractor::IsSaveLoaded(true)) {
-        // Not a release - there is no live actor to hand back to. Just forget the pointer.
+        // Not a release - there is no live actor to hand back to. Just forget the pointer, and the
+        // flags we would have restored along with it.
         sOwnedActor = nullptr;
         sOwnedActorId = 0;
+        sAddedFlags = 0;
         sPhase = LIFT_PHASE_NONE;
         return;
     }
@@ -354,6 +369,7 @@ void SevenSagesGauntletLiftFrameUpdate() {
     if (sOwnedActor != nullptr && !ActorIsStillLoaded(sOwnedActor, sOwnedActorId)) {
         sOwnedActor = nullptr;
         sOwnedActorId = 0;
+        sAddedFlags = 0;
         sPhase = LIFT_PHASE_NONE;
     }
 
