@@ -558,14 +558,32 @@ static s32 sFloorType = 0;
 #define SEVEN_SAGES_SKATE_STEP_RATE 1.0f
 #define SEVEN_SAGES_SKATE_GLIDE_MIN_FRAMES 0
 #define SEVEN_SAGES_SKATE_GLIDE_MAX_FRAMES 20
-// MAX_SPEED is the actual run cap, not a guess: R_RUN_SPEED_LIMIT ships 600 for ordinary boots and
-// linearVelocity is CLAMPed to it (z_player.c:7341), so 6.0 is as fast as Link goes on foot. It was
-// briefly set to 7.5, which put the top of the ramp past anything reachable and quietly capped the
-// glide at ~73% of MAX_FRAMES.
-#define SEVEN_SAGES_SKATE_GLIDE_MIN_SPEED 2.0f
-#define SEVEN_SAGES_SKATE_GLIDE_MAX_SPEED 6.0f
-static s32 sSevenSagesSkateHeldFrames = 0; // frames the current glide has run so far
+// Both bounds are measured, not derived. Reading R_RUN_SPEED_LIMIT (600) and the clamp at
+// z_player.c:7341 suggests a 6.0 ceiling, but that is wrong for these boots: the Hover Boots' speed
+// factor is applied *after* the clamp, and a probe run logs a steady 7.43. Anything at or above
+// MAX_SPEED saturates to MAX_FRAMES, so a ceiling set too low is invisible - it just pins every
+// glide to maximum, which is exactly how the first attempt failed.
+//
+// MIN_SPEED sits below walking pace on purpose. It is not "where gliding begins" - the smoothing
+// below decides that - it is only the bottom of the ramp.
+#define SEVEN_SAGES_SKATE_GLIDE_MIN_SPEED 1.0f
+#define SEVEN_SAGES_SKATE_GLIDE_MAX_SPEED 7.4f
+
+// How fast the glide's notion of speed catches up to Link's actual speed, per update tick.
+//
+// This exists because linearVelocity cannot drive the ramp on its own. A probe run shows Link going
+// from 0.10 to the full 7.43 between one footfall and the next - the acceleration is over inside a
+// single step, so a ramp keyed directly to velocity has exactly two values to show (none, then
+// full) and reads as a switch rather than a build-up.
+//
+// Feeding the ramp a lagged speed instead spreads that build-up over the two or three steps it takes
+// to settle, which is the "gradually gets longer as I build up speed" this is meant to be. It is a
+// deliberate lie about how fast Link is going, and the honest version was tried first and does not
+// work. Lower = longer, more gradual build; higher = closer to raw velocity.
+#define SEVEN_SAGES_SKATE_SPEED_LERP 0.06f
+static s32 sSevenSagesSkateHeldFrames = 0; // ticks the current glide has run so far
 static s32 sSevenSagesSkateGliding = false;
+static f32 sSevenSagesSkateSpeed = 0.0f; // lagged linearVelocity; see SEVEN_SAGES_SKATE_SPEED_LERP
 static f32 sWaterSpeedFactor = 1.0f;    // Set to 0.5f in water, 1.0f otherwise. Influences different speed values.
 static f32 sInvWaterSpeedFactor = 1.0f; // Inverse of `sWaterSpeedFactor` (1.0f / sWaterSpeedFactor)
 static u32 sTouchedWallFlags = 0;
@@ -8330,11 +8348,15 @@ void func_8084029C(Player* this, f32 arg1) {
         // would desynchronise the footstep sound from the foot.
         arg1 *= SEVEN_SAGES_SKATE_STEP_RATE;
 
+        // Advanced every tick, including through a glide, so a hold entered early keeps lengthening
+        // while the lagged speed is still climbing under it.
+        sSevenSagesSkateSpeed += (this->linearVelocity - sSevenSagesSkateSpeed) * SEVEN_SAGES_SKATE_SPEED_LERP;
+
         if (sSevenSagesSkateGliding) {
             // Re-derived from the *current* speed each frame, so a glide entered at walking pace
             // keeps extending while Link accelerates under it, and shortens if he slows. A target of
             // 0 releases immediately, which is how low speeds get ordinary steps for free.
-            if (sSevenSagesSkateHeldFrames < SevenSagesSkateGlideFrames(this->linearVelocity)) {
+            if (sSevenSagesSkateHeldFrames < SevenSagesSkateGlideFrames(sSevenSagesSkateSpeed)) {
                 sSevenSagesSkateHeldFrames++;
                 arg1 = 0.0f;
             } else {
@@ -8352,12 +8374,14 @@ void func_8084029C(Player* this, f32 arg1) {
             // step, and the speed range it maps over was assumed rather than measured. One footfall
             // per line, so a single run down a straight path shows whether linearVelocity actually
             // climbs gradually or snaps to the cap. Remove once the ramp is confirmed.
-            lusprintf(__FILE__, __LINE__, 2, "[SevenSages] skate push: speed=%.2f glideFrames=%d",
-                      this->linearVelocity, SevenSagesSkateGlideFrames(this->linearVelocity));
+            lusprintf(__FILE__, __LINE__, 2, "[SevenSages] skate push: speed=%.2f lagged=%.2f glideFrames=%d",
+                      this->linearVelocity, sSevenSagesSkateSpeed,
+                      SevenSagesSkateGlideFrames(sSevenSagesSkateSpeed));
         }
     } else {
         sSevenSagesSkateGliding = false;
         sSevenSagesSkateHeldFrames = 0;
+        sSevenSagesSkateSpeed = 0.0f;
     }
 
     if ((this->currentBoots == PLAYER_BOOTS_HOVER) && !(this->actor.bgCheckFlags & BGCHECKFLAG_GROUND) &&
