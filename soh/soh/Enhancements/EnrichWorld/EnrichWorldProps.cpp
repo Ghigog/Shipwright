@@ -49,16 +49,29 @@ struct EnrichedRoom {
     std::vector<ActorEntry> props;
 };
 
-// Nothing placed yet - this is the scaffold. Entries look like:
-//
-//     { SCENE_HYRULE_FIELD, 0, {
-//         { ACTOR_OBJ_HANA, { 1234, 0, -5678 }, { 0, 0, 0 }, 0 },
-//     } },
-//
-// Check the prop's object is native to that room first (see the header comment). If a scene
-// ever needs props to differ by age or time of day, this struct is where that filter goes -
-// vanilla varies room contents the same way, via alternate scene headers.
-const std::vector<EnrichedRoom> enrichedRooms = {};
+// Check the prop's object is native to that room before adding an entry (see the header
+// comment). If a scene ever needs props to differ by age or time of day, this struct is where
+// that filter goes - vanilla varies room contents the same way, via alternate scene headers.
+const std::vector<EnrichedRoom> enrichedRooms = {
+    // Hyrule Field - two trees flanking the Market drawbridge where it lands in the field.
+    //
+    // OBJECT_WOOD02 is in spot00's base object list, and params 0x0205 (WOOD_TREE_OVAL_GREEN,
+    // drop table 0x02) is exactly what the three vanilla trees on the west bank already use.
+    //
+    // Not literally beside the gate walls: those sit at x +/-180..340, z 360..680, and the moat
+    // (floor y = -140, spanning x -800..800 / z 700..1000) runs along both of their outer faces,
+    // so there is no ground to stand a tree on there. z = 1400 is the first flat y = 0 ground
+    // past the bridge, which frames the exit instead. Both spots verified against the scene
+    // collision mesh: ground y = 0, >= 315 units from the nearest wall, >= 544 from any existing
+    // actor. The west bank already has vanilla trees; the east was bare.
+    //
+    // rot.z must stay 0 - EnWood02_Init treats a non-zero home.rot.z as a packed drop/flag value
+    // and rewrites params. rot.y is free and is only varied here so the pair doesn't look cloned.
+    { SCENE_HYRULE_FIELD, 0, {
+        { ACTOR_EN_WOOD02, { -650, 0, 1400 }, { 0, 8000, 0 }, 517 },
+        { ACTOR_EN_WOOD02, { 650, 0, 1400 }, { 0, -12000, 0 }, 517 },
+    } },
+};
 
 void EnrichWorldOnSceneSpawnActors() {
     for (const auto& room : enrichedRooms) {

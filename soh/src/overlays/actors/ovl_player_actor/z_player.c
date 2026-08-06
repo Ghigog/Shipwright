@@ -535,8 +535,8 @@ static s16 sControlStickWorldYaw = 0;
 static s32 sUpperBodyIsBusy = false; // see `Player_UpdateUpperBody`
 static s32 sFloorType = 0;
 
-// Seven Sages: the Hover Boots' skating rhythm - the step plays slowly, then the run cycle is held
-// still, so Link reads as pushing off and then gliding rather than running. See func_8084029C.
+// Seven Sages: the Hover Boots' skating rhythm - the step plays, then the run cycle is held still,
+// so Link reads as pushing off and then gliding rather than running. See func_8084029C.
 // Four playtests settled this: the step wants to be left alone (1.0f, i.e. exactly the ordinary run
 // cycle - 0.25f read as wading, 1.5f as skittering), and everything expressive lives in the glide.
 //
@@ -544,6 +544,12 @@ static s32 sFloorType = 0;
 // skating rather than as a limp: pushing off from a standstill gives almost no glide, so the first
 // steps look like ordinary steps, and the hold grows as Link builds to full stride. Below MIN_SPEED
 // there is no hold at all and walking is untouched.
+//
+// The target is recomputed *every frame of the hold*, not sampled once at the push. That is the
+// point of the effect: accelerating down a straight path, each glide is longer than the last and an
+// individual glide keeps stretching as the speed under it builds. Sampling at the push instead was
+// tried first and is wrong for this - it quantises the ramp to one step per glide, so the build-up
+// reads as steps rather than as a smooth gathering of speed.
 //
 // STEP_RATE is kept as a live dial even though 1.0f makes the multiply a no-op. Note that raising it
 // above 1.0f lets the scaled increment exceed the 7.25 clamp applied further up func_8084029C; that
@@ -554,7 +560,8 @@ static s32 sFloorType = 0;
 #define SEVEN_SAGES_SKATE_GLIDE_MAX_FRAMES 20
 #define SEVEN_SAGES_SKATE_GLIDE_MIN_SPEED 2.0f
 #define SEVEN_SAGES_SKATE_GLIDE_MAX_SPEED 7.5f
-static s32 sSevenSagesSkateHoldFrames = 0;
+static s32 sSevenSagesSkateHeldFrames = 0; // frames the current glide has run so far
+static s32 sSevenSagesSkateGliding = false;
 static f32 sWaterSpeedFactor = 1.0f;    // Set to 0.5f in water, 1.0f otherwise. Influences different speed values.
 static f32 sInvWaterSpeedFactor = 1.0f; // Inverse of `sWaterSpeedFactor` (1.0f / sWaterSpeedFactor)
 static u32 sTouchedWallFlags = 0;
@@ -8271,6 +8278,23 @@ s32 func_8084021C(f32 arg0, f32 arg1, f32 arg2, f32 arg3) {
     return 0;
 }
 
+// Seven Sages: how many frames the skating glide should last at this speed. Linear ramp between the
+// two speed bounds, flat outside them. Called every frame of a glide, not once per push - see
+// func_8084029C.
+static s32 SevenSagesSkateGlideFrames(f32 speed) {
+    f32 scale = (speed - SEVEN_SAGES_SKATE_GLIDE_MIN_SPEED) /
+                (SEVEN_SAGES_SKATE_GLIDE_MAX_SPEED - SEVEN_SAGES_SKATE_GLIDE_MIN_SPEED);
+
+    if (scale < 0.0f) {
+        scale = 0.0f;
+    } else if (scale > 1.0f) {
+        scale = 1.0f;
+    }
+
+    return SEVEN_SAGES_SKATE_GLIDE_MIN_FRAMES +
+           (s32)(scale * (SEVEN_SAGES_SKATE_GLIDE_MAX_FRAMES - SEVEN_SAGES_SKATE_GLIDE_MIN_FRAMES));
+}
+
 void func_8084029C(Player* this, f32 arg1) {
     f32 updateScale = R_UPDATE_RATE * 0.5f;
 
@@ -8302,33 +8326,27 @@ void func_8084029C(Player* this, f32 arg1) {
         // would desynchronise the footstep sound from the foot.
         arg1 *= SEVEN_SAGES_SKATE_STEP_RATE;
 
-        if (sSevenSagesSkateHoldFrames > 0) {
-            sSevenSagesSkateHoldFrames--;
-            arg1 = 0.0f;
+        if (sSevenSagesSkateGliding) {
+            // Re-derived from the *current* speed each frame, so a glide entered at walking pace
+            // keeps extending while Link accelerates under it, and shortens if he slows. A target of
+            // 0 releases immediately, which is how low speeds get ordinary steps for free.
+            if (sSevenSagesSkateHeldFrames < SevenSagesSkateGlideFrames(this->linearVelocity)) {
+                sSevenSagesSkateHeldFrames++;
+                arg1 = 0.0f;
+            } else {
+                sSevenSagesSkateGliding = false;
+                sSevenSagesSkateHeldFrames = 0;
+            }
         } else if (func_8084021C(this->unk_868, arg1, 29.0f, 10.0f) ||
                    func_8084021C(this->unk_868, arg1, 29.0f, 24.0f)) {
-            // Armed on the crossing frame, so the step completes and its footstep sfx still plays;
-            // the hold starts from the next frame.
-            //
-            // Length is taken from the speed *at the moment of the push*, not re-read while the hold
-            // runs down. That is what makes a glide feel committed: it carries the momentum it was
-            // launched with, and letting go of the stick mid-glide does not cut it short.
-            f32 glideScale =
-                (this->linearVelocity - SEVEN_SAGES_SKATE_GLIDE_MIN_SPEED) /
-                (SEVEN_SAGES_SKATE_GLIDE_MAX_SPEED - SEVEN_SAGES_SKATE_GLIDE_MIN_SPEED);
-
-            if (glideScale < 0.0f) {
-                glideScale = 0.0f;
-            } else if (glideScale > 1.0f) {
-                glideScale = 1.0f;
-            }
-
-            sSevenSagesSkateHoldFrames =
-                SEVEN_SAGES_SKATE_GLIDE_MIN_FRAMES +
-                (s32)(glideScale * (SEVEN_SAGES_SKATE_GLIDE_MAX_FRAMES - SEVEN_SAGES_SKATE_GLIDE_MIN_FRAMES));
+            // Armed on the crossing frame rather than held on it, so the step completes and its
+            // footstep sfx still plays; the glide starts from the next frame.
+            sSevenSagesSkateGliding = true;
+            sSevenSagesSkateHeldFrames = 0;
         }
     } else {
-        sSevenSagesSkateHoldFrames = 0;
+        sSevenSagesSkateGliding = false;
+        sSevenSagesSkateHeldFrames = 0;
     }
 
     if ((this->currentBoots == PLAYER_BOOTS_HOVER) && !(this->actor.bgCheckFlags & BGCHECKFLAG_GROUND) &&
