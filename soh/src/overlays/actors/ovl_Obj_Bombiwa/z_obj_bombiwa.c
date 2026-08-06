@@ -126,8 +126,19 @@ void ObjBombiwa_Update(Actor* thisx, PlayState* play) {
     ObjBombiwa* this = (ObjBombiwa*)thisx;
     s32 pad;
 
+    // Seven Sages: the brown boulder additionally accepts the bomb bit (0x8) that Din's Fire carries,
+    // so Din's Fire breaks it the way a bomb does.
+    //
+    // The widening is here rather than on Din's Fire's own collider on purpose, and this is the
+    // second attempt. Adding 0x40 to Din's Fire made it match this actor's 0x40000040 - but
+    // Obj_Hamishi, the *bronze* boulder, tests the identical mask (z_obj_hamishi.c:175), so Din's
+    // Fire started breaking hammer-only boulders too. The two boulders are distinguished by which
+    // actor they are, not by any flag, so the tier split can only be expressed on the boulder side.
+    u32 sevenSagesBreakFlags = IS_RANDO ? 0x40000048 : 0x40000040;
+
     if ((func_80033684(play, &this->actor) != NULL) ||
-        ((this->collider.base.acFlags & AC_HIT) && (this->collider.info.acHitInfo->toucher.dmgFlags & 0x40000040))) {
+        ((this->collider.base.acFlags & AC_HIT) &&
+         (this->collider.info.acHitInfo->toucher.dmgFlags & sevenSagesBreakFlags))) {
         ObjBombiwa_Break(this, play);
         Flags_SetSwitch(play, this->actor.params & 0x3F);
         SoundSource_PlaySfxAtFixedWorldPos(play, &this->actor.world.pos, 80, NA_SE_EV_WALL_BROKEN);

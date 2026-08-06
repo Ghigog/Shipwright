@@ -3039,6 +3039,18 @@ void StaticData::HintTable_Init() {
         "#[[1]]#. Good luck finding it.",
         { QM_RED }));
 
+    // Fire Temple Goron Entrance - Fire Temple
+    hintTextTable[RHT_NPC_FT_GORON_ENTRANCE] = HintText(CustomMessage(
+        "Right by the door and still I couldn't get out, goro. Embarrassing.^There's a shortcut through the "
+        "rock maze with #[[1]]# behind it.",
+        { QM_RED }));
+
+    // Fire Temple Goron Lava Room Bomb - Fire Temple
+    hintTextTable[RHT_NPC_FT_GORON_LAVA_ROOM_BOMB] = HintText(CustomMessage(
+        "Goro! Across the lava from where you came in, that was me.^A door round here won't open without a "
+        "bang. #[[1]]# sits behind it.",
+        { QM_RED }));
+
 // <<< SEVEN_SAGES_GENERATED: HINT_TEXT
     /*--------------------------
     |    Static Entrance Hint   |

@@ -4946,12 +4946,31 @@ s32 func_808382DC(Player* this, PlayState* play) {
                 static u8 D_808544F4[] = { 120, 60 };
                 s32 sp48 = func_80838144(sFloorType);
 
+                // Seven Sages: `sp48 >= 0` is the hot-floor test (func_80838144 - floor types 2 and 3,
+                // which is what lava is), and the two clauses that use it are the burn-your-feet
+                // damage. **This is where "lava still hurts" actually lived**, not in the ignition
+                // tick further down - the 2026-08-06 fix there was real but was fixing a different
+                // source of the same symptom.
+                //
+                // Note what vanilla's Goron Tunic does in the third clause: it does not prevent this
+                // damage, it only *delays* it, until floorTypeTimer passes D_808544F4[sp48]. Stand on
+                // lava long enough in vanilla and the Goron Tunic burns you anyway. That is why this
+                // reproduced with the tunic equipped and not just with the mask, and it is why
+                // widening the tunic test alone would not have been enough - the timer clause would
+                // still fire.
+                //
+                // Our spec says the Red Tunic is *complete* fire protection, so both hot-floor
+                // clauses are refused outright while any fire-protection source is active. The wall
+                // clause is deliberately untouched: damaging walls are spikes and the like, not fire,
+                // and nothing about fire protection should make Link immune to those.
+                s32 sevenSagesHotFloorSafe = SevenSagesFireProtectionActive();
+
                 if (((this->actor.wallPoly != NULL) &&
                      SurfaceType_IsWallDamage(&play->colCtx, this->actor.wallPoly, this->actor.wallBgId)) ||
-                    ((sp48 >= 0) &&
+                    (!sevenSagesHotFloorSafe && (sp48 >= 0) &&
                      SurfaceType_IsWallDamage(&play->colCtx, this->actor.floorPoly, this->actor.floorBgId) &&
                      (this->floorTypeTimer >= D_808544F4[sp48])) ||
-                    ((sp48 >= 0) &&
+                    (!sevenSagesHotFloorSafe && (sp48 >= 0) &&
                      ((this->currentTunic != PLAYER_TUNIC_GORON && CVarGetInteger(CVAR_CHEAT("SuperTunic"), 0) == 0) ||
                       (this->floorTypeTimer >= D_808544F4[sp48])))) {
                     this->floorTypeTimer = 0;

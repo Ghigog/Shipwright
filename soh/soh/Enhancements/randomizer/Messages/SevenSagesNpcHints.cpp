@@ -218,6 +218,8 @@ constexpr NpcHintSpeaker npcHintSpeakers[] = {
     { ACTOR_EN_GO2, SCENE_FIRE_TEMPLE, 0xFC00, 0x0C00, 0x3071, RH_NPC_FT_GORON_FALLING_DOORS },  // Fire Temple Goron Falling Doors
     { ACTOR_EN_GO2, SCENE_FIRE_TEMPLE, 0xFC00, 0x2800, 0x3071, RH_NPC_FT_GORON_OCARINA },  // Fire Temple Goron Ocarina
     { ACTOR_EN_GO2, SCENE_FIRE_TEMPLE, 0xFC00, 0x2C00, 0x3071, RH_NPC_FT_GORON_HIDDEN_DOOR },  // Fire Temple Goron Hidden Door
+    { ACTOR_EN_GO2, SCENE_FIRE_TEMPLE, 0xFC00, 0x2400, 0x3071, RH_NPC_FT_GORON_ENTRANCE },  // Fire Temple Goron Entrance
+    { ACTOR_EN_GO2, SCENE_FIRE_TEMPLE, 0xFC00, 0x0800, 0x3071, RH_NPC_FT_GORON_LAVA_ROOM_BOMB },  // Fire Temple Goron Lava Room Bomb
 // <<< SEVEN_SAGES_GENERATED: SPEAKERS
 };
 
