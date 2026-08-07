@@ -1607,6 +1607,11 @@ typedef struct FileChooseContext {
     uint8_t randomizerIndex;
     int16_t randomizerUIAlpha;
     uint16_t randomizerArrowOffset;
+    // Seven Sages sage-select screen. Index runs 0..6 over the sage enum, not over ring
+    // positions: the six medallions are drawn in a ring and Zelda in the centre, but
+    // navigation stays a flat cycle so it does not have to model the geometry.
+    uint8_t sevenSagesIndex;
+    int16_t sevenSagesUIAlpha;
 } FileChooseContext; // size = 0x1CAE0
 
 // Macros for `EntranceInfo.field`

@@ -16,6 +16,7 @@
 #include "objects/gameplay_keep/gameplay_keep.h"
 #include "soh_assets.h"
 #include "soh/Enhancements/boss-rush/BossRush.h"
+#include "soh/Enhancements/SevenSages/SevenSagesSelectMenu.h"
 #include "soh/Enhancements/FileSelectEnhancements.h"
 #include "soh/Enhancements/game-interactor/GameInteractor_Hooks.h"
 #include <assert.h>
@@ -613,6 +614,21 @@ void FileChoose_StartBossRushMenu(GameState* thisx) {
     }
 }
 
+void FileChoose_StartSevenSagesMenu(GameState* thisx) {
+    FileChooseContext* this = (FileChooseContext*)thisx;
+
+    this->logoAlpha -= 25;
+    this->sevenSagesUIAlpha = 0;
+    // Start on whichever sage is already selected, so reopening the screen does not silently
+    // move the choice back to Rauru.
+    this->sevenSagesIndex = (u8)CVarGetInteger(CVAR_RANDOMIZER_SETTING("SelectedSage"), RO_SAGE_RAURU);
+
+    if (this->logoAlpha <= 0) {
+        this->logoAlpha = 0;
+        this->configMode = CM_SEVEN_SAGES_MENU;
+    }
+}
+
 void FileChoose_StartRandomizerMenu(GameState* thisx) {
     FileChooseContext* this = (FileChooseContext*)thisx;
 
@@ -691,7 +707,11 @@ void FileChoose_UpdateQuestMenu(GameState* thisx) {
                 SohFileSelect_ShowSevenSagesModal();
             }
             this->prevConfigMode = this->configMode;
-            this->configMode = CM_ROTATE_TO_RANDOMIZER_SETTINGS_MENU;
+            // Seven Sages picks its sage first; that screen hands off to the randomizer
+            // settings menu itself once the choice is made.
+            this->configMode = (this->questType[this->buttonIndex] == QUEST_SEVENSAGES)
+                                   ? CM_ROTATE_TO_SEVEN_SAGES_MENU
+                                   : CM_ROTATE_TO_RANDOMIZER_SETTINGS_MENU;
         } else {
             Audio_PlaySoundGeneral(NA_SE_SY_FSEL_DECIDE_L, &gSfxDefaultPos, 4, &gSfxDefaultFreqAndVolScale,
                                    &gSfxDefaultFreqAndVolScale, &gSfxDefaultReverb);
@@ -926,6 +946,7 @@ void FileChoose_RotateToQuest(GameState* thisx) {
     FileChooseContext* this = (FileChooseContext*)thisx;
 
     if (this->configMode == CM_NAME_ENTRY_TO_QUEST_MENU || this->configMode == CM_BOSS_RUSH_TO_QUEST ||
+        this->configMode == CM_SEVEN_SAGES_TO_QUEST ||
         this->configMode == CM_RANDOMIZER_SETTINGS_MENU_TO_QUEST) {
         this->windowRot -= VREG(16);
 
@@ -951,6 +972,17 @@ void FileChoose_RotateToBossRush(GameState* thisx) {
     if (this->windowRot >= 628.0f) {
         this->windowRot = 628.0f;
         this->configMode = CM_START_BOSS_RUSH_MENU;
+    }
+}
+
+void FileChoose_RotateToSevenSages(GameState* thisx) {
+    FileChooseContext* this = (FileChooseContext*)thisx;
+
+    this->windowRot += VREG(16);
+
+    if (this->windowRot >= 628.0f) {
+        this->windowRot = 628.0f;
+        this->configMode = CM_START_SEVEN_SAGES_MENU;
     }
 }
 
@@ -1003,6 +1035,10 @@ static void (*gConfigModeUpdateFuncs[])(GameState*) = {
     FileChoose_RotateToRandomizer,  FileChoose_UpdateRandomizerMenu,
     FileChoose_StartRandomizerMenu, FileChoose_RotateToQuest,
     FileChoose_RotateToRandomizer,
+    // Seven Sages sage select. Order must match the four modes appended to ConfigMode:
+    // ROTATE_TO, MENU, START, TO_QUEST. This table is indexed by the enum.
+    FileChoose_RotateToSevenSages,  FileChoose_UpdateSevenSagesMenu,
+    FileChoose_StartSevenSagesMenu, FileChoose_RotateToQuest,
 };
 
 static void (*gConfigModeUpdateFuncsNES[])(GameState*) = {
@@ -1034,6 +1070,10 @@ static void (*gConfigModeUpdateFuncsNES[])(GameState*) = {
     FileChoose_RotateToRandomizer,  FileChoose_UpdateRandomizerMenu,
     FileChoose_StartRandomizerMenu, FileChoose_RotateToQuest,
     FileChoose_RotateToRandomizer,
+    // Seven Sages sage select. Order must match the four modes appended to ConfigMode:
+    // ROTATE_TO, MENU, START, TO_QUEST. This table is indexed by the enum.
+    FileChoose_RotateToSevenSages,  FileChoose_UpdateSevenSagesMenu,
+    FileChoose_StartSevenSagesMenu, FileChoose_RotateToQuest,
 };
 
 /**
@@ -1693,12 +1733,16 @@ void FileChoose_DrawWindowContents(GameState* thisx) {
         case CM_QUEST_TO_MAIN:
         case CM_NAME_ENTRY_TO_QUEST_MENU:
         case CM_ROTATE_TO_BOSS_RUSH_MENU:
+        case CM_ROTATE_TO_SEVEN_SAGES_MENU:
         case CM_ROTATE_TO_RANDOMIZER_SETTINGS_MENU:
             tex = FileChoose_GetQuestChooseTitleTexName(gSaveContext.language);
             break;
         case CM_BOSS_RUSH_MENU:
         case CM_START_BOSS_RUSH_MENU:
         case CM_BOSS_RUSH_TO_QUEST:
+        case CM_SEVEN_SAGES_MENU:
+        case CM_START_SEVEN_SAGES_MENU:
+        case CM_SEVEN_SAGES_TO_QUEST:
         case CM_RANDOMIZER_SETTINGS_MENU:
         case CM_START_RANDOMIZER_SETTINGS_MENU:
         case CM_RANDOMIZER_SETTINGS_MENU_TO_QUEST:
@@ -1833,6 +1877,8 @@ void FileChoose_DrawWindowContents(GameState* thisx) {
         }
     } else if (this->configMode == CM_BOSS_RUSH_MENU) {
         FileChoose_DrawBossRushMenuWindowContents(this);
+    } else if (this->configMode == CM_SEVEN_SAGES_MENU) {
+        FileChoose_DrawSevenSagesMenuWindowContents(this);
     } else if (this->configMode == CM_RANDOMIZER_SETTINGS_MENU) {
         uint8_t language = (gSaveContext.language == LANGUAGE_JPN) ? LANGUAGE_ENG : gSaveContext.language;
         uint8_t textAlpha = this->randomizerUIAlpha;
@@ -1885,6 +1931,9 @@ void FileChoose_DrawWindowContents(GameState* thisx) {
 
     } else if (this->configMode != CM_ROTATE_TO_NAME_ENTRY && this->configMode != CM_START_BOSS_RUSH_MENU &&
                this->configMode != CM_ROTATE_TO_BOSS_RUSH_MENU && this->configMode != CM_BOSS_RUSH_TO_QUEST &&
+               this->configMode != CM_START_SEVEN_SAGES_MENU &&
+               this->configMode != CM_ROTATE_TO_SEVEN_SAGES_MENU && this->configMode != CM_SEVEN_SAGES_TO_QUEST &&
+               this->configMode != CM_SEVEN_SAGES_MENU &&
                this->configMode != CM_START_RANDOMIZER_SETTINGS_MENU &&
                this->configMode != CM_ROTATE_TO_RANDOMIZER_SETTINGS_MENU &&
                this->configMode != CM_RANDOMIZER_SETTINGS_MENU_TO_QUEST &&
@@ -2238,6 +2287,7 @@ void FileChoose_ConfigModeDraw(GameState* thisx) {
     if (this->configMode == CM_QUEST_MENU || (this->configMode == CM_ROTATE_TO_QUEST_MENU) ||
         this->configMode == CM_ROTATE_TO_NAME_ENTRY || this->configMode == CM_QUEST_TO_MAIN ||
         this->configMode == CM_NAME_ENTRY_TO_QUEST_MENU || this->configMode == CM_ROTATE_TO_BOSS_RUSH_MENU ||
+        this->configMode == CM_ROTATE_TO_SEVEN_SAGES_MENU ||
         this->configMode == CM_ROTATE_TO_RANDOMIZER_SETTINGS_MENU ||
         this->configMode == CM_NAME_ENTRY_TO_RANDOMIZER_SETTINGS_MENU) {
         // window
@@ -2270,6 +2320,8 @@ void FileChoose_ConfigModeDraw(GameState* thisx) {
     // Draw Boss Rush / Randomizer Options Menu
     if (this->configMode == CM_BOSS_RUSH_MENU || this->configMode == CM_ROTATE_TO_BOSS_RUSH_MENU ||
         this->configMode == CM_START_BOSS_RUSH_MENU || this->configMode == CM_BOSS_RUSH_TO_QUEST ||
+        this->configMode == CM_SEVEN_SAGES_MENU || this->configMode == CM_ROTATE_TO_SEVEN_SAGES_MENU ||
+        this->configMode == CM_START_SEVEN_SAGES_MENU || this->configMode == CM_SEVEN_SAGES_TO_QUEST ||
         this->configMode == CM_RANDOMIZER_SETTINGS_MENU || this->configMode == CM_ROTATE_TO_RANDOMIZER_SETTINGS_MENU ||
         this->configMode == CM_START_RANDOMIZER_SETTINGS_MENU ||
         this->configMode == CM_RANDOMIZER_SETTINGS_MENU_TO_QUEST) {

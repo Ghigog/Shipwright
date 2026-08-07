@@ -70,6 +70,14 @@ typedef enum {
     CM_START_RANDOMIZER_SETTINGS_MENU,
     CM_RANDOMIZER_SETTINGS_MENU_TO_QUEST,
     CM_NAME_ENTRY_TO_RANDOMIZER_SETTINGS_MENU,
+    // Seven Sages sage select. Appended, and appended in this order, because
+    // gConfigModeUpdateFuncs[] is indexed by ConfigMode - the enum and both function tables
+    // in z_file_choose.c have to stay in lockstep or every mode after the insertion point
+    // dispatches to the wrong handler.
+    CM_ROTATE_TO_SEVEN_SAGES_MENU,
+    CM_SEVEN_SAGES_MENU,
+    CM_START_SEVEN_SAGES_MENU,
+    CM_SEVEN_SAGES_TO_QUEST,
 } ConfigMode;
 
 typedef enum {
@@ -246,6 +254,10 @@ void FileChoose_DrawOptionsNES(GameState* thisx);
 
 void FileChoose_DrawNameEntryNES(GameState* thisx);
 void FileChoose_DrawCharacterNES(GraphicsContext* gfxCtx, void* texture, s16 vtx);
+// Defined in z_file_choose.c with external linkage but never declared. The Seven Sages sage
+// select draws medallion item icons through it, the same way the quest subtitles are drawn.
+void FileChoose_DrawImageRGBA32(GraphicsContext* gfxCtx, s16 centerX, s16 centerY, const char* source, u32 width,
+                                u32 height);
 
 extern s16 gKeyboardCharactersHiragana[];
 extern s16 gKeyboardCharactersKatakana[];
