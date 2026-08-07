@@ -56,10 +56,12 @@ bool FromJson(const nlohmann::json& j, Placement& out) {
     if (!j.contains("scene") || !j.contains("actor") || !j.contains("pos")) {
         return false;
     }
-    out.sceneId = j.value("scene", 0);
-    out.room = j.value("room", 0);
-    out.actorId = j.value("actor", 0);
-    out.params = j.value("params", 0);
+    // j.value() deduces int from the literal default, so each of these narrows on assignment -
+    // ask for the field's own width instead of casting after the fact.
+    out.sceneId = j.value<int16_t>("scene", 0);
+    out.room = j.value<int8_t>("room", 0);
+    out.actorId = j.value<int16_t>("actor", 0);
+    out.params = j.value<int16_t>("params", 0);
 
     const auto& pos = j["pos"];
     if (!pos.is_array() || pos.size() != 3) {
