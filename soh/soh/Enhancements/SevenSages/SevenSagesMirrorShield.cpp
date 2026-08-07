@@ -46,7 +46,6 @@
 #include "soh/Enhancements/game-interactor/GameInteractor_Hooks.h"
 
 #include <cmath>
-#include <vector>
 
 // Required by OPEN_DISPS in the draw pass below, and the requirement is invisible until link time.
 // The macro embeds its own forward declaration of FrameInterpolation_RecordOpenChild; this header
@@ -59,6 +58,7 @@ extern "C" {
 #include "macros.h"
 #include "functions.h"
 #include "variables.h"
+#include "objects/object_mir_ray/object_mir_ray.h"
 }
 
 extern "C" PlayState* gPlayState;
@@ -86,20 +86,21 @@ constexpr s16 STUN_COLOR_INTENSITY = 0x78;
 // plus a few seconds of the enemy actually getting to act before the shield can catch it again.
 constexpr int32_t COOLDOWN_FRAMES = STUN_FRAMES + 20 * 4;
 
-// Chest height. Both the cone test and the drawn beam start here, from the same constant, so what
-// the player sees is the volume that actually stuns rather than an approximation of it.
+// Chest height, for the cone test's line-of-sight origin.
 constexpr f32 BEAM_EYE_HEIGHT = 40.0f;
 
-// Where the drawn beam starts along Link's facing, so the cone's apex sits out at the shield rather
-// than inside his chest - at the apex the cone has no width, and a cone starting inside the model
-// reads as a triangle stuck to the camera.
-constexpr f32 BEAM_FORWARD_OFFSET = 18.0f;
+// How far the glow is stretched down the shield's own axis. Vanilla scales this display list by
+// reflectIntensity * 5 (z_mir_ray.c:494), so 5 is its full-strength look - a lit mirror in the
+// Spirit Temple - and that is deliberately what this matches rather than BEAM_RANGE. The drawn glow
+// is an aiming indicator with vanilla's proportions, not a scale drawing of the 400-unit cone.
+constexpr f32 BEAM_GLOW_STRETCH = 5.0f;
 
-// State handed from the frame update to the draw pass. The two run from different hooks, so the
-// update records what it resolved and the draw pass renders it without re-testing anything.
+// Vanilla's own beam colour and full-strength alpha, from the same call.
+constexpr uint8_t BEAM_GLOW_ALPHA = 100;
+
+// Set by the frame update, read by the draw pass, which runs from a different hook and must not
+// re-derive it.
 bool sBeamActive = false;
-Vec3f sBeamOrigin = { 0.0f, 0.0f, 0.0f };
-s16 sBeamYaw = 0;
 
 // One slot per enemy the shield has caught recently. Sixteen is more enemies than any vanilla room
 // holds; a full table simply refuses the stun rather than evicting a live cooldown, so an overflow
@@ -208,14 +209,10 @@ void SevenSagesMirrorShieldFrameUpdate() {
         return;
     }
 
-    // Recorded for the draw pass, which runs from a different hook and must not re-derive this: the
-    // beam is drawn whenever the shield is up, hit or no hit, because its job is to show the player
-    // where the cone is pointing. Aiming an invisible 40-degree cone was the first thing play
-    // testing complained about (2026-08-07).
+    // Drawn whenever the shield is up, hit or no hit, because its job is to show the player where
+    // the cone is pointing. Aiming an invisible 40-degree cone was the first thing play testing
+    // complained about (2026-08-07).
     sBeamActive = true;
-    sBeamOrigin = player->actor.world.pos;
-    sBeamOrigin.y += BEAM_EYE_HEIGHT;
-    sBeamYaw = player->actor.shape.rot.y;
 
     SevenSagesForEachActorInRoom(gPlayState, ACTORCAT_ENEMY, [player](Actor* enemy) {
         // A killed actor waiting to be deleted, and anything already held still by any other source
@@ -237,127 +234,43 @@ void SevenSagesMirrorShieldFrameUpdate() {
     });
 }
 
-// The beam mesh: a cone with its apex at the origin and its axis down +Z, which is the direction an
-// actor with yaw 0 faces. Built once, then instanced by translate/rotate/scale, the same way the
-// removed AOE sphere was (see 85fa1703f if that scaffolding is ever wanted again).
-//
-// Vertex positions in Vtx_t are s16, so a unit-length cone would round to nothing. It is built at
-// CONE_MESH_LENGTH and scaled down by the draw, exactly as the sphere used SPHERE_MESH_RADIUS.
-constexpr f32 CONE_MESH_LENGTH = 100.0f;
-constexpr int32_t CONE_SEGMENTS = 18;
-
-// tan(20 degrees). Kept as its own constant with BEAM_COS_HALF_ANGLE rather than derived from it,
-// because the two describe the same cone in different terms and both are read by eye when tuning.
-constexpr f32 CONE_BASE_RATIO = 0.364f;
-
-// Alpha at the apex, falling to nothing at the base. The falloff is per-vertex rather than a single
-// flat value: an evenly-lit cone reads as a solid object, and the whole point is that this is light.
-constexpr uint8_t CONE_APEX_ALPHA = 110;
-
-std::vector<Vtx> sConeVtx;
-std::vector<Gfx> sConeGfx;
-bool sConeBuilt = false;
-Mtx sBeamMtx;
-
-void BuildConeMesh() {
-    if (sConeBuilt) {
-        return;
-    }
-
-    const f32 baseRadius = CONE_MESH_LENGTH * CONE_BASE_RATIO;
-
-    // One triangle per segment, apex to two neighbouring points on the base ring. Vertices are
-    // emitted per-triangle rather than shared, because each gsSPVertex load below indexes its own
-    // three, and that keeps the display list trivial at this size.
-    for (int32_t i = 0; i < CONE_SEGMENTS; i++) {
-        const f32 a0 = (2.0f * M_PI * i) / CONE_SEGMENTS;
-        const f32 a1 = (2.0f * M_PI * (i + 1)) / CONE_SEGMENTS;
-
-        Vtx apex{};
-        apex.v.ob[0] = 0;
-        apex.v.ob[1] = 0;
-        apex.v.ob[2] = 0;
-        apex.v.cn[0] = 255;
-        apex.v.cn[1] = 255;
-        apex.v.cn[2] = 255;
-        apex.v.cn[3] = CONE_APEX_ALPHA;
-
-        Vtx rim0{};
-        rim0.v.ob[0] = (s16)(cosf(a0) * baseRadius);
-        rim0.v.ob[1] = (s16)(sinf(a0) * baseRadius);
-        rim0.v.ob[2] = (s16)CONE_MESH_LENGTH;
-        rim0.v.cn[0] = 255;
-        rim0.v.cn[1] = 255;
-        rim0.v.cn[2] = 255;
-        rim0.v.cn[3] = 0;
-
-        Vtx rim1 = rim0;
-        rim1.v.ob[0] = (s16)(cosf(a1) * baseRadius);
-        rim1.v.ob[1] = (s16)(sinf(a1) * baseRadius);
-
-        const size_t base = sConeVtx.size();
-        sConeVtx.push_back(apex);
-        sConeVtx.push_back(rim0);
-        sConeVtx.push_back(rim1);
-        sConeGfx.push_back(gsSPVertex((uintptr_t)(sConeVtx.data() + base), 3, 0));
-        sConeGfx.push_back(gsSP1Triangle(0, 1, 2, 0));
-    }
-
-    sConeGfx.push_back(gsSPEndDisplayList());
-    sConeBuilt = true;
-}
-
 } // namespace
 
 // At file scope, outside the anonymous namespace above, matching every other OPEN_DISPS caller in
-// this codebase (nametag.cpp, colViewer.cpp). The anonymous-namespace members it reads are still
-// reachable from here. Note that the linkage error this shape avoids is NOT the one the removed AOE
-// sphere's comment described: the actual requirement is the frame_interpolation.h include at the top
-// of this file, which is what gives the macro's embedded declaration C linkage.
+// this codebase (nametag.cpp, colViewer.cpp).
+//
+// **This is vanilla's own shield beam, not a lookalike.** The first attempt at this drew a generated
+// cone and looked wrong in every way a hand-rolled effect can; the reason it was attempted at all was
+// a wrong assumption, recorded here so nobody repeats it: that gShieldBeamGlowDL is unusable outside
+// the Spirit Temple because it lives in object_mir_ray and that object is not in any other room's
+// bank. That is true on N64 and false in Ship of Harkinian. ALIGN_ASSET makes the symbol an OTR path
+// string ("__OTR__objects/object_mir_ray/gShieldBeamGlowDL", object_mir_ray.h:9) which the resource
+// manager resolves at draw time from the archive. The object bank gates ACTORS, not display lists
+// referenced by name, so the beam is available anywhere.
+//
+// Placement is vanilla's too. player->shieldMf is the matrix the game already maintains for the
+// shield in Link's hand, so the beam sits and angles exactly where the shield does through every
+// animation, with no offset of ours to drift out of alignment.
 void SevenSagesMirrorShieldDraw() {
     if (!sBeamActive || !GameInteractor::IsSaveLoaded(true) || gPlayState == nullptr) {
         return;
     }
 
-    BuildConeMesh();
-
-    Matrix_Push();
-    Matrix_Translate(sBeamOrigin.x, sBeamOrigin.y, sBeamOrigin.z, MTXMODE_NEW);
-    Matrix_RotateZYX(0, sBeamYaw, 0, MTXMODE_APPLY);
-    Matrix_Translate(0.0f, 0.0f, BEAM_FORWARD_OFFSET, MTXMODE_APPLY);
-    const f32 scale = BEAM_RANGE / CONE_MESH_LENGTH;
-    Matrix_Scale(scale, scale, scale, MTXMODE_APPLY);
-    Matrix_ToMtx(&sBeamMtx, (char*)__FILE__, __LINE__);
-    Matrix_Pop();
+    Player* player = GET_PLAYER(gPlayState);
 
     OPEN_DISPS(gPlayState->state.gfxCtx);
 
-    // Additive rather than alpha-blended: light adds to what is behind it, and the overlapping faces
-    // of a cone seen from the side brighten each other, which is what makes it read as a volume of
-    // light instead of a translucent paper cone.
-    //
-    // G_LIGHTING is deliberately OFF, unlike the old sphere. With it off, Vtx_t::cn is vertex colour
-    // rather than a normal, which is what carries the apex-to-base alpha falloff built above. The
-    // alpha cycle multiplies that by PRIMITIVE's alpha so overall intensity stays tunable in one
-    // place.
-    gSPLoadGeometryMode(POLY_XLU_DISP++, G_ZBUFFER | G_SHADE | G_SHADING_SMOOTH);
-    gSPTexture(POLY_XLU_DISP++, 0, 0, 0, G_TX_RENDERTILE, G_OFF);
-    gDPPipeSync(POLY_XLU_DISP++);
-    gDPSetCycleType(POLY_XLU_DISP++, G_CYC_1CYCLE);
-    gDPSetRenderMode(POLY_XLU_DISP++,
-                     Z_CMP | IM_RD | CVG_DST_FULL | FORCE_BL | ZMODE_XLU |
-                         GBL_c1(G_BL_CLR_IN, G_BL_A_IN, G_BL_CLR_MEM, G_BL_1),
-                     Z_CMP | IM_RD | CVG_DST_FULL | FORCE_BL | ZMODE_XLU |
-                         GBL_c2(G_BL_CLR_IN, G_BL_A_IN, G_BL_CLR_MEM, G_BL_1));
-    gDPSetCombineLERP(POLY_XLU_DISP++, PRIMITIVE, 0, SHADE, 0, SHADE, 0, PRIMITIVE, 0, PRIMITIVE, 0, SHADE, 0, SHADE, 0,
-                      PRIMITIVE, 0);
-    // Pale gold rather than white: the Mirror Shield's own reflected light in the Spirit Temple is
-    // warm, and a pure white cone against a bright outdoor scene disappears.
-    gDPSetPrimColor(POLY_XLU_DISP++, 0, 0, 255, 246, 200, 255);
+    Matrix_Mult(&player->shieldMf, MTXMODE_NEW);
+    Matrix_Scale(1.0f, 1.0f, BEAM_GLOW_STRETCH, MTXMODE_APPLY);
 
-    gSPMatrix(POLY_XLU_DISP++, &sBeamMtx, G_MTX_MODELVIEW | G_MTX_LOAD | G_MTX_PUSH);
-    gSPDisplayList(POLY_XLU_DISP++, sConeGfx.data());
-    gSPPopMatrix(POLY_XLU_DISP++, G_MTX_MODELVIEW);
+    Gfx_SetupDL_25Xlu(gPlayState->state.gfxCtx);
+    gSPMatrix(POLY_XLU_DISP++, MATRIX_NEWMTX(gPlayState->state.gfxCtx),
+              G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
+    gDPSetPrimColor(POLY_XLU_DISP++, 0, 0, 255, 255, 150, BEAM_GLOW_ALPHA);
+    // The cast is the C++ tax on the OTR-path trick above: in C the char[] converts to Gfx*
+    // implicitly, in C++ it does not. Same shape as CustomLogoTitle.cpp:60 and ShuffleTrees.cpp:76,
+    // both of which draw display lists out of objects the current room never loaded.
+    gSPDisplayList(POLY_XLU_DISP++, (Gfx*)gShieldBeamGlowDL);
 
     CLOSE_DISPS(gPlayState->state.gfxCtx);
 }
