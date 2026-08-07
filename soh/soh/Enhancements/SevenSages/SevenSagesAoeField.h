@@ -35,17 +35,18 @@ constexpr uint32_t SEVEN_SAGES_AOE_DMG_STUN = 0x00000001;
 // height/2 above and height/2 below. Vanilla's own area effects only extend upward, which suits a
 // bomb at your feet but not an arrow that lands above its target.
 //
-// What the field looks like. Vanilla's spell ACTORS are unusable for this - Magic_Fire and friends
-// hard-set their position to the player's every frame (z_magic_fire.c:114) and kill themselves on
-// player state, so one spawned at an arrow's landing point snaps straight to Link. The visual here
-// has no such tie: a translucent icosphere (SevenSagesAoeField.cpp, SevenSagesAoeFieldDraw) is drawn
-// straight from the field's own pos/radius every frame it's alive, so it's pinned to the impact point
-// and tracks the actual collider exactly - growth, hold, and disappearance all included - rather than
-// a particle burst with its own separate timer. A small one-shot EffectSs burst (shockwave ring, and
-// Din's Fire's flame sprite for the fire case) plays once on impact for punch, but isn't the radius
-// indicator; see SpawnFieldBurst.
+// What the field looks like: a one-shot burst of vanilla's own particles at the impact point, and
+// nothing after that. The persistent radius indicator this used to draw - a translucent icosphere
+// sized from field.radius every frame, so it tracked the collider exactly - was built, played, and
+// **rejected on looks** (2026-08-07). It is gone rather than disabled; a field's visual is now the
+// burst alone, and its extent is deliberately not drawn.
+//
+// Vanilla's spell ACTORS remain unusable as a replacement, which is worth keeping on record for
+// whoever tries again: Magic_Fire and friends hard-set their position to the player's every frame
+// (z_magic_fire.c:114) and kill themselves on player state, so one spawned at an arrow's landing
+// point snaps straight back to Link.
 enum SevenSagesAoeVisual {
-    SEVEN_SAGES_AOE_VISUAL_NONE, // for fields whose source is already visible, e.g. a blue flame
+    SEVEN_SAGES_AOE_VISUAL_NONE, // no burst at all, for fields whose source is already visible
     SEVEN_SAGES_AOE_VISUAL_FIRE,
     SEVEN_SAGES_AOE_VISUAL_ICE,
 };
