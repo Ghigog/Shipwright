@@ -20,12 +20,32 @@
  * deliberately gets no stun: a stun with no visual would read as enemies freezing at random.
  *
  * It is spawned as a SevenSagesAoeField with a one-frame lifetime — the degenerate case the field
- * was built to cover (SevenSagesAoeField.h). Deku Nut damage flag with 0 damage, which is vanilla's
- * own way of saying "the effect is the stun, not the hit", and the same pairing the Ice Arrow's
- * field was playtested on. Visual is NONE because the white shockwave IS the visual.
+ * was built to cover (SevenSagesAoeField.h). Visual is NONE because the white shockwave IS the
+ * visual.
  *
- * THE WALL BREAKING is two pieces, because vanilla gates "was I hit by a bomb" in two unrelated
- * ways and the hammer already satisfied neither:
+ * THAT SAME FIELD ALSO BREAKS THINGS, and does so without becoming a second effect. Decided
+ * 2026-08-07: a shockwave that both stuns and deals bomb damage is two weapons wearing one
+ * animation, and the hammer's identity in vanilla is already the stun (it flips Tektites). So the
+ * radius stuns enemies and smashes scenery — the "reveal" half of the melee-bomb spec extended to
+ * the AOE — and deals no explosive damage to anything alive.
+ *
+ * Getting both from one collider is not obvious, because eligibility and resolution both key off
+ * the same dmgFlags word, and they want different answers. The field submits 0x9 (explosive | Deku
+ * Nut) so it is ELIGIBLE to touch both scenery and stunnable enemies, which makes it RESOLVE as the
+ * explosive row for everything (highest set bit wins, bit 3 > bit 0). A VB_MODIFY_RESOLVED_DAMAGE
+ * hook then rewrites that back to the target's own Deku Nut row, but only for targets that have a
+ * damage table — which breakables do not. Scenery reads the field as a bomb, enemies read it as a
+ * nut, one AT collider.
+ *
+ * Two fields was the first attempt and is a trap worth naming, because it fails silently:
+ * CollisionCheck_SetATvsAC assigns rather than accumulates acHitInfo (z_collision_check.c:1740) and
+ * all AT/AC pairs resolve before any damage is applied (z_play.c:1180-1186), so of two fields on
+ * the same target only the later-registered one survives. The stun field was being discarded on
+ * every enemy in the radius, and the symptom — "the hammer does bomb damage and never stuns" —
+ * looks exactly like a flag bug rather than an ordering one.
+ *
+ * THE WALL BREAKING ON CONTACT is two further pieces, because vanilla gates "was I hit by a bomb"
+ * in two unrelated ways and the hammer already satisfied neither:
  *
  *   1. Actors that gate on the attacker's dmgFlags. Most bombable geometry is here, and most of it
  *      the hammer *already* broke in vanilla: Bg_Breakwall's bumper mask is 0x48, which is
