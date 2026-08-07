@@ -186,7 +186,19 @@ void SevenSagesSpawnAoeField(PlayState* play, float x, float y, float z, float m
         field.pos = { x, y, z };
         field.maxRadius = maxRadius;
         field.radius = 0.0f;
-        field.growthPerFrame = maxRadius / GROW_FRAMES;
+        // Clamped to the lifetime, and this is load-bearing rather than defensive. A field is only
+        // ever submitted to CollisionCheck from the update below, which grows it BEFORE submitting,
+        // so a field that lives fewer frames than the grow-in takes never reaches its own radius: at
+        // lifetimeFrames 1 it got exactly one submission at maxRadius/GROW_FRAMES. That is a sixth of
+        // the documented size, and it is silent - the field still spawns, still hits whatever is
+        // close enough, and only the reach is wrong.
+        //
+        // Found 2026-08-07 by reading, then confirmed in play: the Megaton Hammer's 120-unit
+        // shockwave was landing as 20 and breaking no pots at all, and every thrown impact (also
+        // lifetime 1) was a sixth of its tier's radius, which collapsed the whole size scale the
+        // thrown-item feature exists to express.
+        const int32_t growFrames = lifetimeFrames < GROW_FRAMES ? lifetimeFrames : GROW_FRAMES;
+        field.growthPerFrame = maxRadius / growFrames;
         field.height = (s16)height;
         field.framesLeft = lifetimeFrames;
         field.owner = play;
