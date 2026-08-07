@@ -57,6 +57,37 @@ constexpr int32_t KNOCKDOWN_FRAMES = 20 * 3;
 // than evicting a live one, so the failure is "that one wasn't liftable", never a wrong grant.
 constexpr int32_t MAX_KNOCKDOWNS = 8;
 
+// **Why the shockwave field is spawned two frames late.**
+//
+// Vanilla already has a hammer-ground-strike AOE, and it is not a collider. func_80842A28 sets
+// `play->actorCtx.unk_02 = 4` (z_player.c:9360), a broadcast that counts down one per frame in
+// Actor_UpdateAll (z_actor.c:2605), and twelve actors poll it and react on their own - the Tektite
+// flips onto its back, the Deku Baba and Skulltula drop, and so on.
+//
+// Every one of those reactions is written as the ELSE of the actor's damage check. EnTite_CheckDamage
+// is the clearest case: `if (acFlags & AC_HIT) { ...damage... } else if (unk_02 != 0 && dist <= 400 &&
+// grounded) { flip }` (z_en_tite.c:852-884). So an AC_HIT arriving in the same frame does not merely
+// compete with the flip - it makes the flip branch unreachable. Our field was landing on the very
+// frame of the strike and silently replacing every vanilla hammer reaction in the game with a Deku
+// Nut stun. Reported from play as "tektites don't flip any more".
+//
+// Two frames of the four-frame window are given back to vanilla, so those actors do what they have
+// always done, and the field then lands on everything else while the broadcast is still live. The
+// delay is invisible at 20fps.
+//
+// Note this is a different failure from the melee-precedence one handled in the damage hook below,
+// which is about which ATTACKER a target resolves. This one is about an actor never reaching its
+// vanilla branch at all, and no amount of rewriting the resolved damage can fix it - AC_HIT alone is
+// what diverts them.
+constexpr int32_t SHOCKWAVE_DELAY_FRAMES = 2;
+
+struct PendingShockwave {
+    Vec3f pos;
+    int32_t frames;
+};
+
+PendingShockwave sPending = { { 0.0f, 0.0f, 0.0f }, 0 };
+
 struct Knockdown {
     // Compared, never dereferenced - the same rule SevenSagesThrownImpact.cpp and the Mirror
     // Shield's cooldown table follow. A freed actor's entry simply ages out, and a recycled address
@@ -113,16 +144,6 @@ bool MeleeQuadHit(const Actor* target) {
     return false;
 }
 
-void SevenSagesHammerKnockdownFrameUpdate() {
-    if (!GameInteractor::IsSaveLoaded(true)) {
-        for (Knockdown& entry : sKnockdowns) {
-            entry.actor = nullptr;
-            entry.frames = 0;
-        }
-        return;
-    }
-    TickKnockdowns();
-}
 
 // The shockwave's dmgFlags: the explosive bit, plus the Deku Nut bit (0x1).
 //
@@ -164,6 +185,23 @@ constexpr float SHOCKWAVE_RADIUS = 120.0f;
 // the shockwave travels along the ground, so something hovering well above Link should not be
 // caught by it.
 constexpr float SHOCKWAVE_HEIGHT = 80.0f;
+
+void SevenSagesHammerKnockdownFrameUpdate() {
+    if (!GameInteractor::IsSaveLoaded(true) || gPlayState == nullptr) {
+        for (Knockdown& entry : sKnockdowns) {
+            entry.actor = nullptr;
+            entry.frames = 0;
+        }
+        sPending.frames = 0;
+        return;
+    }
+    TickKnockdowns();
+
+    if (sPending.frames > 0 && --sPending.frames == 0) {
+        SevenSagesSpawnAoeField(gPlayState, sPending.pos.x, sPending.pos.y, sPending.pos.z, SHOCKWAVE_RADIUS,
+                                SHOCKWAVE_HEIGHT, 1, SHOCKWAVE_DMG_FLAGS, 0, SEVEN_SAGES_AOE_VISUAL_NONE);
+    }
+}
 
 } // namespace
 
@@ -210,8 +248,10 @@ void SevenSagesHammerShockwave(PlayState* play, float x, float y, float z) {
     // uses. Damage 0 because the resolved number comes from the target's own table, never from
     // here. Visual NONE because EffectSsBlast_SpawnWhiteShockwave has already been spawned at this
     // exact position by the caller; a second indicator on top of it would only muddy the strike.
-    SevenSagesSpawnAoeField(play, x, y, z, SHOCKWAVE_RADIUS, SHOCKWAVE_HEIGHT, 1, SHOCKWAVE_DMG_FLAGS, 0,
-                            SEVEN_SAGES_AOE_VISUAL_NONE);
+    //
+    // Queued rather than spawned, and the delay is the whole point - see SHOCKWAVE_DELAY_FRAMES.
+    sPending.pos = { x, y, z };
+    sPending.frames = SHOCKWAVE_DELAY_FRAMES;
 }
 
 static void RegisterSevenSagesMegatonHammer() {
