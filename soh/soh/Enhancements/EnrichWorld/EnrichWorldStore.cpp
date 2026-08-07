@@ -14,8 +14,6 @@
  * off a live actor, and rounding that to s16 on every save would make a prop creep as it was
  * re-saved.
  */
-#include "EnrichWorld.h"
-
 #include <ship/Context.h>
 #include <nlohmann/json.hpp>
 
@@ -23,6 +21,10 @@
 #include <fstream>
 
 #include <spdlog/spdlog.h>
+
+// After the standard headers on purpose - EnrichWorld.h pulls z64.h, whose macros break libstdc++
+// internals if they are live while a standard header is parsed. See EnrichWorldPlacer.cpp.
+#include "EnrichWorld.h"
 
 namespace EnrichWorld {
 

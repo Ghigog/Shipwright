@@ -15,11 +15,12 @@
  * choice a person can make and 0x0205 isn't. Params stay editable in the placer for the cases
  * these defaults don't cover (mainly drop tables, the high byte on several of these actors).
  */
-#include "EnrichWorld.h"
-
 #include "soh/ActorDB.h"
 
 #include <spdlog/fmt/fmt.h>
+
+// After the headers above on purpose - see EnrichWorldPlacer.cpp for why z64.h has to come last.
+#include "EnrichWorld.h"
 
 extern "C" {
 #include "functions.h"

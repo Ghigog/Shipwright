@@ -32,12 +32,13 @@
  * Deliberately independent of Seven Sages: gated on its own CVar and nothing else, never
  * IS_RANDO, so this works in a plain playthrough and the two mods can't observe each other.
  */
-#include "EnrichWorld.h"
-
 #include "soh/Enhancements/game-interactor/GameInteractor_Hooks.h"
 #include "soh/ShipInit.hpp"
 
 #include <vector>
+
+// After the headers above on purpose - see EnrichWorldPlacer.cpp for why z64.h has to come last.
+#include "EnrichWorld.h"
 
 extern "C" {
 #include "functions.h"

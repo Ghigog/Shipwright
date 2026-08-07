@@ -15,15 +15,19 @@
  * The prop list is filtered to objects actually loaded in the current room, which makes the
  * mod's one hard rule unreachable by hand - see EnrichWorldPalette.cpp.
  */
-#include "EnrichWorldPlacer.h"
-#include "EnrichWorld.h"
-
 #include "soh/SohGui/UIWidgets.hpp"
 #include "soh/Enhancements/game-interactor/GameInteractor.h"
 
 #include <spdlog/fmt/fmt.h>
 #include <string>
 #include <vector>
+
+// These two must come AFTER everything above, because EnrichWorld.h pulls in z64.h. OoT's macros
+// break libstdc++ internals when they are live while a standard header is parsed - here <future>,
+// reached via UIWidgets.hpp -> portable-file-dialogs.h. Clang tolerates it; GCC and MSVC do not,
+// which is what broke the first Linux and Windows CI builds while macOS stayed green.
+#include "EnrichWorldPlacer.h"
+#include "EnrichWorld.h"
 
 extern "C" {
 #include "z64.h"
