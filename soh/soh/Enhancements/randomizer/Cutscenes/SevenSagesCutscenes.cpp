@@ -66,10 +66,19 @@ constexpr CutsceneTextEntry cutsceneTextEntries[] = {
 // >>> SEVEN_SAGES_GENERATED: TEXT_IDS - edit data/cutscenes.json, not this
 
 // <<< SEVEN_SAGES_GENERATED: TEXT_IDS
+    // Sentinel, deliberately outside the generated markers so regenerating keeps it. No
+    // cutscene declares dialogue right now, so without this the generated region is empty
+    // and the array is zero-length - a clang extension, but hard error C2466 on MSVC
+    // ("cannot allocate an array of constant size 0"). The loop below skips it by its null
+    // dialogue rather than by its id, so it stays correct if a real entry ever uses id 0.
+    { 0, nullptr },
 };
 
 void BuildCutsceneMessage(uint16_t* textId, bool* loadFromMessageTable) {
     for (const CutsceneTextEntry& entry : cutsceneTextEntries) {
+        if (entry.dialogue == nullptr) {
+            continue; // the sentinel above, not a real entry
+        }
         if (entry.textId == *textId) {
             CustomMessage msg(entry.dialogue);
             // AutoFormat() is not optional: LoadIntoFont() copies the string in
