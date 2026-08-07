@@ -31,7 +31,11 @@ Color_RGBA8 sFlameEnvColor = { 255, 50, 0, 0 };
 
 // The stick scales its flame down as it burns out (`temp * 200.0f`). This one never burns out, so
 // it holds at the stick's full-strength value.
-constexpr float FLAME_SCALE = 200.0f;
+//
+// s16 rather than float because func_8002836C takes s16: as a float this narrowed implicitly at the
+// call site, which MSVC reports as C4244 and CI promotes to an error under /WX. 200 is exactly
+// representable either way, so the effect is unchanged.
+constexpr s16 FLAME_SCALE = 200;
 
 Player* CurrentPlayer() {
     if (!GameInteractor::IsSaveLoaded(true) || gPlayState == nullptr) {
