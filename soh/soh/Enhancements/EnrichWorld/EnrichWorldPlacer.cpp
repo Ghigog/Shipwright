@@ -19,6 +19,7 @@
 #include "EnrichWorld.h"
 
 #include "soh/SohGui/UIWidgets.hpp"
+#include "soh/Enhancements/game-interactor/GameInteractor.h"
 
 #include <spdlog/fmt/fmt.h>
 #include <string>
@@ -61,6 +62,18 @@ std::vector<std::pair<int, const PropDef*>> AvailableProps() {
 
 void EnrichWorldPlacerWindow::InitElement() {
     EnrichWorld::LoadStore();
+
+    // A placement's `live` pointer outlives the actor if anything else destroys it - the player
+    // cutting a placed bush, an actor culling itself, a room unload. Nudging the placement after
+    // that would write through a freed pointer. Drop the reference the moment the actor dies.
+    GameInteractor::Instance->RegisterGameHook<GameInteractor::OnActorDestroy>([](void* refActor) {
+        Actor* actor = static_cast<Actor*>(refActor);
+        for (auto& p : EnrichWorld::Placements()) {
+            if (p.live == actor) {
+                p.live = nullptr;
+            }
+        }
+    });
 }
 
 void EnrichWorldPlacerWindow::DrawElement() {
