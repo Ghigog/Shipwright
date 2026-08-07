@@ -11,6 +11,7 @@
  */
 #include "soh/Enhancements/SevenSages/SevenSagesMegatonHammer.h"
 #include "soh/Enhancements/SevenSages/SevenSagesAoeField.h"
+#include "soh/Enhancements/SevenSages/SevenSagesRoomAoe.h"
 
 #include "soh/Enhancements/game-interactor/GameInteractor.h"
 #include "soh/Enhancements/game-interactor/GameInteractor_Hooks.h"
@@ -87,6 +88,38 @@ struct PendingShockwave {
 };
 
 PendingShockwave sPending = { { 0.0f, 0.0f, 0.0f }, 0 };
+
+// The actors that poll actorCtx.unk_02 and react to a hammer ground strike on their own. Taken by
+// grepping for that field rather than by memory, and deliberately including the ones that do
+// something other than flip - the Deku Baba and the Skulltulas drop, the scrubs duck - because all
+// of them end up briefly helpless, which is the state the gauntlets care about.
+//
+// The list omits the three non-enemy readers: En_Kanban (a signpost), Bg_Ganon_Otyuka (Ganon's floor
+// tiles) and the player. EnemyIsLiftable tests ACTORCAT_ENEMY anyway, so they could not qualify, but
+// leaving them out keeps the list meaning what its name says.
+bool VanillaReactsToHammer(s16 actorId) {
+    switch (actorId) {
+        case ACTOR_EN_BW:        // Torch Slug
+        case ACTOR_EN_DEKUBABA:  // Deku Baba
+        case ACTOR_EN_DEKUNUTS:  // Deku Scrub
+        case ACTOR_EN_DODOJR:    // Baby Dodongo
+        case ACTOR_EN_FD:        // Flare Dancer
+        case ACTOR_EN_HINTNUTS:  // hint-giving Deku Scrub
+        case ACTOR_EN_SHOPNUTS:  // Business Scrub
+        case ACTOR_EN_SSH:       // Skullwalltula
+        case ACTOR_EN_ST:        // Skulltula
+        case ACTOR_EN_SW:        // Gold/wall Skulltula
+        case ACTOR_EN_TITE:      // Tektite
+            return true;
+        default:
+            return false;
+    }
+}
+
+// Vanilla's own reach for the broadcast, and every one of the actors above tests exactly this
+// distance to the PLAYER (not to the strike point) plus "is on the ground". Mirrored rather than
+// re-invented so that "it flipped" and "I can pick it up" cannot disagree.
+constexpr f32 VANILLA_HAMMER_RANGE = 400.0f;
 
 struct Knockdown {
     // Compared, never dereferenced - the same rule SevenSagesThrownImpact.cpp and the Mirror
@@ -179,7 +212,7 @@ constexpr uint32_t SHOCKWAVE_DMG_FLAGS = DMG_FLAG_EXPLOSIVE | 0x00000001;
 // STILL OPEN as of 2026-08-07: 120 sits at ~92% of Din's Fire's core sphere (325 * 0.4 scale, see
 // z_magic_fire.c:133), which is not the "clearly smaller than Din's" the spec's area ordering
 // wants. Left at 120 pending playtest rather than guessed at; ~80 is the likely landing spot.
-constexpr float SHOCKWAVE_RADIUS = 120.0f;
+constexpr float SHOCKWAVE_RADIUS = 96.0f; // 120 originally; cut 20% on the author's call from play
 
 // Total vertical extent, centred on the strike point (SevenSagesAoeField.h). Deliberately short:
 // the shockwave travels along the ground, so something hovering well above Link should not be
@@ -201,6 +234,29 @@ void SevenSagesHammerKnockdownFrameUpdate() {
         SevenSagesSpawnAoeField(gPlayState, sPending.pos.x, sPending.pos.y, sPending.pos.z, SHOCKWAVE_RADIUS,
                                 SHOCKWAVE_HEIGHT, 1, SHOCKWAVE_DMG_FLAGS, 0, SEVEN_SAGES_AOE_VISUAL_NONE);
     }
+}
+
+// An enemy vanilla knocked down with the ground strike is liftable too, which is what makes a flipped
+// tektite something Link can pick up and throw.
+//
+// It cannot be detected after the fact. Being flipped is a per-actor action state with no shared
+// field to read, and unlike a melee hit there is no collision to observe either - vanilla's broadcast
+// reaches these actors without anything touching them. So this predicts it: at the moment of the
+// strike, every actor that WILL react is recorded, using vanilla's own two conditions. If one of them
+// is somehow prevented from reacting, Link gets a lift he should not have had, on an enemy standing
+// in the middle of a hammer strike.
+void RecordVanillaHammerReactions() {
+    SevenSagesForEachActorInRoom(gPlayState, ACTORCAT_ENEMY, [](Actor* enemy) {
+        if (enemy->update == nullptr || !VanillaReactsToHammer(enemy->id)) {
+            return;
+        }
+        // Vanilla's pair, and the grounded half is why a tektite caught mid-jump neither flips nor
+        // becomes liftable - the same answer to both, which is the point of mirroring it.
+        if (enemy->xzDistToPlayer > VANILLA_HAMMER_RANGE || !(enemy->bgCheckFlags & BGCHECKFLAG_GROUND)) {
+            return;
+        }
+        RecordKnockdown(enemy);
+    });
 }
 
 } // namespace
@@ -252,6 +308,10 @@ void SevenSagesHammerShockwave(PlayState* play, float x, float y, float z) {
     // Queued rather than spawned, and the delay is the whole point - see SHOCKWAVE_DELAY_FRAMES.
     sPending.pos = { x, y, z };
     sPending.frames = SHOCKWAVE_DELAY_FRAMES;
+
+    // Recorded now, on the frame of the strike, for the same reason the field is delayed: this is
+    // the only moment at which vanilla's conditions are the ones vanilla will itself evaluate.
+    RecordVanillaHammerReactions();
 }
 
 static void RegisterSevenSagesMegatonHammer() {
