@@ -2684,16 +2684,16 @@ void StaticData::HintTable_Init() {
         "Don't tell him I told you.",
         { QM_RED }));
 
-    // Kokiri 10 - Kokiri Forest
+    // Sarias House Kokiri 6 - Kokiri Forest
     hintTextTable[RHT_NPC_KOKIRI_10] = HintText(CustomMessage(
-        "You can't hear Saria's song anywhere in the forest any more.^Someone's carried it off to #[[1]]#. It "
-        "isn't right.",
+        "This was Saria's house. We keep it the way she left it, in case she comes back.^You can't hear her "
+        "song anywhere in the forest now. Someone carried it off to #[[1]]#.",
         { QM_RED }));
 
-    // Kokiri 11 - Kokiri Forest
+    // Kokiri Shop Kokiri 10 - Kokiri Forest
     hintTextTable[RHT_NPC_KOKIRI_11] = HintText(CustomMessage(
-        "A funny little man used to sell beans by the river.^His whole stock ended up scattered into #[[1]]#. "
-        "He's furious.",
+        "If you came in for beans, we haven't got any.^A funny little man used to sell them by the river. His "
+        "whole stock ended up scattered into #[[1]]#.",
         { QM_RED }));
 
     // Kokiri 2 - Kokiri Forest
@@ -2725,22 +2725,22 @@ void StaticData::HintTable_Init() {
         "left #[[1]]# in it.",
         { QM_RED }));
 
-    // Kokiri 7 - Kokiri Forest
+    // Midos House Kokiri 0 - Kokiri Forest
     hintTextTable[RHT_NPC_KOKIRI_7] = HintText(CustomMessage(
-        "The slingshot's gone from the training grounds!^A Deku told me it turned up in #[[1]]#. How does "
-        "that even happen?",
+        "We've been shut in Mido's house since the woods turned bad. Nobody goes outside now.^The slingshot's "
+        "long gone from the training grounds. It's in #[[1]]#, if you're big enough to go and get it.",
         { QM_RED }));
 
-    // Kokiri 8 - Kokiri Forest
+    // Midos House Kokiri 4 - Kokiri Forest
     hintTextTable[RHT_NPC_KOKIRI_8] = HintText(CustomMessage(
-        "Careful out there without a shield.^The shop's out. Somebody said there are some in #[[1]]#, if you "
-        "can believe it.",
+        "You're far too big to be one of us. Are you here for Mido's things?^There isn't even a shield left "
+        "in here to hide behind. The last of them ended up in #[[1]]#.",
         { QM_RED }));
 
-    // Kokiri 9 - Kokiri Forest
+    // Kokiri Shop Kokiri 5 - Kokiri Forest
     hintTextTable[RHT_NPC_KOKIRI_9] = HintText(CustomMessage(
-        "Saria's always playing, but her spare ocarina went missing when the world came apart.^Word is it's "
-        "in #[[1]]# now.",
+        "We closed the shop when the monsters came. It's just us in here now.^Saria's spare ocarina went the "
+        "way of everything else. It turned up in #[[1]]#.",
         { QM_RED }));
 
     // Shop Kokiri - Kokiri Forest
