@@ -24,6 +24,8 @@ extern "C" {
 #include "variables.h"
 }
 
+extern "C" PlayState* gPlayState;
+
 namespace {
 
 // Same flag En_Bom's explosion collider touches breakables with (z_en_bom.c's sJntSphElementsInit),
@@ -87,6 +89,28 @@ void TickKnockdowns() {
             entry.frames--;
         }
     }
+}
+
+// Whether the player's own hammer swing connected with this actor during THIS frame's
+// CollisionCheck_AT.
+//
+// Reading the quads' resolved `at` pointer is safe in the one place this is called from and nowhere
+// else. SevenSagesHammerCountsAsExplosive deliberately avoids the quads' AT_HIT state because it is
+// asked from inside Actor_UpdateAll, where the answer depends on whether the player updated before
+// the actor asking - a category-ordering detail. VB_MODIFY_RESOLVED_DAMAGE is different: it fires
+// from CollisionCheck_Damage (z_play.c:1186), after CollisionCheck_AT has resolved every AT/AC pair
+// for the frame, so `at` is final and the same for every caller.
+bool MeleeQuadHit(const Actor* target) {
+    if (gPlayState == nullptr) {
+        return false;
+    }
+    Player* player = GET_PLAYER(gPlayState);
+    for (const ColliderQuad& quad : player->meleeWeaponQuads) {
+        if ((quad.base.atFlags & AT_HIT) && quad.base.at == target) {
+            return true;
+        }
+    }
+    return false;
 }
 
 void SevenSagesHammerKnockdownFrameUpdate() {
@@ -209,11 +233,37 @@ static void RegisterSevenSagesMegatonHammer() {
         uint32_t dmgFlags = va_arg(args, uint32_t);
 
         if (dmgFlags == SHOCKWAVE_DMG_FLAGS && target != nullptr && target->colChkInfo.damageTable != nullptr) {
-            // DMG_ENTRY packs damage in the low nibble and effect in the high one; index 0 is the
-            // Deku Nut row.
-            u8 dekuNutEntry = target->colChkInfo.damageTable->table[0];
-            *damage = (f32)(dekuNutEntry & 0xF);
-            target->colChkInfo.damageEffect = (dekuNutEntry >> 4) & 0xF;
+            // **The enemy the swing actually connected with resolves as a hammer hit, not a nut.**
+            //
+            // Only ONE attack survives per target: CollisionCheck_SetATvsAC ends with
+            // `acInfo->acHitInfo = atInfo` (z_collision_check.c:1743), a plain assignment, so a
+            // bumper touched by several ATs keeps whichever registered last. The shockwave field is
+            // submitted from OnGameFrameUpdate (game.c:356), which runs after Play_Update has
+            // finished Actor_UpdateAll, so it is always submitted after the player's melee quads and
+            // therefore always wins. The hammer's own hit on that enemy is discarded before it can
+            // resolve.
+            //
+            // That was invisible while the field was a sixth of its radius and rarely reached the
+            // enemy in front of Link. Fixing the radius exposed it as a regression in play
+            // (2026-08-07): tektites stopped flipping and just froze, because the swing's hit was
+            // being replaced by the shockwave's stun.
+            //
+            // Rather than fight the submission order, the surviving collider is made to carry the
+            // right answer: for the melee target, resolve through the hammer's own damage row
+            // instead of the Deku Nut one. Row index is the position of the highest set bit in the
+            // attacker's dmgFlags, so the hammer swing's bit 6 is table[6].
+            const bool meleeTarget = MeleeQuadHit(target);
+            const u8 entry = target->colChkInfo.damageTable->table[meleeTarget ? 6 : 0];
+            *damage = (f32)(entry & 0xF);
+            target->colChkInfo.damageEffect = (entry >> 4) & 0xF;
+
+            // The knockdown record has to be made here too. It cannot key off the hammer's melee
+            // dmgFlags reaching this hook, because by the reasoning above those flags never arrive -
+            // the field's 0x9 is what the target resolves. This is the only point at which "the
+            // swing hit this enemy" is both true and observable.
+            if (meleeTarget && target->category == ACTORCAT_ENEMY) {
+                RecordKnockdown(target);
+            }
         }
 
         // A MELEE hammer hit on an enemy makes it liftable for a few seconds, which is what the
