@@ -216,7 +216,7 @@ void SevenSagesSecretMarkersDraw() {
     // One slow revolution keeps the marker legible from any angle - the octahedron's silhouette is
     // narrow edge-on - and the bob stops a row of them reading as scenery. Driven from
     // gameplayFrames rather than a counter of our own so it stays in step with the paused game.
-    const float spin = gPlayState->gameplayFrames * 0.03f;
+    const float spin = static_cast<float>(gPlayState->gameplayFrames) * 0.03f;
     const float bob = Math_SinS((s16)(gPlayState->gameplayFrames * 900)) * 4.0f;
 
     for (size_t i = 0; i < markers.size(); i++) {

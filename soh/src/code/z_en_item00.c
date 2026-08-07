@@ -1624,7 +1624,7 @@ EnItem00* Item_DropCollectible(PlayState* play, Vec3f* spawnPos, s16 params) {
                     thisDrop->actor.gravity = -0.9f;
                     // Vanilla already randomizes this, which is what scatters the extras rather than
                     // stacking them in one spot - no extra positional offset needed.
-                    thisDrop->actor.world.rot.y = Rand_CenteredFloat(65536.0f);
+                    thisDrop->actor.world.rot.y = (s16)Rand_CenteredFloat(65536.0f);
                     Actor_SetScale(&thisDrop->actor, 0.0f);
                     EnItem00_SetupAction(thisDrop, func_8001E304);
                     thisDrop->unk_15A = 220;

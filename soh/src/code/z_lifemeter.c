@@ -395,9 +395,9 @@ s16 getHealthMeterOwnYOffset() {
         Y_Margins = 0;
 
     if (CVarGetInteger(CVAR_COSMETIC("HUD.HeartsCount.PosType"), 0) != ORIGINAL_LOCATION) {
-        return CVarGetInteger(CVAR_COSMETIC("HUD.HeartsCount.PosY"), 0) + Y_Margins;
+        return (s16)(CVarGetInteger(CVAR_COSMETIC("HUD.HeartsCount.PosY"), 0) + Y_Margins);
     } else {
-        return 0.0f + Y_Margins;
+        return Y_Margins;
     }
 }
 

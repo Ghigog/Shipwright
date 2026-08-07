@@ -257,7 +257,8 @@ int32_t ChamberOfSagesCommand(std::shared_ptr<Ship::Console> console, std::vecto
         return 1;
     }
 
-    gSaveContext.chamberCutsceneNum = which;
+    // Range-checked to 0-4 just above, so the u8 field takes it whole.
+    gSaveContext.chamberCutsceneNum = static_cast<u8>(which);
 
     // sceneLayer is derived from cutsceneIndex on load; anything >= 0xFFF0 puts
     // it at 4+ and the sage checks would fail. Write nextCutsceneIndex, not

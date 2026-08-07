@@ -137,7 +137,7 @@ uint8_t MinChannel(Rgb c) {
  */
 Rgb TowardBlack(Rgb c, float t, int32_t minDelta = 0) {
     uint8_t room = MaxChannel(c);
-    if (minDelta > 0 && room > 0 && room * t < minDelta) {
+    if (minDelta > 0 && room > 0 && room * t < static_cast<float>(minDelta)) {
         t = std::min(1.0f, static_cast<float>(minDelta) / room);
     }
     return { ClampChannel(std::lround(c.r - c.r * t)), ClampChannel(std::lround(c.g - c.g * t)),
@@ -146,8 +146,8 @@ Rgb TowardBlack(Rgb c, float t, int32_t minDelta = 0) {
 
 Rgb TowardWhite(Rgb c, float t, int32_t minDelta = 0) {
     int32_t room = 255 - MinChannel(c);
-    if (minDelta > 0 && room > 0 && room * t < minDelta) {
-        t = std::min(1.0f, static_cast<float>(minDelta) / room);
+    if (minDelta > 0 && room > 0 && static_cast<float>(room) * t < static_cast<float>(minDelta)) {
+        t = std::min(1.0f, static_cast<float>(minDelta) / static_cast<float>(room));
     }
     return { ClampChannel(std::lround(c.r + (255 - c.r) * t)), ClampChannel(std::lround(c.g + (255 - c.g) * t)),
              ClampChannel(std::lround(c.b + (255 - c.b) * t)) };

@@ -45,7 +45,10 @@ std::function<void()> sPendingOnSuccess;
 // leaving it stuck - see the release-watch comment below for the full reasoning.
 bool sReleaseWatchActive = false;
 s32 sReleaseWatchFrames = 0;
-s16 sReleaseWatchTarget = 0;
+// s8 to match gSaveContext.magic, which is where this gets written back. magicTarget is declared
+// s16 but only ever holds magic +/- a cost that Magic_RequestChange has already range-checked
+// against 0 and magicCapacity, so it always fits - see the cast at the assignment below.
+s8 sReleaseWatchTarget = 0;
 
 void SevenSagesSongMagicFrameUpdate() {
     if (sReleaseWatchActive) {
@@ -117,7 +120,9 @@ void SevenSagesSongMagicFrameUpdate() {
     // it here - see the release-watch block above.
     sReleaseWatchActive = true;
     sReleaseWatchFrames = 0;
-    sReleaseWatchTarget = gSaveContext.magicTarget;
+    // Narrowing s16 -> s8 is safe: Magic_RequestChange returned true above, which means it
+    // range-checked the cost and set magicTarget to a value inside [0, magicCapacity] (96 at most).
+    sReleaseWatchTarget = static_cast<s8>(gSaveContext.magicTarget);
 
     if (onSuccess) {
         onSuccess();
