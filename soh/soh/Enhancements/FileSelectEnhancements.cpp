@@ -3,6 +3,7 @@
 #include "soh/OTRGlobals.h"
 #include "soh/SohGui/SohModals.h"
 #include "soh/SohGui/SohGui.hpp"
+#include "soh/Enhancements/Presets/Presets.h"
 
 #include <array>
 #include <string>
@@ -77,6 +78,58 @@ void SohFileSelect_ShowPresetMenu() {
 
 void SohFileSelect_DismissPresetModal() {
     CVarSetInteger(CVAR_GENERAL("HasSeenPresetModal"), 1);
+}
+
+// Seven Sages ships as two presets that both have to be applied before the seed is generated: the
+// rando settings shape the seed itself, the enhancements shape how it plays. Applying one and
+// missing the other is the failure mode this modal exists to remove - it doesn't error, it just
+// produces a run that's subtly wrong rather than obviously broken, which is far worse to debug from
+// a player's chair.
+//
+// Deliberately hooked where the player picks the Randomizer quest (z_file_choose.c), NOT where the
+// vanilla preset modal fires. That one runs on "Start Randomizer", by which point the seed already
+// exists and applying rando settings would change nothing about it.
+constexpr const char* CVAR_SEVEN_SAGES_CONFIGURED = CVAR_GENERAL("SevenSages.Configured");
+
+static const char* kSevenSagesPresets[] = {
+    "Rando Seed Settings - Seven Sages",
+    "Enhancements - Seven Sages",
+};
+
+void SohFileSelect_ApplySevenSagesPresets() {
+    for (const char* preset : kSevenSagesPresets) {
+        // Empty section list means "every section the preset declares". applyPreset handles the
+        // randomizer-section refresh (UpdateAllOptions / UpdateMenuTricks) internally.
+        applyPreset(preset, {});
+    }
+    CVarSetInteger(CVAR_SEVEN_SAGES_CONFIGURED, 1);
+}
+
+void SohFileSelect_DismissSevenSagesModal() {
+    CVarSetInteger(CVAR_SEVEN_SAGES_CONFIGURED, 1);
+}
+
+void SohFileSelect_ShowSevenSagesModal() {
+    if (CVarGetInteger(CVAR_SEVEN_SAGES_CONFIGURED, 0)) {
+        return;
+    }
+    std::shared_ptr<SohModalWindow> modal = static_pointer_cast<SohModalWindow>(
+        Ship::Context::GetRawInstance()->GetWindow()->GetGui()->GetGuiWindow("Modal Window"));
+    if (modal->IsPopupOpen("Set up Seven Sages?")) {
+        modal->DismissPopup();
+    } else {
+        modal->RegisterPopup(
+            "Set up Seven Sages?",
+            "\nSeven Sages needs two presets applied before you generate a seed, and it's easy to\n"
+            "apply one and miss the other. This does both for you.\n"
+            "\n"
+            "After that, pick who you're playing: Randomizer -> Logic -> Selected Sage. Each sage\n"
+            "starts somewhere different with a different kit, so it's the biggest choice you make.\n"
+            "\n"
+            "Then Generate Randomizer Seed, and Start Randomizer.\n",
+            "Set it up for me", "I'll do it myself", SohFileSelect_ApplySevenSagesPresets,
+            SohFileSelect_DismissSevenSagesModal);
+    }
 }
 
 void SohFileSelect_ShowPresetModal() {

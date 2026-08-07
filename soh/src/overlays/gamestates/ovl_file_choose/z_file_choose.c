@@ -680,6 +680,9 @@ void FileChoose_UpdateQuestMenu(GameState* thisx) {
         } else if (this->questType[this->buttonIndex] == QUEST_RANDOMIZER) {
             Audio_PlaySoundGeneral(NA_SE_SY_FSEL_DECIDE_L, &gSfxDefaultPos, 4, &gSfxDefaultFreqAndVolScale,
                                    &gSfxDefaultFreqAndVolScale, &gSfxDefaultReverb);
+            // Seven Sages: offer one-click preset setup here, while the seed still doesn't exist.
+            // The vanilla preset modal fires on "Start Randomizer", too late for rando settings.
+            SohFileSelect_ShowSevenSagesModal();
             this->prevConfigMode = this->configMode;
             this->configMode = CM_ROTATE_TO_RANDOMIZER_SETTINGS_MENU;
         } else {
