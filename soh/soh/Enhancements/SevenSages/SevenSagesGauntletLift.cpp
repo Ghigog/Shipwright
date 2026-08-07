@@ -95,6 +95,7 @@
 #include "soh/Enhancements/game-interactor/GameInteractor_Hooks.h"
 #include "soh/Enhancements/SevenSages/SevenSagesAoeField.h"
 #include "soh/Enhancements/SevenSages/SevenSagesRoomAoe.h"
+#include "soh/Enhancements/SevenSages/SevenSagesThrownImpact.h"
 
 extern "C" {
 #include "z64.h"
@@ -144,12 +145,6 @@ constexpr f32 ENEMY_RANGE_Y = 60.0f;
 constexpr f32 THROWN_GRAVITY = -2.5f;
 constexpr f32 THROWN_MIN_VELOCITY_Y = -20.0f;
 constexpr s16 THROWN_MAX_FRAMES = 300;
-
-// The landing shock for a thrown enemy. Small and short - it is an impact, not a spell.
-constexpr f32 IMPACT_RADIUS = 60.0f;
-constexpr f32 IMPACT_HEIGHT = 80.0f;
-constexpr int32_t IMPACT_FRAMES = 6;
-constexpr uint8_t IMPACT_DAMAGE = 0; // the effect is the stun, not the hit - see SevenSagesAoeField.h
 
 // Held while the actor is in Link's hands or in flight. Any value above 1 survives the DECR that
 // Actor_UpdateAll does before testing it, and this is re-applied every frame we own the actor.
@@ -312,12 +307,20 @@ void ShatterBoulder(Actor* actor) {
     Actor_Kill(actor);
 }
 
-// See the header comment for why this stops short of killing the enemy.
+// The landing itself is SevenSagesThrownImpact's job, so a thrown enemy lands by the same rule every
+// other thrown object does and its own weight decides how hard.
+//
+// Changed 2026-08-07: this used to spawn a 0-damage stun field of its own, which made the landing a
+// deku nut rather than a collision. It reads better as damage - the enemy Link just threw is what
+// hit the ground - and it means one mechanism covers pots, boulders and enemies alike. Note the
+// field is centred on the thrown enemy, so it now takes its own landing damage as well, which is
+// what "throwing an enemy hurts it" ought to mean and which the old stun field never did.
+//
+// Order matters: the impact is spawned while the actor is still ours and still moving, because
+// SevenSagesThrownImpact reads speedXZ to tell a throw from a drop, and the next two lines zero it.
 void ImpactEnemy(Actor* actor) {
     SoundSource_PlaySfxAtFixedWorldPos(gPlayState, &actor->world.pos, 20, NA_SE_PL_BODY_HIT);
-    SevenSagesSpawnAoeField(gPlayState, actor->world.pos.x, actor->world.pos.y, actor->world.pos.z, IMPACT_RADIUS,
-                            IMPACT_HEIGHT, IMPACT_FRAMES, SEVEN_SAGES_AOE_DMG_STUN, IMPACT_DAMAGE,
-                            SEVEN_SAGES_AOE_VISUAL_NONE);
+    SevenSagesThrownImpact(gPlayState, actor);
     // Zeroed so the enemy doesn't inherit the throw's momentum and skate away the moment its own
     // update resumes.
     actor->speedXZ = 0.0f;
