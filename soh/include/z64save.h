@@ -381,11 +381,26 @@ typedef enum {
     /* 01 */ QUEST_MASTER,
     /* 02 */ QUEST_RANDOMIZER,
     /* 03 */ QUEST_BOSSRUSH,
+    // Appended, never inserted: quest.id is persisted per save file, so giving an existing
+    // entry a new value would silently reinterpret every save already on disk.
+    /* 04 */ QUEST_SEVENSAGES,
 } Quest;
 
 #define IS_VANILLA (gSaveContext.ship.quest.id == QUEST_NORMAL)
 #define IS_MASTER_QUEST (gSaveContext.ship.quest.id == QUEST_MASTER)
-#define IS_RANDO (gSaveContext.ship.quest.id == QUEST_RANDOMIZER)
+// Seven Sages is a curated randomizer, not a separate game mode: it is built on the
+// randomizer's seed generation, item pool and hint system, and its own code asks "is this
+// a randomized save?" 211 times through this macro. So IS_RANDO deliberately covers both
+// ids - a Seven Sages save must answer yes to everything a randomizer save does.
+//
+// Use IS_RANDOMIZER_QUEST, below, where the question is genuinely "is this the Randomizer
+// quest specifically" rather than "is this randomized" - user-visible naming, for instance.
+// Takes the id rather than reading gSaveContext, because SaveManager works on a passed-in
+// SaveContext* when saving and cannot use the gSaveContext-based macros.
+#define QUEST_IS_RANDOMIZED(questId) ((questId) == QUEST_RANDOMIZER || (questId) == QUEST_SEVENSAGES)
+#define IS_RANDO QUEST_IS_RANDOMIZED(gSaveContext.ship.quest.id)
+#define IS_RANDOMIZER_QUEST (gSaveContext.ship.quest.id == QUEST_RANDOMIZER)
+#define IS_SEVENSAGES (gSaveContext.ship.quest.id == QUEST_SEVENSAGES)
 #define IS_BOSS_RUSH (gSaveContext.ship.quest.id == QUEST_BOSSRUSH)
 
 typedef enum {

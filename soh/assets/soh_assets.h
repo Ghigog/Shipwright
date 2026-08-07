@@ -80,6 +80,9 @@ static const ALIGN_ASSET(2) char gTitleRandomizerSubtitleTex[] = dgTitleRandomiz
 #define dgTitleBossRushSubtitleTex "__OTR__objects/object_mag/gTitleBossRushSubtitleTex"
 static const ALIGN_ASSET(2) char gTitleBossRushSubtitleTex[] = dgTitleBossRushSubtitleTex;
 
+#define dgTitleSevenSagesSubtitleTex "__OTR__objects/object_mag/gTitleSevenSagesSubtitleTex"
+static const ALIGN_ASSET(2) char gTitleSevenSagesSubtitleTex[] = dgTitleSevenSagesSubtitleTex;
+
 #define dgOcarinaAButtonDL "__OTR__objects/object_ocarina_a_button/gOcarinaAButtonDL"
 static const ALIGN_ASSET(2) char gOcarinaAButtonDL[] = dgOcarinaAButtonDL;
 

@@ -156,7 +156,9 @@ SaveManager::SaveManager() {
 }
 
 void SaveManager::LoadRandomizer() {
-    if (gSaveContext.ship.quest.id != QUEST_RANDOMIZER) {
+    // IS_RANDO, not a literal id check: a Seven Sages save carries randomizer data too, and
+    // returning early here would leave its item locations and hints unloaded.
+    if (!IS_RANDO) {
         return;
     }
 
@@ -260,7 +262,9 @@ void SaveManager::LoadRandomizer() {
 }
 
 void SaveManager::SaveRandomizer(SaveContext* saveContext, int sectionID, bool fullSave) {
-    if (saveContext->ship.quest.id != QUEST_RANDOMIZER) {
+    // Operates on the passed-in saveContext, not gSaveContext, so this uses the id-taking
+    // form rather than IS_RANDO. Seven Sages saves must write randomizer data like any other.
+    if (!QUEST_IS_RANDOMIZED(saveContext->ship.quest.id)) {
         return;
     }
 
@@ -1150,6 +1154,10 @@ void SaveManager::SaveFileThreaded(int fileNum, SaveContext* saveContext, int se
     } else {
         saveBlock["fileType"] = FILE_TYPE_SAVE_VANILLA;
     }
+    // fileType alone cannot distinguish Seven Sages from Randomizer - both are randomized, so
+    // both write FILE_TYPE_SAVE_RANDO, and the load path below used to rebuild the id from it.
+    // Record the real id so a Seven Sages save does not come back as a plain Randomizer save.
+    saveBlock["questId"] = saveContext->ship.quest.id;
     if (sectionID == SECTION_ID_BASE) {
         for (auto& sectionHandlerPair : sectionSaveHandlers) {
             auto& saveFuncInfo = sectionHandlerPair.second;
@@ -1285,6 +1293,12 @@ void SaveManager::LoadFile(int fileNum) {
         }
         if (saveBlock.contains("fileType") && saveBlock["fileType"] == FILE_TYPE_SAVE_RANDO) {
             gSaveContext.ship.quest.id = QUEST_RANDOMIZER;
+        }
+        // Saves written since questId was added carry the real id, which is the only way to
+        // tell Seven Sages from Randomizer - both are FILE_TYPE_SAVE_RANDO. Applied after the
+        // fileType branch so it wins, and guarded so pre-existing saves keep the old behaviour.
+        if (saveBlock.contains("questId")) {
+            gSaveContext.ship.quest.id = saveBlock["questId"].get<uint8_t>();
         }
         switch (saveBlock["version"].get<int>()) {
             case 1:

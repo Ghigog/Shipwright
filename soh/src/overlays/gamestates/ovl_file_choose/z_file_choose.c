@@ -26,7 +26,7 @@
 #include "soh/ShipUtils.h"
 
 #define MIN_QUEST (ResourceMgr_GameHasOriginal() ? QUEST_NORMAL : QUEST_MASTER)
-#define MAX_QUEST QUEST_BOSSRUSH
+#define MAX_QUEST QUEST_SEVENSAGES
 
 void Sram_InitDebugSave(void);
 void Sram_InitBossRushSave();
@@ -333,13 +333,14 @@ void DrawSeedHashSprites(FileChooseContext* this) {
 
     // Draw Seed Icons for spoiler log:
     // 1. On Name Entry if a rando seed has been generated
-    // 2. On Quest Menu if a spoiler has been dropped and the Randomizer quest option is currently hovered.
+    // 2. On Quest Menu if a spoiler has been dropped and a randomized quest option is currently
+    //    hovered - Seven Sages generates a seed the same way, so it wants the same indicator.
     if ((Randomizer_IsSeedGenerated() || Randomizer_IsSpoilerLoaded()) &&
         (((this->configMode == CM_NAME_ENTRY || this->configMode == CM_ROTATE_TO_NAME_ENTRY ||
            this->configMode == CM_NAME_ENTRY_TO_RANDOMIZER_SETTINGS_MENU || this->configMode == CM_START_NAME_ENTRY ||
            this->configMode == CM_START_RANDOMIZER_SETTINGS_MENU) ||
           this->configMode == CM_RANDOMIZER_SETTINGS_MENU) &&
-         gSaveContext.ship.quest.id == QUEST_RANDOMIZER)) {
+         IS_RANDO)) {
 
         gDPSetPrimColor(POLY_OPA_DISP++, 0, 0, 0xFF, 0xFF, 0xFF, 0xFF);
         u16 xStart = 64;
@@ -677,12 +678,18 @@ void FileChoose_UpdateQuestMenu(GameState* thisx) {
             this->prevConfigMode = this->configMode;
             this->configMode = CM_ROTATE_TO_BOSS_RUSH_MENU;
             return;
-        } else if (this->questType[this->buttonIndex] == QUEST_RANDOMIZER) {
+        } else if (QUEST_IS_RANDOMIZED(this->questType[this->buttonIndex])) {
+            // Both randomized quests use the randomizer settings menu - Seven Sages is a curated
+            // randomizer, so it needs the same seed generation and settings flow.
             Audio_PlaySoundGeneral(NA_SE_SY_FSEL_DECIDE_L, &gSfxDefaultPos, 4, &gSfxDefaultFreqAndVolScale,
                                    &gSfxDefaultFreqAndVolScale, &gSfxDefaultReverb);
             // Seven Sages: offer one-click preset setup here, while the seed still doesn't exist.
             // The vanilla preset modal fires on "Start Randomizer", too late for rando settings.
-            SohFileSelect_ShowSevenSagesModal();
+            // Only on the Seven Sages entry now that it has its own - picking plain Randomizer
+            // should no longer be interrupted by an offer to set up a different mod.
+            if (this->questType[this->buttonIndex] == QUEST_SEVENSAGES) {
+                SohFileSelect_ShowSevenSagesModal();
+            }
             this->prevConfigMode = this->configMode;
             this->configMode = CM_ROTATE_TO_RANDOMIZER_SETTINGS_MENU;
         } else {
@@ -1811,6 +1818,17 @@ void FileChoose_DrawWindowContents(GameState* thisx) {
                     this->state.gfxCtx, 160, 135,
                     ResourceMgr_GameHasOriginal() ? gTitleZeldaShieldLogoTex : gTitleZeldaShieldLogoMQTex, 160, 160);
                 FileChoose_DrawImageRGBA32(this->state.gfxCtx, 182, 180, gTitleBossRushSubtitleTex, 128, 32);
+                break;
+            case QUEST_SEVENSAGES:
+                gDPSetPrimColor(POLY_OPA_DISP++, 0, 0, 255, 255, 255, this->logoAlpha);
+                FileChoose_DrawTextureI8(this->state.gfxCtx, gTitleTheLegendOfTextTex, 72, 8, 156, 108, 72, 8, 1024,
+                                         1024);
+                FileChoose_DrawTextureI8(this->state.gfxCtx, gTitleOcarinaOfTimeTMTextTex, 96, 8, 154, 163, 96, 8, 1024,
+                                         1024);
+                FileChoose_DrawImageRGBA32(
+                    this->state.gfxCtx, 160, 135,
+                    ResourceMgr_GameHasOriginal() ? gTitleZeldaShieldLogoTex : gTitleZeldaShieldLogoMQTex, 160, 160);
+                FileChoose_DrawImageRGBA32(this->state.gfxCtx, 182, 180, gTitleSevenSagesSubtitleTex, 128, 32);
                 break;
         }
     } else if (this->configMode == CM_BOSS_RUSH_MENU) {

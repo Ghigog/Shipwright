@@ -90,8 +90,9 @@ static void PauseWarp_HandleSelection() {
         int song = gPlayState->pauseCtx.cursorPoint[PAUSE_QUEST];
         if (aButtonPressed && CHECK_QUEST_ITEM(song) && song >= QUEST_SONG_MINUET && song <= QUEST_SONG_PRELUDE &&
             gPlayState->pauseCtx.pageIndex == PAUSE_QUEST && gPlayState->pauseCtx.state == 6) {
-            if (gSaveContext.ship.quest.id == QUEST_RANDOMIZER &&
-                Randomizer_GetSettingValue(RSK_SHUFFLE_OCARINA_BUTTONS)) {
+            // IS_RANDO rather than the literal id: this guards a randomizer *setting*
+            // (shuffled ocarina buttons), which a Seven Sages seed can have set too.
+            if (IS_RANDO && Randomizer_GetSettingValue(RSK_SHUFFLE_OCARINA_BUTTONS)) {
                 bool canplay = false;
                 switch (song) {
                     case QUEST_SONG_MINUET:

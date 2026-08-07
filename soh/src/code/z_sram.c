@@ -275,8 +275,12 @@ void Sram_InitSave(FileChooseContext* fileChooseCtx) {
 
     u8 currentQuest = fileChooseCtx->questType[fileChooseCtx->buttonIndex];
 
-    if (currentQuest == QUEST_RANDOMIZER && (Randomizer_IsSeedGenerated() || Randomizer_IsSpoilerLoaded())) {
-        gSaveContext.ship.quest.id = QUEST_RANDOMIZER;
+    // Both randomized quests come through here - the Seven Sages setup below is the whole
+    // reason this branch matters to the mod, and gating it on QUEST_RANDOMIZER alone would
+    // mean picking Seven Sages on the file-select screen skipped initialisation entirely.
+    if (QUEST_IS_RANDOMIZED(currentQuest) && (Randomizer_IsSeedGenerated() || Randomizer_IsSpoilerLoaded())) {
+        // Keep whichever was chosen, rather than flattening both to QUEST_RANDOMIZER.
+        gSaveContext.ship.quest.id = currentQuest;
 
         Randomizer_InitSaveFile();
 
