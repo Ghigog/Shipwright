@@ -19,6 +19,7 @@
 #include "include/global.h"
 
 #include "soh/Enhancements/debugger/MessageViewer.h"
+#include "soh/Enhancements/EnrichWorld/EnrichWorldPlacer.h"
 #include "soh/Notification/Notification.h"
 #include "soh/Enhancements/TimeDisplay/TimeDisplay.h"
 #include "soh/Enhancements/mod_menu.h"
@@ -69,6 +70,7 @@ std::shared_ptr<InputViewer> mInputViewer;
 std::shared_ptr<InputViewerSettingsWindow> mInputViewerSettings;
 std::shared_ptr<CosmeticsEditorWindow> mCosmeticsEditorWindow;
 std::shared_ptr<ActorViewerWindow> mActorViewerWindow;
+std::shared_ptr<EnrichWorldPlacerWindow> mEnrichWorldPlacerWindow;
 std::shared_ptr<ColViewerWindow> mColViewerWindow;
 std::shared_ptr<SaveEditorWindow> mSaveEditorWindow;
 std::shared_ptr<HookDebuggerWindow> mHookDebuggerWindow;
@@ -146,6 +148,9 @@ void SetupGuiElements() {
     mActorViewerWindow =
         std::make_shared<ActorViewerWindow>(CVAR_WINDOW("ActorViewer"), "Actor Viewer", ImVec2(520, 600));
     gui->AddGuiWindow(mActorViewerWindow);
+    mEnrichWorldPlacerWindow = std::make_shared<EnrichWorldPlacerWindow>(CVAR_WINDOW("EnrichWorldPlacer"),
+                                                                        "Enrich World Placer", ImVec2(520, 640));
+    gui->AddGuiWindow(mEnrichWorldPlacerWindow);
     mColViewerWindow =
         std::make_shared<ColViewerWindow>(CVAR_WINDOW("CollisionViewer"), "Collision Viewer", ImVec2(520, 600));
     gui->AddGuiWindow(mColViewerWindow);
@@ -225,6 +230,7 @@ void Destroy() {
     mSaveEditorWindow = nullptr;
     mHookDebuggerWindow = nullptr;
     mColViewerWindow = nullptr;
+    mEnrichWorldPlacerWindow = nullptr;
     mActorViewerWindow = nullptr;
     mCosmeticsEditorWindow = nullptr;
     mModMenuWindow = nullptr;

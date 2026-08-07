@@ -386,6 +386,13 @@ void SohMenu::AddMenuEnhancements() {
         .Options(CheckboxOptions().Tooltip(
             "Adds extra rocks, trees, bushes and flowers to the existing scenes, using only props "
             "that already appear in each area."));
+    AddWidget(path, "Open Prop Placer", WIDGET_WINDOW_BUTTON)
+        .CVar(CVAR_WINDOW("EnrichWorldPlacer"))
+        .WindowName("Enrich World Placer")
+        .Options(WindowButtonOptions().Tooltip(
+            "Place your own scenery: stand where you want a prop, pick it from the list and drop "
+            "it in. Only props already loaded in the room you're standing in are offered. Saves "
+            "to a JSON file that loads back on the next scene change."));
 
     // Skips & Speed-ups
     path.sidebarName = "Skips & Speed-ups";

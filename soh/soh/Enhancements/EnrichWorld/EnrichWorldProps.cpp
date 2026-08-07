@@ -6,6 +6,13 @@
  * Actor_UpdateAll), so we can append to the room from here and leave the archive untouched.
  * Same shape as Enhancements/QoL/DaytimeGS.cpp, which does this for night-time Gold Skulltulas.
  *
+ * There are two sources of placements, and both spawn:
+ *
+ *   1. `builtInRooms` below - content that ships with the mod. Reviewed, commented, in git.
+ *   2. The JSON store (EnrichWorldStore.cpp) - whatever the in-game placer has written. This is
+ *      the working set: place things by eye, save, and they're live on the next scene load with
+ *      no rebuild. Entries get promoted into the table above once they've been vetted.
+ *
  * THE ONE RULE: only place props already native to the scene.
  *
  * Every room loads a short list of objects (asset banks) and a prop's model lives in one of
@@ -17,14 +24,16 @@
  *   - But eight actors re-check their own object in their init function and Actor_Kill
  *     themselves when it's absent. En_Kusa (bushes) is one of them.
  *
- * So a bad entry either quietly doesn't exist or renders as garbage. Which props are native to
- * which room is not guessable - look it up in ../../../../enrich-world/data/scene-props.json
- * (every vanilla prop in 388 rooms, with coordinates), and read
- * ../../../../enrich-world/docs/environment-props.md before adding anything.
+ * The placer makes this unreachable by hand - it only offers props whose object is loaded in the
+ * room you're standing in (EnrichWorldPalette.cpp). For the table below, look it up in
+ * ../../../../enrich-world/data/scene-props.json and read
+ * ../../../../enrich-world/docs/environment-props.md first.
  *
  * Deliberately independent of Seven Sages: gated on its own CVar and nothing else, never
  * IS_RANDO, so this works in a plain playthrough and the two mods can't observe each other.
  */
+#include "EnrichWorld.h"
+
 #include "soh/Enhancements/game-interactor/GameInteractor_Hooks.h"
 #include "soh/ShipInit.hpp"
 
@@ -52,7 +61,7 @@ struct EnrichedRoom {
 // Check the prop's object is native to that room before adding an entry (see the header
 // comment). If a scene ever needs props to differ by age or time of day, this struct is where
 // that filter goes - vanilla varies room contents the same way, via alternate scene headers.
-const std::vector<EnrichedRoom> enrichedRooms = {
+const std::vector<EnrichedRoom> builtInRooms = {
     // Hyrule Field - two trees flanking the Market drawbridge where it lands in the field.
     //
     // OBJECT_WOOD02 is in spot00's base object list, and params 0x0205 (WOOD_TREE_OVAL_GREEN,
@@ -73,8 +82,8 @@ const std::vector<EnrichedRoom> enrichedRooms = {
     } },
 };
 
-void EnrichWorldOnSceneSpawnActors() {
-    for (const auto& room : enrichedRooms) {
+void SpawnBuiltIns() {
+    for (const auto& room : builtInRooms) {
         if (room.scene != gPlayState->sceneNum || room.room != gPlayState->roomCtx.curRoom.num) {
             continue;
         }
@@ -83,6 +92,25 @@ void EnrichWorldOnSceneSpawnActors() {
                         prop.rot.y, prop.rot.z, prop.params);
         }
     }
+}
+
+void SpawnFromStore() {
+    for (auto& p : EnrichWorld::Placements()) {
+        // Every placement's cached instance belongs to the room it was spawned into. Clearing on
+        // the way past means a stale Actor* can never outlive its room and get nudged by the
+        // placer into a freed slot.
+        if (p.sceneId != gPlayState->sceneNum || p.room != gPlayState->roomCtx.curRoom.num) {
+            p.live = nullptr;
+            continue;
+        }
+        p.live = Actor_Spawn(&gPlayState->actorCtx, gPlayState, p.actorId, p.pos.x, p.pos.y, p.pos.z, p.rot.x, p.rot.y,
+                             p.rot.z, p.params);
+    }
+}
+
+void EnrichWorldOnSceneSpawnActors() {
+    SpawnBuiltIns();
+    SpawnFromStore();
 }
 
 void RegisterEnrichWorldProps() {
