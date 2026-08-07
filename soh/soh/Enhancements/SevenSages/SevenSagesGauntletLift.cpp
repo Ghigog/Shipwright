@@ -96,6 +96,7 @@
 #include "soh/Enhancements/SevenSages/SevenSagesAoeField.h"
 #include "soh/Enhancements/SevenSages/SevenSagesRoomAoe.h"
 #include "soh/Enhancements/SevenSages/SevenSagesThrownImpact.h"
+#include "soh/Enhancements/SevenSages/SevenSagesMegatonHammer.h"
 
 extern "C" {
 #include "z64.h"
@@ -191,8 +192,16 @@ u8 RequiredTierForEnemy(const Actor* actor) {
 
 // `update == NULL` is an actor that has been killed and is only waiting to be deleted; offering it
 // would hand Link a corpse that vanishes out of his hands next frame.
+//
+// A hammer knockdown counts alongside a stun, added 2026-08-07 from play: an enemy the Megaton
+// Hammer has just flipped over reads as helpless and is not, because being knocked flat leaves none
+// of the marks IsStunned tests. SevenSagesMegatonHammer.cpp tracks the hit itself instead - see its
+// KNOCKDOWN_FRAMES comment for why that has to be a time window. Only the lift needs this: once the
+// actor is owned, this file holds freezeTimer up, so it reads as stunned from then on by the
+// ordinary rule.
 bool EnemyIsLiftable(const Actor* actor) {
-    return actor->category == ACTORCAT_ENEMY && actor->update != nullptr && IsStunned(actor) &&
+    return actor->category == ACTORCAT_ENEMY && actor->update != nullptr &&
+           (IsStunned(actor) || SevenSagesHammerKnockedDown(actor)) &&
            CanUseGauntlets(RequiredTierForEnemy(actor));
 }
 

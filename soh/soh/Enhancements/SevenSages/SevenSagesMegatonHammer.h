@@ -106,6 +106,13 @@ uint32_t SevenSagesHammerMeleeDmgFlags(const struct Player* player, uint32_t dmg
 // shockwave, with the same ground position it uses.
 void SevenSagesHammerShockwave(struct PlayState* play, float x, float y, float z);
 
+// True for a few seconds after a Megaton Hammer MELEE hit landed on this enemy, so the gauntlets can
+// treat a hammered enemy as liftable. The shockwave does not need this - it stuns through the
+// target's own Deku Nut row and leaves the blue colour filter the gauntlets already recognise - but
+// a swing that connects directly leaves no readable state at all, because OoT has no generic
+// knocked-down flag. See the definition for why this is a time window rather than a state test.
+bool SevenSagesHammerKnockedDown(const struct Actor* actor);
+
 #ifdef __cplusplus
 }
 #endif

@@ -32,6 +32,74 @@ namespace {
 // the same reason.
 constexpr uint32_t DMG_FLAG_EXPLOSIVE = 0x00000008;
 
+// The hammer's own two melee bits, from the header's damage-table discussion: bit 6 is a swing, bit
+// 30 the jump strike. Used only to recognise the hammer's melee hit in the damage hook below.
+constexpr uint32_t DMG_FLAG_HAMMER_SWING = 0x00000040;
+constexpr uint32_t DMG_FLAG_HAMMER_JUMP = 0x40000000;
+
+// How long after a hammer strike an enemy stays liftable.
+//
+// **This is a time window because OoT has no "knocked down" state to read.** Every generic stun in
+// this game leaves a mark another system can test - a blue colour filter, a freezeTimer - and being
+// knocked flat by a hammer leaves neither. What "flipped over" actually means is a per-enemy action
+// state selected through that enemy's own damage table, where the effect nibble means whatever that
+// actor decided it means; there is no cross-enemy value to compare against. So rather than infer the
+// state, this records the CAUSE and trusts it for a few seconds.
+//
+// The cost of that is honest: an enemy that gets up early is liftable for the remainder of the
+// window anyway. Three seconds is short enough that this reads as "grab it while it's down" rather
+// than as a lasting property, and it is the same order as the knockdown itself.
+constexpr int32_t KNOCKDOWN_FRAMES = 20 * 3;
+
+// Eight is more enemies than one swing can plausibly flatten; a full table drops the record rather
+// than evicting a live one, so the failure is "that one wasn't liftable", never a wrong grant.
+constexpr int32_t MAX_KNOCKDOWNS = 8;
+
+struct Knockdown {
+    // Compared, never dereferenced - the same rule SevenSagesThrownImpact.cpp and the Mirror
+    // Shield's cooldown table follow. A freed actor's entry simply ages out, and a recycled address
+    // can at worst offer one lift it should not have, for under three seconds.
+    const Actor* actor;
+    int32_t frames;
+};
+
+Knockdown sKnockdowns[MAX_KNOCKDOWNS];
+
+void RecordKnockdown(const Actor* actor) {
+    for (Knockdown& entry : sKnockdowns) {
+        if (entry.actor == actor && entry.frames > 0) {
+            entry.frames = KNOCKDOWN_FRAMES;
+            return;
+        }
+    }
+    for (Knockdown& entry : sKnockdowns) {
+        if (entry.frames <= 0) {
+            entry.actor = actor;
+            entry.frames = KNOCKDOWN_FRAMES;
+            return;
+        }
+    }
+}
+
+void TickKnockdowns() {
+    for (Knockdown& entry : sKnockdowns) {
+        if (entry.frames > 0) {
+            entry.frames--;
+        }
+    }
+}
+
+void SevenSagesHammerKnockdownFrameUpdate() {
+    if (!GameInteractor::IsSaveLoaded(true)) {
+        for (Knockdown& entry : sKnockdowns) {
+            entry.actor = nullptr;
+            entry.frames = 0;
+        }
+        return;
+    }
+    TickKnockdowns();
+}
+
 // The shockwave's dmgFlags: the explosive bit, plus the Deku Nut bit (0x1).
 //
 // This one value carries the whole design of the field, so it is worth spelling out. It does three
@@ -74,6 +142,18 @@ constexpr float SHOCKWAVE_RADIUS = 120.0f;
 constexpr float SHOCKWAVE_HEIGHT = 80.0f;
 
 } // namespace
+
+bool SevenSagesHammerKnockedDown(const Actor* actor) {
+    if (actor == nullptr) {
+        return false;
+    }
+    for (const Knockdown& entry : sKnockdowns) {
+        if (entry.frames > 0 && entry.actor == actor) {
+            return true;
+        }
+    }
+    return false;
+}
 
 bool SevenSagesHammerCountsAsExplosive(const Actor* attacker) {
     if (!IS_RANDO || attacker == nullptr || attacker->category != ACTORCAT_PLAYER) {
@@ -135,7 +215,23 @@ static void RegisterSevenSagesMegatonHammer() {
             *damage = (f32)(dekuNutEntry & 0xF);
             target->colChkInfo.damageEffect = (dekuNutEntry >> 4) & 0xF;
         }
+
+        // A MELEE hammer hit on an enemy makes it liftable for a few seconds, which is what the
+        // gauntlets read through SevenSagesHammerKnockedDown. Deliberately separate from the
+        // shockwave case above: that one stuns through the target's own Deku Nut row and so already
+        // leaves the blue filter the gauntlets recognise, whereas a swing that connects directly
+        // leaves nothing to recognise at all. Requested from play 2026-08-07 - "it flips over and I
+        // still can't pick it up".
+        //
+        // Testing the hammer's own bits means the swing's added explosive bit is irrelevant here,
+        // and a real bomb (0x8 alone) never qualifies.
+        if (target != nullptr && target->category == ACTORCAT_ENEMY &&
+            (dmgFlags & (DMG_FLAG_HAMMER_SWING | DMG_FLAG_HAMMER_JUMP)) != 0) {
+            RecordKnockdown(target);
+        }
     });
+
+    COND_HOOK(OnGameFrameUpdate, IS_RANDO, SevenSagesHammerKnockdownFrameUpdate);
 }
 
 static RegisterShipInitFunc sevenSagesMegatonHammerInitFunc(RegisterSevenSagesMegatonHammer, { "IS_RANDO" });
