@@ -104,9 +104,15 @@ constexpr int16_t TRIFORCE_DRAW_H = 26;
 constexpr uint16_t TRIFORCE_DSDX = TEXELS_PER_PIXEL(32, TRIFORCE_DRAW_W);
 constexpr uint16_t TRIFORCE_DTDY = TEXELS_PER_PIXEL(32, TRIFORCE_DRAW_H);
 
-// Right-hand detail pane.
+// Right-hand detail pane. Y is derived, not fixed: the block is centred on the ring's own
+// axis so the two halves read as one composition. Line offsets from the block's top:
+//   name 0, location +16, age +27, then each kit line at +43 + n*11.
 constexpr int16_t INFO_X = 168;
-constexpr int16_t INFO_Y = 104;
+constexpr int16_t INFO_LOCATION_DY = 16;
+constexpr int16_t INFO_AGE_DY = 27;
+constexpr int16_t INFO_KIT_DY = 43;
+constexpr int16_t INFO_KIT_LINE_H = 11;
+constexpr int16_t INFO_LAST_LINE_H = 10;
 
 // Each sage's starting scene and kit are FIXED, not randomized - that is the whole point of
 // choosing one. Transcribed from seven-sages/docs/characters.md, which is the human-readable
@@ -255,16 +261,27 @@ extern "C" void FileChoose_DrawSevenSagesMenuWindowContents(FileChooseContext* f
     {
         const SageInfo& info = sSageInfo[fileChooseContext->sevenSagesIndex];
 
-        Interface_DrawTextLine(fileChooseContext->state.gfxCtx, (char*)info.name, INFO_X, INFO_Y, 255, 255, 170, alpha,
-                               1.0f, true);
-        Interface_DrawTextLine(fileChooseContext->state.gfxCtx, (char*)info.location, INFO_X, INFO_Y + 16, 190, 220,
-                               255, alpha, 0.7f, true);
-        Interface_DrawTextLine(fileChooseContext->state.gfxCtx, (char*)info.age, INFO_X,
-                               INFO_Y + 27, 190, 220, 255, alpha, 0.7f, true);
+        uint8_t kitCount = 0;
+        while (kitCount < 5 && info.kit[kitCount] != nullptr) {
+            kitCount++;
+        }
+        // Kits run 3 to 5 entries, so the block's height varies; centring on the measured
+        // height rather than a fixed top is what keeps each sage balanced instead of leaving
+        // the short ones bottom-heavy.
+        const int16_t blockH =
+            (int16_t)(INFO_KIT_DY + (kitCount > 0 ? (kitCount - 1) * INFO_KIT_LINE_H : 0) + INFO_LAST_LINE_H);
+        const int16_t top = (int16_t)(RING_CENTRE_Y - blockH / 2);
 
-        for (uint8_t k = 0; k < 5 && info.kit[k] != nullptr; k++) {
-            Interface_DrawTextLine(fileChooseContext->state.gfxCtx, (char*)info.kit[k], INFO_X, INFO_Y + 43 + (k * 11),
-                                   255, 255, 255, alpha, 0.65f, true);
+        Interface_DrawTextLine(fileChooseContext->state.gfxCtx, (char*)info.name, INFO_X, top, 255, 255, 170, alpha,
+                               1.0f, true);
+        Interface_DrawTextLine(fileChooseContext->state.gfxCtx, (char*)info.location, INFO_X, top + INFO_LOCATION_DY,
+                               190, 220, 255, alpha, 0.7f, true);
+        Interface_DrawTextLine(fileChooseContext->state.gfxCtx, (char*)info.age, INFO_X, top + INFO_AGE_DY, 190, 220,
+                               255, alpha, 0.7f, true);
+
+        for (uint8_t k = 0; k < kitCount; k++) {
+            Interface_DrawTextLine(fileChooseContext->state.gfxCtx, (char*)info.kit[k], INFO_X,
+                                   top + INFO_KIT_DY + (k * INFO_KIT_LINE_H), 255, 255, 255, alpha, 0.65f, true);
         }
     }
 
