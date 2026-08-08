@@ -25,6 +25,7 @@
 #include <soh/OTRGlobals.h>
 #include "soh/Enhancements/randomizer/randomizerTypes.h"
 #include "soh/Enhancements/randomizer/savefile.h"
+#include "soh/Enhancements/randomizer/randomizer.h"
 #include "soh_assets.h"
 
 #include <libultraship/bridge.h>
@@ -183,6 +184,27 @@ extern "C" void FileChoose_UpdateSevenSagesMenu(GameState* gameState) {
         CVarSave();
         Audio_PlaySoundGeneral(NA_SE_SY_FSEL_DECIDE_L, &gSfxDefaultPos, 4, &gSfxDefaultFreqAndVolScale,
                                &gSfxDefaultFreqAndVolScale, &gSfxDefaultReverb);
+
+        // Generate here, not on the settings screen. The sage is baked into the seed at
+        // generation time - Randomizer_ApplySageGenerationSettings() folds its age, kit and
+        // home region into the real settings before Fill() runs - so a seed made before this
+        // choice carries whichever sage was selected when it was made. Choosing a sage and
+        // then playing a stale seed silently gives you the wrong one, which is exactly the
+        // trap this screen should close.
+        //
+        // Must follow CVarSave(): generation reads the setting back through the randomizer
+        // context, which is populated from the CVars.
+        //
+        // Asynchronous - this spawns the generation thread and returns immediately. The
+        // randomizer settings menu we hand off to already renders the "Generating..." state
+        // and withholds "Start Randomizer" until the seed exists, so no waiting is needed
+        // here. A custom seed set in the randomizer options is still honoured, since that is
+        // read during generation like any other setting.
+        // GenerateRandomizer(), not Randomizer_GenerateRandomizer(): the latter lives inside an
+        // #ifndef __cplusplus block in OTRGlobals.h, so it is C-only. This is the C++ entry
+        // point, and the same one debugconsole.cpp uses. An empty seed means "use whatever the
+        // randomizer options say", so a custom seed set there is still honoured.
+        GenerateRandomizer();
         fileChooseContext->prevConfigMode = fileChooseContext->configMode;
         fileChooseContext->configMode = CM_ROTATE_TO_RANDOMIZER_SETTINGS_MENU;
         return;
