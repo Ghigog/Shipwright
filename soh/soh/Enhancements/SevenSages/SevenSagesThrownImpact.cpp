@@ -46,6 +46,31 @@ constexpr ImpactSpec sImpacts[] = {
     { DMG_FLAG_EXPLOSIVE, 100.0f, 120.0f, 4 },
 };
 
+// Explosives never count as thrown, however they leave Link's hands.
+//
+// A bombchu is the case that exposed this: it is *placed*, not thrown, and then crawls away
+// under its own power at speedXZ 8.0 (z_en_bom_chu.c:238) while touching the ground. That is
+// indistinguishable from "a thrown object just landed hard" by the speed-and-ground test
+// below, so the moment you set one down it was handed an impact field centred on itself - and
+// the chu is AC_ON | AC_TYPE_PLAYER, so the field's own player-attributed collider detonated
+// it instantly.
+//
+// Bombs and bomb flowers are excluded for the same underlying reason even though they do not
+// self-propel: an explosive already carries its own detonation, on its own timer and its own
+// terms. Handing one an extra damage field the instant it lands can only set it off early or
+// double up on what it was going to do anyway. Nothing here is what makes a thrown bomb
+// dangerous.
+bool IsExplosive(const Actor* actor) {
+    switch (actor->id) {
+        case ACTOR_EN_BOM:     // bomb
+        case ACTOR_EN_BOM_CHU: // bombchu
+        case ACTOR_EN_BOMBF:   // bomb flower
+            return true;
+        default:
+            return false;
+    }
+}
+
 ThrownSize SizeOf(const Actor* actor) {
     switch (actor->id) {
         case ACTOR_EN_ISHI:
@@ -124,8 +149,12 @@ void SevenSagesThrownImpactPlayerUpdate() {
         // It left his hands this frame. Whether that was a throw or a drop is decided at the
         // landing, from the object's own speed, rather than here - the throw's speed is set by
         // Player on the way out and is still on the actor when it lands.
-        sFlying = sHeld;
-        sFlightFrames = FLIGHT_WINDOW_FRAMES;
+        //
+        // Explosives are dropped rather than tracked: see IsExplosive above. Filtering at the
+        // moment of release rather than at the landing means nothing downstream has to
+        // reason about them at all.
+        sFlying = IsExplosive(sHeld) ? nullptr : sHeld;
+        sFlightFrames = sFlying != nullptr ? FLIGHT_WINDOW_FRAMES : 0;
         sHeld = nullptr;
     }
 }
@@ -169,6 +198,13 @@ void SevenSagesThrownImpact(PlayState* play, Actor* actor) {
     // definition.
     if (actor == sFlying) {
         ForgetFlight();
+    }
+
+    // Also guarded here, not only where flight is tracked, because SevenSagesGauntletLift.cpp
+    // calls this directly for what it throws. One check at the point every route converges on
+    // is what makes "an explosive never gets an impact field" true rather than merely usual.
+    if (IsExplosive(actor)) {
+        return;
     }
 
     if (actor->speedXZ < MIN_THROW_SPEED) {
