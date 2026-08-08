@@ -1933,7 +1933,6 @@ void FileChoose_DrawWindowContents(GameState* thisx) {
                this->configMode != CM_ROTATE_TO_BOSS_RUSH_MENU && this->configMode != CM_BOSS_RUSH_TO_QUEST &&
                this->configMode != CM_START_SEVEN_SAGES_MENU &&
                this->configMode != CM_ROTATE_TO_SEVEN_SAGES_MENU && this->configMode != CM_SEVEN_SAGES_TO_QUEST &&
-               this->configMode != CM_SEVEN_SAGES_MENU &&
                this->configMode != CM_START_RANDOMIZER_SETTINGS_MENU &&
                this->configMode != CM_ROTATE_TO_RANDOMIZER_SETTINGS_MENU &&
                this->configMode != CM_RANDOMIZER_SETTINGS_MENU_TO_QUEST &&
