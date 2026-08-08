@@ -63,6 +63,12 @@ constexpr float FLEE_RADIUS = 400.0f;
 constexpr float FLEE_SPEED = 5.0f;
 
 // Free-moving minor mobs only - see the header comment for why this is an explicit list.
+//
+// **No undead here.** En_Skb (Stalchild), En_Rd (ReDead/Gibdo) and En_Poh (Poe) were on the
+// spec's list and were removed 2026-08-08 after play: undead are the Skull Mask's job, and
+// having both masks act on the same actors makes them feel like the same item. The full
+// undead set is whoever handles VB_UNDEAD_DETECT_PLAYER - En_Dh, En_Dha, En_Po_Sisters,
+// En_Poh, En_Rd, En_Skb, En_Test, En_Wallmas - and none of them belong in this list.
 const std::unordered_set<int16_t>& FleeingActors() {
     static const std::unordered_set<int16_t> actors = {
         ACTOR_EN_FIREFLY,  // Keese
@@ -77,15 +83,12 @@ const std::unordered_set<int16_t>& FleeingActors() {
         ACTOR_EN_VALI,     // Bari
         ACTOR_EN_TP,       // Tailpasaran
         ACTOR_EN_SB,       // Shellblade
-        ACTOR_EN_SKB,      // Stalchild
         ACTOR_EN_DODOJR,   // Baby Dodongo
         ACTOR_EN_DODONGO,  // Dodongo
         ACTOR_EN_BW,       // Torch Slug
         ACTOR_EN_RR,       // Like Like
         ACTOR_EN_OKUTA,    // Octorok
         ACTOR_EN_AM,       // Armos
-        ACTOR_EN_RD,       // ReDead / Gibdo
-        ACTOR_EN_POH,      // Poe
         ACTOR_EN_FLOORMAS, // Floormaster
         ACTOR_EN_BUBBLE,   // Shabom
         ACTOR_EN_GOMA,     // Gohma larva
@@ -116,6 +119,13 @@ void SevenSagesSpookyMaskFrameUpdate() {
         // xzDistToPlayer is maintained by the engine each frame, so this costs nothing extra
         // and stays correct for actors that moved since the room walk began.
         if (actor->xzDistToPlayer > FLEE_RADIUS) {
+            return;
+        }
+
+        // Leave an actor alone once it is against a wall. Re-pointing it into the wall every
+        // frame overrides whatever its own collision response was about to do, and the result
+        // is a mob that grinds along - or through - level geometry instead of stopping.
+        if (actor->bgCheckFlags & BGCHECKFLAG_WALL) {
             return;
         }
 
