@@ -116,14 +116,19 @@ constexpr int16_t INFO_KIT_LINE_H = 11;
 constexpr int16_t INFO_LAST_LINE_H = 10;
 
 // Each sage's starting scene and kit are FIXED, not randomized - that is the whole point of
-// choosing one. Transcribed from seven-sages/docs/characters.md, which is the human-readable
-// face of the sSageDefinitions[] table in savefile.cpp. Kept as display strings here because
-// the kit is stored there as RSK_STARTING_* option ids, which have no readable names at this
-// layer. If either the table or the doc changes, this has to change with them.
+// choosing one. Kept as display strings because sSageDefinitions[] stores the kit as
+// RSK_STARTING_* option ids, which have no readable names at this layer.
+//
+// Transcribed from sSageDefinitions[] in savefile.cpp - the code, NOT docs/characters.md.
+// That distinction is load-bearing: the doc's summary table had drifted from the code and
+// listed a "random mask" for Saria that is not implemented at all (the doc says so itself,
+// further down, under open questions), omitted the Magic every caster starts with, and put
+// Impa in Kakariko and Ruto in Zora's Domain when they spawn at the Graveyard and Zora's
+// Fountain. If the definitions change, re-derive this from them.
 struct SageInfo {
     const char* name;
     const char* location;
-    const char* age;    // from the doc table, NOT Randomizer_GetSageStartingAge(): that reads
+    const char* age;    // from sSageDefinitions[], NOT Randomizer_GetSageStartingAge(): that reads
                         // the randomizer context's options, which are only populated at
                         // generation time, so this early it always answers for Rauru.
     const char* kit[5]; // nullptr-terminated
@@ -133,17 +138,17 @@ const SageInfo sSageInfo[SAGE_COUNT] = {
     { "Rauru", "Lon Lon Ranch", "Adult",
       { "Megaton Hammer", "Bow + Light Arrows", "Magic", "Stone of Agony", nullptr } },
     { "Saria", "Sacred Forest Meadow", "Child",
-      { "Deku Sticks & Nuts", "A random mask", "Fairy Ocarina", "Saria's Song", nullptr } },
+      { "Deku Sticks & Nuts", "Fairy Ocarina", "Saria's Song", "Magic", nullptr } },
     { "Darunia", "Goron City", "Child",
       { "Bomb Bag + Bombchus", "Goron's Bracelet", "Goron Tunic", nullptr, nullptr } },
-    { "Ruto", "Zora's Domain", "Child",
-      { "All diving scales", "Iron Boots", "Zora Tunic", nullptr, nullptr } },
-    { "Impa", "Kakariko Village", "Adult",
+    { "Ruto", "Zora's Fountain", "Child",
+      { "Golden Scale", "Iron Boots", "Zora Tunic", nullptr, nullptr } },
+    { "Impa", "The Graveyard", "Adult",
       { "Bunny Hood", "Hookshot", "Lens of Truth", "Magic", nullptr } },
     { "Nabooru", "Gerudo Fortress", "Adult",
       { "Hover Boots", "Gerudo Card", "Mirror Shield", nullptr, nullptr } },
     { "Zelda", "Hyrule Castle", "Child",
-      { "Farore's Wind", "Nayru's Love", "Din's Fire", "Ocarina + Lullaby", nullptr } },
+      { "Farore's Wind", "Nayru's Love", "Din's Fire", "Ocarina + Lullaby", "Double Magic" } },
 };
 
 } // namespace
