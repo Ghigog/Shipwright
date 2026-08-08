@@ -230,14 +230,23 @@ jobs:
       uses: hendrikmuhs/ccache-action@v1.2.23
       with:
         variant: sccache
-        max-size: "2G"
+        max-size: "1G"
         evict-old-files: job
         # Fork change: save on any branch - see the note in generate-soh-otr above.
         save: true
-        key: ${{ runner.os }}-ccache-${{ github.ref }}-${{ github.sha }}
-        restore-keys: |
-          ${{ runner.os }}-ccache-${{ github.ref }}
-          ${{ runner.os }}-ccache
+        # Fork change: a STABLE key, matching what build-macos already does.
+        #
+        # This was ${{ runner.os }}-ccache-${{ github.ref }}-${{ github.sha }}, which can never
+        # hit its own key and mints a fresh cache entry per commit. On Windows that entry is
+        # ~1.9 GB - roughly 15x the macOS and Linux ones - so a few commits filled the repo's
+        # 10 GB cache budget by themselves, GitHub began evicting least-recently-used entries,
+        # and the prefix fallback kept restoring a stale cache. Measured 2026-08-08: 9.98 GB
+        # used across 28 entries, sccache-Windows alone 5.69 GB of it, and a run touching two
+        # .cpp files still took 14.2 min against Linux 2.8 and macOS 4.9.
+        #
+        # One reused entry instead, and max-size below drops to 1G so a single platform cannot
+        # eat the whole budget again.
+        key: ${{ runner.os }}-sccache
     - name: Restore Cached VCPKG folder
       id: restore-cache-vcpkg
       uses: actions/cache/restore@v5
