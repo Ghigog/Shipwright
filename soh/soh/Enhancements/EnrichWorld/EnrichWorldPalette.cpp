@@ -38,6 +38,14 @@
  * it entered the update culling volume and took the process down. That is why the screen is a
  * table entry rather than something checked at spawn.
  *
+ * A third way to be wrong, and the one that costs the most time: the entry renders exactly what
+ * the actor draws, and the actor is not the thing its name suggests. Bg_Menkuri_Eye was listed
+ * as "Eye statue". It is not a statue - it is the glowing eye *decal* that GTG's eye switches
+ * wear, one small XLU quad (gGTGEyeStatueEyeDL) at 0.1 scale. The statue under it is scene
+ * geometry that no actor carries. Worse, its dormant state draws at env alpha 0, so away from a
+ * set switch flag it is a faint smudge rather than anything. It was dropped; when a prop looks
+ * wrong, read what its Draw actually emits before assuming the model failed to resolve.
+ *
  * Variants are separate entries rather than a raw params box, because "Tree - oval, green" is a
  * choice a person can make and 0x0205 isn't. Params stay editable in the placer for the cases
  * these defaults don't cover (mainly drop tables, the high byte on several of these actors).
@@ -236,7 +244,7 @@ const std::vector<PropDef>& AllProps() {
         // Bg_Mizu_Bwall dropped - same waterbox reason, see the file header. The other four
         // bombable walls below are safe; only the Water Temple one reads the waterbox array.
         { "Wall, climbable sliding", ACTOR_BG_JYA_ZURERUKABE, OBJECT_JYA_OBJ, kNoObjectNeeded, 0, "" },
-        { "Eye statue", ACTOR_BG_MENKURI_EYE, OBJECT_MENKURI_OBJECTS, kNoObjectNeeded, 0, "" },
+        // Bg_Menkuri_Eye dropped - it was mislabelled "Eye statue" and is not one. See below.
         { "Drawbridge, broken", ACTOR_BG_SPOT00_BREAK, OBJECT_SPOT00_BREAK, kNoObjectNeeded, 0, "" },
         { "Bombable wall, fountain", ACTOR_BG_SPOT08_BAKUDANKABE, OBJECT_SPOT08_OBJ, kNoObjectNeeded, 0, "" },
         { "Block, stone (fire)", ACTOR_BG_HIDAN_ROCK, OBJECT_HIDAN_OBJECTS, kNoObjectNeeded, 0, "" },
@@ -444,7 +452,7 @@ static const struct {
     { ACTOR_EN_TANA, "Structures" },               { ACTOR_OBJ_HSBLOCK, "Structures" },
     { ACTOR_BG_SPOT09_OBJ, "Structures" },         { ACTOR_BG_SPOT00_HANEBASI, "Structures" },
     { ACTOR_BG_SPOT00_BREAK, "Structures" },       { ACTOR_BG_SPOT01_IDOSOKO, "Structures" },
-    { ACTOR_BG_MENKURI_EYE, "Structures" },        { ACTOR_BG_HIDAN_DALM, "Structures" },
+    { ACTOR_BG_HIDAN_DALM, "Structures" },
     { ACTOR_BG_MENKURI_NISEKABE, "Structures" },   { ACTOR_BG_GND_NISEKABE, "Structures" },
     { ACTOR_BG_JYA_ZURERUKABE, "Structures" },     { ACTOR_BG_GND_SOULMEIRO, "Structures" },
     { ACTOR_BG_HIDAN_ROCK, "Structures" },         { ACTOR_BG_JYA_BLOCK, "Structures" },

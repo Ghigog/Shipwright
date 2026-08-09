@@ -44,6 +44,19 @@ namespace {
 using EnrichWorld::Placement;
 using EnrichWorld::PropDef;
 
+/**
+ * A button sized to its own label instead of the rest of the row.
+ *
+ * UIWidgets::ButtonOptions defaults size to Sizes::Fill, so a plain UIWidgets::Button eats all
+ * remaining width and anything after an ImGui::SameLine() lands outside the window. That is not
+ * a clip you can see - the row just looks like it has one button on it, which is how Delete,
+ * Move to Link, Go to prop and the prop stepper's "+" all went missing at this window's width.
+ * Every button that shares a row goes through this.
+ */
+bool RowButton(const char* label) {
+    return UIWidgets::Button(label, UIWidgets::ButtonOptions().Size(UIWidgets::Sizes::Inline));
+}
+
 float GroundBelow(float x, float y, float z) {
     Vec3f probe = { x, y + 50.0f, z };
     CollisionPoly* poly = nullptr;
@@ -168,12 +181,12 @@ void EnrichWorldPlacerWindow::DrawElement() {
 
         // Step through the category one prop at a time. The arrows wrap, because with a category
         // of two or three entries stepping off the end and stopping is just annoying.
-        if (UIWidgets::Button("-##prop")) {
+        if (RowButton("-##prop")) {
             selectedProp = (selectedProp + static_cast<int>(inGroup.size()) - 1) % static_cast<int>(inGroup.size());
             paramsEdited = false;
         }
         ImGui::SameLine();
-        if (UIWidgets::Button("+##prop")) {
+        if (RowButton("+##prop")) {
             selectedProp = (selectedProp + 1) % static_cast<int>(inGroup.size());
             paramsEdited = false;
         }
@@ -204,8 +217,8 @@ void EnrichWorldPlacerWindow::DrawElement() {
             paramsOverride = def->params;
         }
         if (!choices[chosen].native) {
-            ImGui::TextWrapped("Not a vanilla prop for this room. Its object is loaded on demand when you "
-                               "place it, so it will render correctly - it just won't look native.");
+            ImGui::TextWrapped("Not a vanilla prop for this room. It still renders - SoH resolves models by "
+                               "resource name, not from the room's object list. It just won't look native.");
         }
         if (def->note[0] != '\0') {
             ImGui::TextWrapped("%s", def->note);
@@ -341,12 +354,12 @@ void EnrichWorldPlacerWindow::DrawElement() {
             }
             ImGui::PopItemWidth();
 
-            if (UIWidgets::Button("Drop to ground")) {
+            if (RowButton("Drop to ground")) {
                 p.pos.y = GroundBelow(p.pos.x, p.pos.y, p.pos.z);
                 moved = true;
             }
             ImGui::SameLine();
-            if (UIWidgets::Button("Move to Link")) {
+            if (RowButton("Move to Link")) {
                 Player* player = GET_PLAYER(gPlayState);
                 p.pos = player->actor.world.pos;
                 if (snapToGround) {
@@ -355,7 +368,7 @@ void EnrichWorldPlacerWindow::DrawElement() {
                 moved = true;
             }
             ImGui::SameLine();
-            if (UIWidgets::Button("Go to prop")) {
+            if (RowButton("Go to prop")) {
                 Player* player = GET_PLAYER(gPlayState);
                 Math_Vec3f_Copy(&player->actor.world.pos, &p.pos);
                 Math_Vec3f_Copy(&player->actor.home.pos, &player->actor.world.pos);
@@ -374,7 +387,7 @@ void EnrichWorldPlacerWindow::DrawElement() {
             }
 
             bool duplicated = false;
-            if (UIWidgets::Button("Duplicate")) {
+            if (RowButton("Duplicate")) {
                 duplicated = true;
                 // Offset rather than placed exactly on top, so the copy is visible and clickable
                 // straight away instead of z-fighting with its original. 30 units is roughly a
@@ -398,7 +411,10 @@ void EnrichWorldPlacerWindow::DrawElement() {
             // `p` is a reference into Placements() and Duplicate just push_back'd, so it is
             // dangling now. Skipping the rest of the block is what makes that safe rather than
             // relying on ImGui not reporting two buttons pressed in one frame.
-            if (!duplicated && UIWidgets::Button("Delete")) {
+            if (!duplicated &&
+                UIWidgets::Button("Delete", UIWidgets::ButtonOptions()
+                                                .Size(UIWidgets::Sizes::Inline)
+                                                .Color(UIWidgets::Colors::DarkRed))) {
                 // The spawned instance goes too, otherwise it lingers until the room reloads and
                 // looks like the delete silently failed.
                 if (p.live != nullptr) {
@@ -415,11 +431,11 @@ void EnrichWorldPlacerWindow::DrawElement() {
 
     // ---- Persistence ----
 
-    if (UIWidgets::Button(EnrichWorld::StoreIsDirty() ? "Save *" : "Save")) {
+    if (RowButton(EnrichWorld::StoreIsDirty() ? "Save *" : "Save")) {
         EnrichWorld::SaveStore();
     }
     ImGui::SameLine();
-    if (UIWidgets::Button("Reload from file")) {
+    if (RowButton("Reload from file")) {
         EnrichWorld::LoadStore();
         selectedPlacement = -1;
     }
