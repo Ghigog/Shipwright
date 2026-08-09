@@ -174,7 +174,9 @@ const std::vector<PropDef>& AllProps() {
         { "Fence, jumpable", ACTOR_BG_UMAJUMP, OBJECT_UMAJUMP, kNoObjectNeeded, 0, "The Lon Lon obstacle fence." },
         { "Gate, ranch", ACTOR_BG_INGATE, OBJECT_INGATE, kNoObjectNeeded, 0, "Ingo's gates." },
         { "Milk crate", ACTOR_BG_SPOT15_RRBOX, OBJECT_SPOT15_OBJ, kNoObjectNeeded, 0, "Liftable." },
-        { "Shop shelves", ACTOR_EN_TANA, OBJECT_SHOP_DUNGEN, kNoObjectNeeded, 0, "" },
+        { "Shop shelves - wooden", ACTOR_EN_TANA, OBJECT_SHOP_DUNGEN, kNoObjectNeeded, 0, "" },
+        { "Shop shelves - stone", ACTOR_EN_TANA, OBJECT_SHOP_DUNGEN, kNoObjectNeeded, 1, "" },
+        { "Shop shelves - stone, dark", ACTOR_EN_TANA, OBJECT_SHOP_DUNGEN, kNoObjectNeeded, 2, "" },
         { "Torch, golden", ACTOR_BG_PO_SYOKUDAI, OBJECT_SYOKUDAI, kNoObjectNeeded, 0,
           "The Poe Sisters' variant. High byte is the flame colour." },
         { "Hookshot target post", ACTOR_OBJ_HSBLOCK, OBJECT_D_HSBLOCK, kNoObjectNeeded, 0, "" },
@@ -198,13 +200,17 @@ const std::vector<PropDef>& AllProps() {
         { "Bush (OBJECT_KUSA)", ACTOR_EN_KUSA, OBJECT_KUSA, OBJECT_KUSA, 1, "Deku Tree, Dodongo's, Well, Kokiri." },
         { "Torch", ACTOR_OBJ_SYOKUDAI, OBJECT_SYOKUDAI, kNoObjectNeeded, 0,
           "params >> 0xC: 0 gold, 1 timed, 2 wooden." },
-        { "Signpost", ACTOR_EN_KANBAN, OBJECT_KANBAN, kNoObjectNeeded, 0, "" },
+        { "Signpost", ACTOR_EN_KANBAN, OBJECT_KANBAN, kNoObjectNeeded, 0,
+          "Options step the sign's text (message 0x300 + options). Same post, different words." },
         { "Gossip stone", ACTOR_EN_GS, OBJECT_GS, kNoObjectNeeded, 0, "" },
         { "Pot (overworld)", ACTOR_OBJ_TSUBO, OBJECT_TSUBO, OBJECT_TSUBO, 0x0100, "Bit 8 set = overworld pot." },
         { "Crate, large", ACTOR_OBJ_KIBAKO2, OBJECT_KIBAKO2, kNoObjectNeeded, 0, "" },
         { "Boulder, bombable", ACTOR_OBJ_BOMBIWA, OBJECT_BOMBIWA, kNoObjectNeeded, 0, "" },
         { "Bomb flower", ACTOR_EN_BOMBF, OBJECT_BOMBF, kNoObjectNeeded, 0, "" },
-        { "Icicle", ACTOR_BG_ICE_TURARA, OBJECT_ICE_OBJECTS, kNoObjectNeeded, 0, "" },
+        { "Icicle - stalagmite (floor)", ACTOR_BG_ICE_TURARA, OBJECT_ICE_OBJECTS, kNoObjectNeeded, 0, "" },
+        { "Icicle - stalactite (ceiling)", ACTOR_BG_ICE_TURARA, OBJECT_ICE_OBJECTS, kNoObjectNeeded, 1, "" },
+        { "Icicle - stalactite, regrowing", ACTOR_BG_ICE_TURARA, OBJECT_ICE_OBJECTS, kNoObjectNeeded, 2,
+          "Drops an item when broken, then grows back." },
         { "Gravestone", ACTOR_BG_HAKA, OBJECT_HAKA, kNoObjectNeeded, 0, "Graveyard and Lake Hylia only." },
 
         // ---- Machinery, traps and structures: added 2026-08-09 ----
@@ -342,7 +348,12 @@ static const ActorParamsLayout kParamsLayouts[] = {
     // Locked shut: the low byte is the sound type (three values of which dereference a scene
     // path) and the high byte IS that path index. Neither is safe to hand to a free-form box.
     { ACTOR_EN_RIVER_SOUND, 0xFFFF, 0, 0xFFFF },
-    { ACTOR_EN_KANBAN, 0x0000, 0, 0x0000 },
+    // params IS the sign's text: En_Kanban does `textId = params | 0x300`, so the low byte walks
+    // messages 0x300-0x3FF and every vanilla signpost in the game is one of these values. The
+    // model never changes. An id with no message is not a crash - Message_FindMessage falls back
+    // to the first table entry - so the whole byte is safe to hand over. 0xFFDD (ENKANBAN_PIECE,
+    // a broken-off fragment) takes a different branch entirely and the mask keeps it unreachable.
+    { ACTOR_EN_KANBAN, 0x0000, 0, 0x00FF },
     { ACTOR_OBJ_KIBAKO2, 0x0000, 0, 0x0000 },
     { ACTOR_EN_BOMBF, 0x0000, 0, 0x0000 },
     { ACTOR_BG_ICE_TURARA, 0x0000, 0, 0x0000 },
@@ -378,7 +389,11 @@ static const ActorParamsLayout kParamsLayouts[] = {
     { ACTOR_BG_UMAJUMP, 0x0000, 0, 0x0000 },
     { ACTOR_BG_INGATE, 0x0000, 0, 0x0003 },
     { ACTOR_BG_SPOT15_RRBOX, 0x0000, 0, 0x003F },
-    { ACTOR_EN_TANA, 0x0000, 0, 0x0000 },
+    // Unmasked direct index, so variantMask is the whole word: En_Tana does sDrawFuncs[params]
+    // and sShelfDLists[params] with no bounds check and no mask at all. Three entries. The old
+    // variantCount of 0 made AreParamsSafe pass everything, which for this actor means a
+    // hand-edited store row calls a function pointer read past the end of the table.
+    { ACTOR_EN_TANA, 0xFFFF, 3, 0x0000 },
     { ACTOR_BG_PO_SYOKUDAI, 0x0000, 0, 0xFF00 },
     { ACTOR_BG_ICE_SHELTER, 0x0700, 0, 0x077F },
     { ACTOR_BG_SPOT16_DOUGHNUT, 0x0000, 0, 0x0000 },

@@ -257,13 +257,30 @@ void EnrichWorldPlacerWindow::DrawElement() {
                         static_cast<uint16_t>(paramsOverride));
         } else {
             int options = static_cast<uint16_t>(paramsOverride) & optionMask;
-            ImGui::PushItemWidth(ImGui::GetFontSize() * 6);
-            if (ImGui::InputInt("options", &options)) {
-                paramsOverride = identity | (static_cast<uint16_t>(options) & optionMask);
+            const auto setOptions = [&](int value) {
+                paramsOverride = identity | (static_cast<uint16_t>(value) & optionMask);
                 paramsEdited = true;
+            };
+
+            // Step by the mask's lowest set bit, so one press moves the field by one rather than
+            // by one *bit* - En_Wood02's drop table lives in 0xFF00 and wants +0x100 a press,
+            // En_Kanban's sign text lives in 0x00FF and wants +1. Masking after the add wraps the
+            // field instead of carrying into bits the actor doesn't read. A mask with holes in it
+            // will skip the values that fall in a hole; nothing unsafe, just a shorter walk.
+            const uint16_t step = optionMask & static_cast<uint16_t>(~optionMask + 1);
+            if (RowButton("-##opt")) {
+                setOptions(options - step);
+            }
+            ImGui::SameLine();
+            if (RowButton("+##opt")) {
+                setOptions(options + step);
+            }
+            ImGui::SameLine();
+            ImGui::PushItemWidth(ImGui::GetFontSize() * 6);
+            if (ImGui::InputInt("options", &options, 0, 0)) {
+                setOptions(options);
             }
             ImGui::PopItemWidth();
-            ImGui::SameLine();
             ImGui::Text("-> params 0x%X", static_cast<uint16_t>(paramsOverride));
             ImGui::TextWrapped("Only bits 0x%X do anything on this prop - the rest are ignored by the "
                                "actor or belong to the dropdown.",
