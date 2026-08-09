@@ -577,10 +577,19 @@ std::string ActorLabel(int16_t actorId, int16_t params) {
             return def.label;
         }
     }
-    // Params were edited away from any palette default - fall back to the actor's own name.
-    auto entry = ActorDB::Instance->RetrieveEntry(actorId);
-    if (entry.entry.valid) {
-        return fmt::format("{} (0x{:X})", entry.name, static_cast<uint16_t>(params));
+    // No palette entry matches - either params were edited away from every default, or the actor
+    // has since been withdrawn from the palette while a saved row still names it.
+    //
+    // ActorDB::Instance is a raw pointer that OTRGlobals.cpp fills in *after* SohGui::
+    // SetupGuiElements(), and the placer window's InitElement loads the store - so at that point
+    // it is still null and RetrieveEntry faults on its own `this`. Nothing hit it until a
+    // withdrawn actor started reaching this branch at startup; the id-only label is a fine answer
+    // and is what the fallback below was already for.
+    if (ActorDB::Instance != nullptr) {
+        auto entry = ActorDB::Instance->RetrieveEntry(actorId);
+        if (entry.entry.valid) {
+            return fmt::format("{} (0x{:X})", entry.name, static_cast<uint16_t>(params));
+        }
     }
     return fmt::format("actor {} (0x{:X})", actorId, static_cast<uint16_t>(params));
 }

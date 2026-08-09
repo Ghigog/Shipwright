@@ -317,20 +317,30 @@ void EnrichWorldPlacerWindow::DrawElement() {
             // event flag, a switch flag, the scene number. Proving each one survivable in advance
             // is not practical, but showing which ones actually made it costs nothing and turns a
             // silent disappearance into something you can see.
+            //
+            // A withdrawn actor is a different thing and needs saying differently: the store
+            // outlives the palette, and SpawnFromStore deliberately refuses to spawn a row whose
+            // actor has been dropped. Reporting that as "killed itself on spawn" would send you
+            // looking for a game condition that isn't the reason.
+            const bool withdrawn = !EnrichWorld::IsInPalette(p.actorId);
             const bool alive = p.live != nullptr;
             if (!alive) {
                 ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.45f, 0.45f, 1.0f));
             }
-            const std::string row = fmt::format("{}{}##{}  ({:.0f}, {:.0f}, {:.0f})", alive ? "" : "[dead] ", p.label,
-                                                i, p.pos.x, p.pos.y, p.pos.z);
+            const char* tag = alive ? "" : (withdrawn ? "[withdrawn] " : "[dead] ");
+            const std::string row =
+                fmt::format("{}{}##{}  ({:.0f}, {:.0f}, {:.0f})", tag, p.label, i, p.pos.x, p.pos.y, p.pos.z);
             if (ImGui::Selectable(row.c_str(), i == selectedPlacement)) {
                 selectedPlacement = i;
             }
             if (!alive) {
                 ImGui::PopStyleColor();
                 if (ImGui::IsItemHovered()) {
-                    ImGui::SetTooltip("This actor killed itself on spawn. Usually it wants something this "
-                                      "scene doesn't provide - a setup layer, an event flag, Link's age.");
+                    ImGui::SetTooltip(withdrawn ? "This prop was removed from the palette because it "
+                                                  "misbehaved, so it is no longer spawned. Delete the row."
+                                                : "This actor killed itself on spawn. Usually it wants "
+                                                  "something this scene doesn't provide - a setup layer, an "
+                                                  "event flag, Link's age.");
                 }
             }
         }
