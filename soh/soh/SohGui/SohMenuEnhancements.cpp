@@ -936,6 +936,10 @@ void SohMenu::AddMenuEnhancements() {
                                            "Control Stick: Steer\n"
                                            "B: Detonate\n"
                                            "A: Quit Control"));
+    AddWidget(path, "Bombchu Remote Detonation", WIDGET_CVAR_CHECKBOX)
+        .CVar(CVAR_ENHANCEMENT("BombchuRemoteDetonate"))
+        .Options(CheckboxOptions().Tooltip("Pulling out a Bombchu detonates the one you already deployed, turning the "
+                                           "item button into a detonator. Costs a Bombchu to trigger."));
     AddWidget(path, "Deku Nuts Explode Bombs", WIDGET_CVAR_CHECKBOX)
         .CVar(CVAR_ENHANCEMENT("NutsExplodeBombs"))
         .Options(CheckboxOptions().Tooltip("Make Deku Nuts explode Bombs, similar to how they interact with Bombchus. "
