@@ -38,20 +38,38 @@
  * the Twinrova abduction, a dungeon sequence rather than a conversation, and removing it is a much
  * bigger change than removing an NPC. She costs no locations either way.
  *
- * Rauru and Impa need nothing here and have no actor to remove. Rauru exists only inside the
- * Chamber of Sages cutscene, which stock SoH already skips in rando
- * (timesaver_hook_handlers.cpp:508, VB_PLAY_PULL_MASTER_SWORD_CS). Impa exists only as DEMO_IM
- * inside the castle courtyard cutscene, which the preset's Starting Zelda's Letter setting skips
- * wholesale (savefile.cpp:966). The Lost Woods bridge Saria is likewise already gone - that
- * cutscene is skipped by stock SoH in rando (SkipLostWoodsBridge.cpp), and EnSa never spawns in
- * Lost Woods to begin with (func_80AF5DFC returns 0 there).
+ * Rauru and Impa need nothing here and have no actor to remove *in the overworld*. Rauru (EN_RL,
+ * OBJECT_RL) exists only inside the Chamber of Sages. Impa exists only as DEMO_IM inside the
+ * castle courtyard cutscene, which the preset's Starting Zelda's Letter setting skips wholesale
+ * (savefile.cpp:966). EnSa never spawns in Lost Woods to begin with (func_80AF5DFC returns 0
+ * there), so the bridge Saria has no actor either.
+ *
+ * ── The story cutscenes are the preset's job, not this file's ───────────────────────────────
+ * Everything that stages a sage *inside a cutscene* - the Chamber of Sages after every dungeon
+ * (Demo_Sa, Demo_Du, Demo_IM, En_Ru2, En_Nb), Rauru at the Master Sword pull, Zelda and Impa
+ * fleeing the castle, the Lost Woods bridge, Nabooru's capture - is already suppressed by stock
+ * SoH behind one switch: TimeSavers.SkipCutscene.Story. The Seven Sages preset sets it to 1.
+ *
+ * That is deliberately a preset value and not a hook here. These are vanilla SoH skips that
+ * happen to do exactly what the premise needs, and each one also fixes up the EventChkInf flags
+ * its cutscene would have set - work this file would otherwise have to reproduce by hand.
+ *
+ * ⚠️ The switch is load-bearing, and it has been wrong once. Its *default* is IS_RANDO, so
+ * reading the source alone suggests these are skipped in any rando seed. An explicit preset value
+ * overrides that default. Phase 4a set Story to 0 to restore story cutscenes for lore reasons,
+ * which silently put Rauru, the chamber sages and the castle-escape Impa back on screen; an
+ * earlier version of this comment still claimed they were "already skipped in rando" and was
+ * stale from that moment. Corrected 2026-08-09. If a sage reappears in a cutscene, check the
+ * preset's Story value first - it is far more likely than a regression in this file.
  *
  * ── The one cutscene this file does suppress ────────────────────────────────────────────────
- * The Temple of Time Light Arrows cutscene is where Sheik unwraps and is Zelda. Nothing in stock
- * SoH skips it, and it is the last place a sage appears as a character. VB_BE_ELIGIBLE_FOR_LIGHT_
- * ARROWS (z_demo.c:2258) is the eligibility test for triggering it, so answering it false means it
- * never fires. RC_TOT_LIGHT_ARROWS_CUTSCENE is excluded to match; the Light Arrows themselves are
- * an ordinary pool item and are placed somewhere else.
+ * The Temple of Time Light Arrows cutscene is where Sheik unwraps and is Zelda, and it is the one
+ * sage cutscene the Story skip does not cover. Story only answers VB_GIVE_ITEM_LIGHT_ARROW, which
+ * withholds the *item* - the cutscene still plays, and Zelda is still in it. So the suppression
+ * belongs here. VB_BE_ELIGIBLE_FOR_LIGHT_ARROWS (z_demo.c:2258) is the eligibility test for
+ * triggering it, so answering it false means it never fires at all. RC_TOT_LIGHT_ARROWS_CUTSCENE
+ * is excluded to match; the Light Arrows themselves are an ordinary pool item and are placed
+ * somewhere else.
  */
 #include "soh/OTRGlobals.h"
 #include "soh/ShipInit.hpp"
