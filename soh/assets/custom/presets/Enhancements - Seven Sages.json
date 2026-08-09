@@ -36,6 +36,7 @@
                 "EquipmentCanBeRemoved": 1,
                 "ExtendedCullingExcludeGlitchActors": 1,
                 "FastBoomerang": 1,
+                "FastBottles": 1,
                 "FastChests": 1,
                 "FastDrops": 1,
                 "FastFarores": 1,
