@@ -162,7 +162,8 @@ void EnrichWorldPlacerWindow::DrawElement() {
             for (int i = 0; i < static_cast<int>(groups.size()); i++) {
                 if (ImGui::Selectable(groups[i], i == selectedGroup)) {
                     selectedGroup = i;
-                    selectedProp = 0; // a new category starts at its first prop
+                    // Forget the prop; the resolve below adopts this category's first entry.
+                    selectedActorId = -1;
                     paramsEdited = false;
                 }
             }
@@ -177,18 +178,36 @@ void EnrichWorldPlacerWindow::DrawElement() {
                 inGroup.push_back(i);
             }
         }
-        selectedProp = std::clamp(selectedProp, 0, static_cast<int>(inGroup.size()) - 1);
+        // Find the remembered prop in this frame's list. Falling back to the first entry covers
+        // the three ways it can be absent: nothing chosen yet, the category just changed, or the
+        // prop stopped being placeable in this room.
+        int selectedProp = -1;
+        for (int i = 0; i < static_cast<int>(inGroup.size()); i++) {
+            const PropDef* d = choices[inGroup[i]].def;
+            if (d->actorId == selectedActorId && d->params == selectedParams) {
+                selectedProp = i;
+                break;
+            }
+        }
+        // Writes the identity back, so the selection survives the next re-sort.
+        const auto chooseProp = [&](int index) {
+            selectedProp = index;
+            selectedActorId = choices[inGroup[index]].def->actorId;
+            selectedParams = choices[inGroup[index]].def->params;
+            paramsEdited = false;
+        };
+        if (selectedProp < 0) {
+            chooseProp(0);
+        }
 
         // Step through the category one prop at a time. The arrows wrap, because with a category
         // of two or three entries stepping off the end and stopping is just annoying.
         if (RowButton("-##prop")) {
-            selectedProp = (selectedProp + static_cast<int>(inGroup.size()) - 1) % static_cast<int>(inGroup.size());
-            paramsEdited = false;
+            chooseProp((selectedProp + static_cast<int>(inGroup.size()) - 1) % static_cast<int>(inGroup.size()));
         }
         ImGui::SameLine();
         if (RowButton("+##prop")) {
-            selectedProp = (selectedProp + 1) % static_cast<int>(inGroup.size());
-            paramsEdited = false;
+            chooseProp((selectedProp + 1) % static_cast<int>(inGroup.size()));
         }
         ImGui::SameLine();
         ImGui::Text("%d/%d", selectedProp + 1, static_cast<int>(inGroup.size()));
@@ -205,8 +224,7 @@ void EnrichWorldPlacerWindow::DrawElement() {
                     ImGui::TextDisabled("Not native to this room");
                 }
                 if (ImGui::Selectable(choices[inGroup[i]].def->label, i == selectedProp)) {
-                    selectedProp = i;
-                    paramsEdited = false; // a new prop means a new sensible default
+                    chooseProp(i); // clears paramsEdited - a new prop means a new sensible default
                 }
             }
             ImGui::EndCombo();
