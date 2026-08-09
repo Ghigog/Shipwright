@@ -82,22 +82,22 @@ void SevenSagesRequiemOfSpiritFrameUpdate() {
 } // namespace
 
 static void RegisterSevenSagesRequiemOfSpirit() {
-    COND_HOOK(OnWarpSongDeclined, IS_RANDO, SevenSagesRequiemOfSpiritDeclined);
-    COND_HOOK(OnGameFrameUpdate, IS_RANDO, SevenSagesRequiemOfSpiritFrameUpdate);
-    COND_VB_SHOULD(VB_PLAYER_MODIFY_MAGIC_SPELL_COST, IS_RANDO, {
+    COND_HOOK(OnWarpSongDeclined, IS_SEVENSAGES, SevenSagesRequiemOfSpiritDeclined);
+    COND_HOOK(OnGameFrameUpdate, IS_SEVENSAGES, SevenSagesRequiemOfSpiritFrameUpdate);
+    COND_VB_SHOULD(VB_PLAYER_MODIFY_MAGIC_SPELL_COST, IS_SEVENSAGES, {
         [[maybe_unused]] Player* player = va_arg(args, Player*);
         s16* cost = va_arg(args, s16*);
         if (sBuffFramesRemaining > 0) {
             *cost = 0;
         }
     });
-    COND_VB_SHOULD(VB_PLAYER_CONSUME_MAGIC_SPELL_COST, IS_RANDO, {
+    COND_VB_SHOULD(VB_PLAYER_CONSUME_MAGIC_SPELL_COST, IS_SEVENSAGES, {
         [[maybe_unused]] Player* player = va_arg(args, Player*);
         if (sBuffFramesRemaining > 0) {
             *should = false;
         }
     });
-    COND_VB_SHOULD(VB_PLAYER_ARROW_MAGIC_CONSUMPTION, IS_RANDO, {
+    COND_VB_SHOULD(VB_PLAYER_ARROW_MAGIC_CONSUMPTION, IS_SEVENSAGES, {
         [[maybe_unused]] Player* player = va_arg(args, Player*);
         [[maybe_unused]] int32_t magicArrowType = va_arg(args, int32_t);
         [[maybe_unused]] int32_t* arrowType = va_arg(args, int32_t*);
@@ -105,13 +105,13 @@ static void RegisterSevenSagesRequiemOfSpirit() {
             *should = false;
         }
     });
-    COND_VB_SHOULD(VB_PLAYER_CONSUME_ARROW_MAGIC, IS_RANDO, {
+    COND_VB_SHOULD(VB_PLAYER_CONSUME_ARROW_MAGIC, IS_SEVENSAGES, {
         [[maybe_unused]] int32_t magicArrowType = va_arg(args, int32_t);
         if (sBuffFramesRemaining > 0) {
             *should = false;
         }
     });
-    COND_VB_SHOULD(VB_PLAYER_CONSUME_LENS_MAGIC, IS_RANDO, {
+    COND_VB_SHOULD(VB_PLAYER_CONSUME_LENS_MAGIC, IS_SEVENSAGES, {
         if (sBuffFramesRemaining > 0) {
             *should = false;
         }

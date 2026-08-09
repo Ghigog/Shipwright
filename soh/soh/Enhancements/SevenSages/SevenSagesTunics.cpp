@@ -65,14 +65,14 @@ bool WearingMask(s32 mask) {
 } // namespace
 
 bool SevenSagesFireProtectionActive(void) {
-    if (!IS_RANDO || !GameInteractor::IsSaveLoaded(true)) {
+    if (!IS_SEVENSAGES || !GameInteractor::IsSaveLoaded(true)) {
         return false;
     }
     return NayrusLoveActive() || WearingTunic(EQUIP_VALUE_TUNIC_GORON) || WearingMask(PLAYER_MASK_GORON);
 }
 
 bool SevenSagesFrostProtectionActive(void) {
-    if (!IS_RANDO || !GameInteractor::IsSaveLoaded(true)) {
+    if (!IS_SEVENSAGES || !GameInteractor::IsSaveLoaded(true)) {
         return false;
     }
     return NayrusLoveActive() || WearingTunic(EQUIP_VALUE_TUNIC_ZORA) || WearingMask(PLAYER_MASK_ZORA);

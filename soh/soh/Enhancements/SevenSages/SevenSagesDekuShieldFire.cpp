@@ -111,14 +111,14 @@ static void RegisterSevenSagesDekuShieldFire() {
     // so this only fires when a Deku Shield really was about to be destroyed. It survives, and
     // catches instead - one hook covering both of func_8083819C's call sites, the fire-attack block
     // and Link burning.
-    COND_VB_SHOULD(VB_BURN_SHIELD, IS_RANDO, {
+    COND_VB_SHOULD(VB_BURN_SHIELD, IS_SEVENSAGES, {
         if (*should) {
             *should = false;
             SevenSagesDekuShieldIgnite();
         }
     });
 
-    COND_HOOK(OnGameFrameUpdate, IS_RANDO, SevenSagesDekuShieldFrameUpdate);
+    COND_HOOK(OnGameFrameUpdate, IS_SEVENSAGES, SevenSagesDekuShieldFrameUpdate);
 }
 
 static RegisterShipInitFunc sevenSagesDekuShieldFireInitFunc(RegisterSevenSagesDekuShieldFire, { "IS_RANDO" });

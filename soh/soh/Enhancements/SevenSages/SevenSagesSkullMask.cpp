@@ -60,7 +60,7 @@ bool IsWearingSkullMask() {
 } // namespace
 
 static void RegisterSevenSagesSkullMask() {
-    COND_VB_SHOULD(VB_UNDEAD_DETECT_PLAYER, IS_RANDO, {
+    COND_VB_SHOULD(VB_UNDEAD_DETECT_PLAYER, IS_SEVENSAGES, {
         [[maybe_unused]] Actor* undead = va_arg(args, Actor*);
         if (IsWearingSkullMask()) {
             *should = false;

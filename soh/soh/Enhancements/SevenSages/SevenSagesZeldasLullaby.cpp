@@ -51,7 +51,7 @@ void SevenSagesZeldasLullabyPlayed() {
 } // namespace
 
 static void RegisterSevenSagesZeldasLullaby() {
-    COND_HOOK(OnOcarinaSongAction, IS_RANDO, SevenSagesZeldasLullabyPlayed);
+    COND_HOOK(OnOcarinaSongAction, IS_SEVENSAGES, SevenSagesZeldasLullabyPlayed);
 }
 
 static RegisterShipInitFunc sevenSagesZeldasLullabyInitFunc(RegisterSevenSagesZeldasLullaby, { "IS_RANDO" });

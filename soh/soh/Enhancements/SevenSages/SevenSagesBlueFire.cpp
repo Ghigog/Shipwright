@@ -68,7 +68,7 @@ void SevenSagesBlueFireUpdate(void* actorPtr) {
 } // namespace
 
 static void RegisterSevenSagesBlueFire() {
-    COND_ID_HOOK(OnActorUpdate, ACTOR_EN_ICE_HONO, IS_RANDO, SevenSagesBlueFireUpdate);
+    COND_ID_HOOK(OnActorUpdate, ACTOR_EN_ICE_HONO, IS_SEVENSAGES, SevenSagesBlueFireUpdate);
 }
 
 static RegisterShipInitFunc sevenSagesBlueFireInitFunc(RegisterSevenSagesBlueFire, { "IS_RANDO" });

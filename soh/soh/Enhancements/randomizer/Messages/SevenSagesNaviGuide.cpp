@@ -343,9 +343,9 @@ void SevenSagesNaviOnVanillaBehavior(GIVanillaBehavior id, bool* should, va_list
 }
 
 void RegisterSevenSagesNaviGuide() {
-    COND_HOOK(OnSceneInit, IS_RANDO, RecalculateNaviSuggestion);
-    COND_HOOK(OnVanillaBehavior, IS_RANDO, SevenSagesNaviOnVanillaBehavior);
-    COND_HOOK(OnOpenText, IS_RANDO, RewriteNaviMessage);
+    COND_HOOK(OnSceneInit, IS_SEVENSAGES, RecalculateNaviSuggestion);
+    COND_HOOK(OnVanillaBehavior, IS_SEVENSAGES, SevenSagesNaviOnVanillaBehavior);
+    COND_HOOK(OnOpenText, IS_SEVENSAGES, RewriteNaviMessage);
 }
 
 } // namespace

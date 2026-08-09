@@ -428,7 +428,7 @@ void SevenSagesGauntletLiftFrameUpdate() {
 } // namespace
 
 static void RegisterSevenSagesGauntletLift() {
-    COND_HOOK(OnGameFrameUpdate, IS_RANDO, SevenSagesGauntletLiftFrameUpdate);
+    COND_HOOK(OnGameFrameUpdate, IS_SEVENSAGES, SevenSagesGauntletLiftFrameUpdate);
 }
 
 static RegisterShipInitFunc sevenSagesGauntletLiftInitFunc(RegisterSevenSagesGauntletLift, { "IS_RANDO" });

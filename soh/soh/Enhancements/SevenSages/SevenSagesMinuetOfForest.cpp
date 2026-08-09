@@ -46,7 +46,7 @@ void SevenSagesMinuetOfForestDeclined() {
 } // namespace
 
 static void RegisterSevenSagesMinuetOfForest() {
-    COND_HOOK(OnWarpSongDeclined, IS_RANDO, SevenSagesMinuetOfForestDeclined);
+    COND_HOOK(OnWarpSongDeclined, IS_SEVENSAGES, SevenSagesMinuetOfForestDeclined);
 }
 
 static RegisterShipInitFunc sevenSagesMinuetOfForestInitFunc(RegisterSevenSagesMinuetOfForest, { "IS_RANDO" });

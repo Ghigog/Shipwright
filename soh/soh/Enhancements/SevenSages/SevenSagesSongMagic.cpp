@@ -142,7 +142,7 @@ void SevenSagesRequestSongMagic(short cost, std::function<void()> onSuccess, boo
 }
 
 static void RegisterSevenSagesSongMagic() {
-    COND_HOOK(OnGameFrameUpdate, IS_RANDO, SevenSagesSongMagicFrameUpdate);
+    COND_HOOK(OnGameFrameUpdate, IS_SEVENSAGES, SevenSagesSongMagicFrameUpdate);
 }
 
 static RegisterShipInitFunc sevenSagesSongMagicInitFunc(RegisterSevenSagesSongMagic, { "IS_RANDO" });

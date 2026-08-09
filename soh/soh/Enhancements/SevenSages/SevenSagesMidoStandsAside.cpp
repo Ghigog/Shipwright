@@ -43,7 +43,7 @@ void SevenSagesMidoOnVanillaBehavior(GIVanillaBehavior id, bool* should, va_list
 }
 
 void RegisterSevenSagesMidoStandsAside() {
-    COND_HOOK(OnVanillaBehavior, IS_RANDO, SevenSagesMidoOnVanillaBehavior);
+    COND_HOOK(OnVanillaBehavior, IS_SEVENSAGES, SevenSagesMidoOnVanillaBehavior);
 }
 
 } // namespace

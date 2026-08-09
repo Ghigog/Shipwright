@@ -188,9 +188,9 @@ void SevenSagesSongOfStormsOnSceneInit(int16_t sceneNum) {
 } // namespace
 
 static void RegisterSevenSagesSongOfStorms() {
-    COND_HOOK(OnOcarinaSongAction, IS_RANDO, SevenSagesSongOfStormsPlayed);
-    COND_HOOK(OnGameFrameUpdate, IS_RANDO, SevenSagesSongOfStormsFrameUpdate);
-    COND_HOOK(OnSceneInit, IS_RANDO, SevenSagesSongOfStormsOnSceneInit);
+    COND_HOOK(OnOcarinaSongAction, IS_SEVENSAGES, SevenSagesSongOfStormsPlayed);
+    COND_HOOK(OnGameFrameUpdate, IS_SEVENSAGES, SevenSagesSongOfStormsFrameUpdate);
+    COND_HOOK(OnSceneInit, IS_SEVENSAGES, SevenSagesSongOfStormsOnSceneInit);
 }
 
 static RegisterShipInitFunc sevenSagesSongOfStormsInitFunc(RegisterSevenSagesSongOfStorms, { "IS_RANDO" });

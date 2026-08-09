@@ -220,7 +220,7 @@ EnOssan* FindShopOwnerMidWelcome(uint16_t textId) {
 }
 
 void SpeakShopGreeting(uint16_t* textId, bool* loadFromMessageTable) {
-    if (!IS_RANDO || gPlayState == nullptr || !IsWearingKeatonMask() ||
+    if (!IS_SEVENSAGES || gPlayState == nullptr || !IsWearingKeatonMask() ||
         FindShopOwnerMidWelcome(*textId) == nullptr) {
         return;
     }
@@ -245,9 +245,9 @@ void SpeakShopGreeting(uint16_t* textId, bool* loadFromMessageTable) {
 } // namespace
 
 static void RegisterSevenSagesKeaton() {
-    COND_HOOK(OnOpenText, IS_RANDO, SpeakShopGreeting);
+    COND_HOOK(OnOpenText, IS_SEVENSAGES, SpeakShopGreeting);
 
-    COND_VB_SHOULD(VB_MODIFY_SHOP_PRICE, IS_RANDO, {
+    COND_VB_SHOULD(VB_MODIFY_SHOP_PRICE, IS_SEVENSAGES, {
         Actor* shopActor = va_arg(args, Actor*);
         s16* basePrice = va_arg(args, s16*);
         // Record before discounting, so what is stored is always the undiscounted price even when
@@ -256,11 +256,11 @@ static void RegisterSevenSagesKeaton() {
         *basePrice = DiscountedPrice(*basePrice);
     });
 
-    COND_ID_HOOK(OnActorUpdate, ACTOR_EN_GIRLA, IS_RANDO, OnShopItemUpdate);
-    COND_HOOK(OnSceneInit, IS_RANDO, [](int16_t sceneNum) { ForgetShopPrices(); });
-    COND_HOOK(OnPlayDestroy, IS_RANDO, ForgetShopPrices);
+    COND_ID_HOOK(OnActorUpdate, ACTOR_EN_GIRLA, IS_SEVENSAGES, OnShopItemUpdate);
+    COND_HOOK(OnSceneInit, IS_SEVENSAGES, [](int16_t sceneNum) { ForgetShopPrices(); });
+    COND_HOOK(OnPlayDestroy, IS_SEVENSAGES, ForgetShopPrices);
 
-    COND_VB_SHOULD(VB_MODIFY_RANDOM_DROP_QUANTITY, IS_RANDO, {
+    COND_VB_SHOULD(VB_MODIFY_RANDOM_DROP_QUANTITY, IS_SEVENSAGES, {
         [[maybe_unused]] Actor* fromActor = va_arg(args, Actor*);
         s16* dropQuantity = va_arg(args, s16*);
         if (IsWearingKeatonMask()) {
@@ -268,7 +268,7 @@ static void RegisterSevenSagesKeaton() {
         }
     });
 
-    COND_VB_SHOULD(VB_MODIFY_FIXED_DROP_QUANTITY, IS_RANDO, {
+    COND_VB_SHOULD(VB_MODIFY_FIXED_DROP_QUANTITY, IS_SEVENSAGES, {
         // va_arg promotes s16 to int; read it as int and narrow, or this reads garbage.
         s16 item00Type = (s16)va_arg(args, int);
         s16* dropQuantity = va_arg(args, s16*);
@@ -277,14 +277,14 @@ static void RegisterSevenSagesKeaton() {
         }
     });
 
-    COND_VB_SHOULD(VB_CHECK_RANDO_PRICE_OF_MEDIGORON, IS_RANDO, {
+    COND_VB_SHOULD(VB_CHECK_RANDO_PRICE_OF_MEDIGORON, IS_SEVENSAGES, {
         [[maybe_unused]] Actor* medigoron = va_arg(args, Actor*);
         if (IsWearingKeatonMask()) {
             *should = gSaveContext.rupees < 100;
         }
     });
 
-    COND_VB_SHOULD(VB_CHECK_RANDO_PRICE_OF_CARPET_SALESMAN, IS_RANDO, {
+    COND_VB_SHOULD(VB_CHECK_RANDO_PRICE_OF_CARPET_SALESMAN, IS_SEVENSAGES, {
         [[maybe_unused]] Actor* carpetSalesman = va_arg(args, Actor*);
         if (IsWearingKeatonMask()) {
             *should = gSaveContext.rupees < 100;

@@ -1064,24 +1064,124 @@ void ApplyWorldNpcColors() {
     COSMETIC_SET("NPC.Gerudo", kGerudoGold);
 }
 
+// ── Putting it back ─────────────────────────────────────────────────────────────────────────
+/**
+ * Everything above writes GLOBAL cosmetic CVars - they are not save data, so they follow the
+ * player out of the file that set them. Until 2026-08-09 there was no way back: loading a vanilla
+ * or plain Randomizer save just early-returned, so whoever last played Impa kept her purple tunic,
+ * purple HUD and rearranged layout in every other save and every later session, with nothing in
+ * the game to explain it or turn it off.
+ *
+ * So the entry point now handles both directions, and this is the other one.
+ *
+ * **Revert means clear, not restore-a-snapshot, and that is a real trade.** A player who had
+ * customised their own cosmetics loses those settings rather than getting them back. Snapshotting
+ * was the obvious alternative and it buys less than it looks: the apply path has never taken one,
+ * so by the time anything could be restored the original values are already gone - the very first
+ * sage file overwrote them. Clearing at least lands somewhere coherent and self-explanatory (stock
+ * SoH), where the status quo lands on whichever sage was played last. If per-player cosmetics ever
+ * need to survive, the snapshot has to be taken in SetCosmeticColor at first apply, not here.
+ *
+ * The two lists below have to stay in step with what the Apply* functions write. They are the
+ * matched half of the invariant stated at the CVar helpers above - "every option this file touches
+ * must be either set or explicitly cleared on every apply" - extended across the mod's own
+ * boundary: every option this file touches must also be undoable when the mod stops applying.
+ */
+
+// Colour options: `.Value` + `.Changed` + `.Rainbow`.
+constexpr const char* kSageColorOptions[] = {
+    "Link.KokiriTunic",     "Link.GoronTunic",      "Link.ZoraTunic",
+    "Swords.MasterBlade",   "Trails.MasterSword",
+    "Consumable.Hearts",    "Consumable.DDHearts",  "Consumable.HeartBorder",
+    "Consumable.Magic",     "Consumable.MagicActive",
+    "Magic.DinsPrimary",    "Magic.DinsSecondary",
+    "Magic.FaroresPrimary", "Magic.FaroresSecondary",
+    "Magic.NayrusPrimary",  "Magic.NayrusSecondary",
+    "HUD.BButton",          "HUD.AButton",          "HUD.StartButton",
+    "HUD.CButtons",         "HUD.Dpad",
+    "HUD.CUpButton",        "HUD.CDownButton",      "HUD.CLeftButton",      "HUD.CRightButton",
+    "NPC.Kokiri",           "NPC.Gerudo",
+};
+
+// Positioned elements: `.PosType` + `.PosX` + `.PosY` + `.UseMargins`. Note HUD.HeartsCount rather
+// than HUD.Hearts - the life meter's position and its margin flag live under different roots, see
+// the ApplyHudLayout comment.
+constexpr const char* kSagePositionedElements[] = {
+    "HUD.HeartsCount", "HUD.MagicBar",    "HUD.BButton",     "HUD.AButton",
+    "HUD.CUpButton",   "HUD.CDownButton", "HUD.CLeftButton", "HUD.CRightButton",
+    "HUD.Dpad",        "HUD.Minimap",     "HUD.StartButton",
+};
+
+void RevertSageCosmetics() {
+    for (const char* id : kSageColorOptions) {
+        const std::string base = std::string(CVAR_PREFIX_COSMETIC ".") + id;
+        ClearCosmeticColor((base + ".Value").c_str(), (base + ".Changed").c_str(),
+                           (base + ".Rainbow").c_str());
+    }
+
+    for (const char* id : kSagePositionedElements) {
+        const std::string base = std::string(CVAR_PREFIX_COSMETIC ".") + id;
+        CVarClear((base + ".PosType").c_str());
+        CVarClear((base + ".PosX").c_str());
+        CVarClear((base + ".PosY").c_str());
+        CVarClear((base + ".UseMargins").c_str());
+    }
+
+    // The stragglers that don't fit either shape.
+    CVarClear(CVAR_COSMETIC("Trails.Duration.Value"));
+    CVarClear(CVAR_COSMETIC("Trails.Duration.Changed"));
+    CVarClear(CVAR_COSMETIC("RainbowSpeed"));
+    CVarClear(CVAR_COSMETIC("HUD.Hearts.UseMargins"));
+
+    // Same list ApplyHudScale clears - it only ever clears, so reverting is the same call.
+    ApplyHudScale();
+
+    // The apply path's final step, for the same reason: several of the options above are display-
+    // list patches, and without a patch pass the CVars would read as cleared while the patched
+    // geometry stayed on screen.
+    ApplyOrResetCustomGfxPatches(true);
+}
+
 } // namespace
 
+// Persisted record that the sage look is currently applied, so the revert path knows whether these
+// global CVars are ours to clear or the player's own to leave alone. Without it, every vanilla load
+// would wipe cosmetics the player set deliberately - a worse bug than the one being fixed.
+//
+// On disk, and CVAR_GENERAL rather than CVAR_COSMETIC: it has to outlive the process (the cosmetics
+// themselves reach disk whenever anything calls CVarSave, so the marker must too, or a crash leaves
+// the look applied with nothing recording that fact), and it must not be inside the cosmetics block
+// that presets overwrite wholesale.
+constexpr const char* CVAR_SAGE_COSMETICS_APPLIED = CVAR_GENERAL("SevenSages.CosmeticsApplied");
+
 extern "C" void SevenSages_ApplySageCosmetics() {
-    if (!IS_RANDO || !SageCosmeticsEnabled()) {
-        return;
-    }
-
-    // -1 means no sage override applies to this file. Reusing the home-entrance accessor as the
-    // "is there a sage at all" probe avoids a second copy of "which sages exist" gating the entry
+    // Runs on EVERY file load, not just Seven Sages ones - see the registration comment below for
+    // why the hook can't be conditionally registered. So this decides which of the two directions
+    // to go, rather than early-returning and leaving the previous sage's look in place.
+    //
+    // -1 from the home-entrance accessor means no sage applies to this file. Reusing it as the "is
+    // there a sage at all" probe avoids a second copy of "which sages exist" gating the entry
     // point, and it stays correct if the sage list ever changes.
-    if (Randomizer_GetSageHomeEntrance() == -1) {
+    const bool wantSageLook =
+        IS_SEVENSAGES && SageCosmeticsEnabled() && Randomizer_GetSageHomeEntrance() != -1;
+
+    const SagePalette* palette =
+        wantSageLook ? FindSagePalette(Randomizer_GetSettingValue(RSK_SELECTED_SAGE)) : nullptr;
+
+    if (palette == nullptr) {
+        // Nothing to apply. Undo a previous sage's look if one is still standing, and otherwise
+        // leave every cosmetic CVar strictly alone - this branch is also every vanilla and plain
+        // Randomizer load, where the player's own settings are none of our business.
+        if (CVarGetInteger(CVAR_SAGE_COSMETICS_APPLIED, 0)) {
+            RevertSageCosmetics();
+            CVarClear(CVAR_SAGE_COSMETICS_APPLIED);
+            CVarSave();
+        }
         return;
     }
 
-    const SagePalette* palette = FindSagePalette(Randomizer_GetSettingValue(RSK_SELECTED_SAGE));
-    if (palette == nullptr) {
-        return;
-    }
+    CVarSetInteger(CVAR_SAGE_COSMETICS_APPLIED, 1);
+    CVarSave();
 
     ApplyTunics(*palette);
     ApplySword(*palette);
@@ -1109,22 +1209,25 @@ extern "C" void SevenSages_ApplySageCosmetics() {
 }
 
 /**
- * Registered unconditionally at boot, and deliberately NOT gated on IS_RANDO the way every other
- * SevenSages module is. That difference is load-bearing, not an oversight.
+ * Registered unconditionally at boot, and deliberately NOT gated on IS_SEVENSAGES the way every
+ * other SevenSages module is. That difference is load-bearing, not an oversight.
  *
- * `ShipInit::Init("IS_RANDO")` - the thing that re-runs IS_RANDO-gated registration - is itself
- * called from inside an OnLoadGame hook (hook_handlers.cpp). So an IS_RANDO-gated OnLoadGame hook
- * gets *registered while OnLoadGame is mid-flight*: ExecuteHooks is range-for iterating
- * RegisteredGameHooks::functions, which is a std::unordered_map, and registration inserts into
- * that same map. An insert that triggers a rehash invalidates every iterator, including the one
- * the loop is holding - undefined behaviour, and even in the benign case whether our hook runs on
- * this first load is left to bucket ordering.
+ * `ShipInit::Init("IS_RANDO")` - the thing that re-runs the modules' registration - is itself
+ * called from inside an OnLoadGame hook (hook_handlers.cpp). So a conditionally-registered
+ * OnLoadGame hook gets *registered while OnLoadGame is mid-flight*: ExecuteHooks is range-for
+ * iterating RegisteredGameHooks::functions, which is a std::unordered_map, and registration
+ * inserts into that same map. An insert that triggers a rehash invalidates every iterator,
+ * including the one the loop is holding - undefined behaviour, and even in the benign case
+ * whether our hook runs on this first load is left to bucket ordering.
  *
- * The other modules get away with the IS_RANDO gate because they hook things that fire long after
- * load (ocarina songs, room AOE). This one hooks OnLoadGame itself, which is exactly the colliding
- * case. Registering once at boot and testing IS_RANDO inside the body sidesteps it: the hook
- * exists before any load can happen, and IS_RANDO / the randomizer options are both valid by the
- * time the body runs.
+ * The other modules get away with a conditional gate because they hook things that fire long
+ * after load (ocarina songs, room AOE). This one hooks OnLoadGame itself, which is exactly the
+ * colliding case. Registering once at boot and testing IS_SEVENSAGES inside the body sidesteps
+ * it: the hook exists before any load can happen, and IS_SEVENSAGES / the randomizer options are
+ * both valid by the time the body runs.
+ *
+ * The body must therefore handle BOTH directions, which is why it restores rather than simply
+ * returning early on a non-sage file - see SevenSages_ApplySageCosmetics.
  */
 static void RegisterSevenSagesSageCosmetics() {
     COND_HOOK(OnLoadGame, true, [](int32_t fileNum) { SevenSages_ApplySageCosmetics(); });

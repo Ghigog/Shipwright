@@ -158,7 +158,7 @@ void RegisterSevenSagesCutsceneDebugCommand() {
 }
 
 void RegisterSevenSagesCutsceneText() {
-    COND_HOOK(OnOpenText, IS_RANDO, BuildCutsceneMessage);
+    COND_HOOK(OnOpenText, IS_SEVENSAGES, BuildCutsceneMessage);
 }
 
 } // namespace

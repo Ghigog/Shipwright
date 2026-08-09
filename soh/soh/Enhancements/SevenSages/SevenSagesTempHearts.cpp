@@ -180,8 +180,8 @@ extern "C" int SevenSagesTempHeartStartIndex(void) {
 }
 
 static void RegisterSevenSagesTempHearts() {
-    COND_HOOK(OnGameFrameUpdate, IS_RANDO, SevenSagesTempHeartsFrameUpdate);
-    COND_HOOK(OnLoadGame, IS_RANDO, SevenSagesTempHeartsOnLoadGame);
+    COND_HOOK(OnGameFrameUpdate, IS_SEVENSAGES, SevenSagesTempHeartsFrameUpdate);
+    COND_HOOK(OnLoadGame, IS_SEVENSAGES, SevenSagesTempHeartsOnLoadGame);
 }
 
 static RegisterShipInitFunc sevenSagesTempHeartsInitFunc(RegisterSevenSagesTempHearts, { "IS_RANDO" });

@@ -276,8 +276,8 @@ void SevenSagesMirrorShieldDraw() {
 }
 
 static void RegisterSevenSagesMirrorShield() {
-    COND_HOOK(OnGameFrameUpdate, IS_RANDO, SevenSagesMirrorShieldFrameUpdate);
-    COND_HOOK(OnPlayDrawEnd, IS_RANDO, SevenSagesMirrorShieldDraw);
+    COND_HOOK(OnGameFrameUpdate, IS_SEVENSAGES, SevenSagesMirrorShieldFrameUpdate);
+    COND_HOOK(OnPlayDrawEnd, IS_SEVENSAGES, SevenSagesMirrorShieldDraw);
 }
 
 static RegisterShipInitFunc sevenSagesMirrorShieldInitFunc(RegisterSevenSagesMirrorShield, { "IS_RANDO" });

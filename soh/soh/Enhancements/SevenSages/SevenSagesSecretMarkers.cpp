@@ -259,7 +259,7 @@ void SevenSagesSecretMarkersDraw() {
 }
 
 static void RegisterSevenSagesSecretMarkers() {
-    COND_HOOK(OnPlayDrawEnd, IS_RANDO, SevenSagesSecretMarkersDraw);
+    COND_HOOK(OnPlayDrawEnd, IS_SEVENSAGES, SevenSagesSecretMarkersDraw);
 }
 
 static RegisterShipInitFunc sevenSagesSecretMarkersInitFunc(RegisterSevenSagesSecretMarkers, { "IS_RANDO" });

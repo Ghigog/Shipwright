@@ -105,7 +105,7 @@ void SevenSagesJabuOnVanillaBehavior(GIVanillaBehavior id, bool* should, va_list
 }
 
 void RegisterSevenSagesJabuWithoutRuto() {
-    COND_HOOK(OnVanillaBehavior, IS_RANDO, SevenSagesJabuOnVanillaBehavior);
+    COND_HOOK(OnVanillaBehavior, IS_SEVENSAGES, SevenSagesJabuOnVanillaBehavior);
 }
 
 } // namespace

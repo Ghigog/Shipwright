@@ -42,7 +42,7 @@ constexpr float HOVER_BOOTS_RUN_FACTOR = 1.35f;
 constexpr float HOVER_BOOTS_GRIP_FACTOR = 1.5f;
 
 bool WearingBoots(const Player* player, s8 boots) {
-    if (!IS_RANDO || !GameInteractor::IsSaveLoaded(true)) {
+    if (!IS_SEVENSAGES || !GameInteractor::IsSaveLoaded(true)) {
         return false;
     }
     // Player_SetBootData runs during Player_Init, before anything hands us a

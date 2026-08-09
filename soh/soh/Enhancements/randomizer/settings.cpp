@@ -2691,42 +2691,48 @@ void Context::FinalizeSettings(const std::set<RandomizerCheck>& excludedLocation
             location->SetExcludedOption(0);
         }
     }
-    // Seven Sages: the sage NPCs are removed from the world (SevenSagesNoSageNPCs.cpp), so the
-    // checks they used to hand over can no longer be collected. Excluding them makes the fill put
-    // junk there rather than stranding progression behind a person who isn't in the game - the
-    // supported path, and the same one used for the Kokiri Sword and Saria's ocarina just below.
-    // These have to sit after the loop above, which resets every location's excluded option from
-    // the player's own list.
-    //
-    // Deliberately NOT excluded: RC_GIFT_FROM_RAURU still holds the Light Medallion whenever
-    // dungeon rewards aren't shuffled and Link's Pocket isn't taking it (fill.cpp:1035), and it is
-    // awarded by pulling the Master Sword, which needs no Rauru. RC_SONG_FROM_IMPA and
-    // RC_HC_ZELDAS_LETTER are handed to the player at file creation with Starting Zelda's Letter
-    // on (savefile.cpp:966), so their items are never out of reach. RC_LW_GIFT_FROM_SARIA is a
-    // bridge cutscene rather than an NPC, and stock SoH already skips it in rando.
-    static constexpr RandomizerCheck sevenSagesRemovedNpcLocations[] = {
-        RC_SONG_FROM_SARIA,             // Saria, Sacred Forest Meadow (EN_SA removed)
-        RC_GC_DARUNIAS_JOY,             // Darunia, Goron City (EN_DU removed)
-        RC_SHEIK_IN_FOREST,             // the six warp-song Sheiks (EN_XC removed)
-        RC_SHEIK_IN_CRATER,      RC_SHEIK_IN_ICE_CAVERN,
-        RC_SHEIK_AT_COLOSSUS,    RC_SHEIK_IN_KAKARIKO,
-        RC_SHEIK_AT_TEMPLE,
-        RC_TOT_LIGHT_ARROWS_CUTSCENE,   // the cutscene itself is suppressed, not just its cast
-    };
-    for (const auto rc : sevenSagesRemovedNpcLocations) {
-        this->GetItemLocation(rc)->SetExcludedOption(1);
-    }
+    // Seven Sages only - both blocks below reshape the seed itself, so a plain Randomizer
+    // generation must not see either. They were unconditional until 2026-08-09, which silently
+    // cost every Randomizer seed eight checks and its choice of song shuffle.
+    if (Randomizer_IsSevenSagesGeneration()) {
+        // Seven Sages: the sage NPCs are removed from the world (SevenSagesNoSageNPCs.cpp), so the
+        // checks they used to hand over can no longer be collected. Excluding them makes the fill
+        // put junk there rather than stranding progression behind a person who isn't in the game -
+        // the supported path, and the same one used for the Kokiri Sword and Saria's ocarina just
+        // below. These have to sit after the loop above, which resets every location's excluded
+        // option from the player's own list.
+        //
+        // Deliberately NOT excluded: RC_GIFT_FROM_RAURU still holds the Light Medallion whenever
+        // dungeon rewards aren't shuffled and Link's Pocket isn't taking it (fill.cpp:1035), and it
+        // is awarded by pulling the Master Sword, which needs no Rauru. RC_SONG_FROM_IMPA and
+        // RC_HC_ZELDAS_LETTER are handed to the player at file creation with Starting Zelda's
+        // Letter on (savefile.cpp:966), so their items are never out of reach. RC_LW_GIFT_FROM_SARIA
+        // is a bridge cutscene rather than an NPC, and stock SoH already skips it in rando.
+        static constexpr RandomizerCheck sevenSagesRemovedNpcLocations[] = {
+            RC_SONG_FROM_SARIA,             // Saria, Sacred Forest Meadow (EN_SA removed)
+            RC_GC_DARUNIAS_JOY,             // Darunia, Goron City (EN_DU removed)
+            RC_SHEIK_IN_FOREST,             // the six warp-song Sheiks (EN_XC removed)
+            RC_SHEIK_IN_CRATER,      RC_SHEIK_IN_ICE_CAVERN,
+            RC_SHEIK_AT_COLOSSUS,    RC_SHEIK_IN_KAKARIKO,
+            RC_SHEIK_AT_TEMPLE,
+            RC_TOT_LIGHT_ARROWS_CUTSCENE,   // the cutscene itself is suppressed, not just its cast
+        };
+        for (const auto rc : sevenSagesRemovedNpcLocations) {
+            this->GetItemLocation(rc)->SetExcludedOption(1);
+        }
 
-    // Seven Sages: songs have to go in the world pool, because the sages who taught them are gone.
-    // Both restricted song modes are exact bijections - Song Locations is 12 songs into the 12
-    // RCTYPE_SONG_LOCATION slots, and Dungeon Rewards is 12 songs into 10 boss rewards plus
-    // RC_SHEIK_IN_ICE_CAVERN and RC_SONG_FROM_IMPA (fill.cpp:1459). Six of those slots belong to
-    // Sheik and one to Saria, so excluding them above leaves more songs than slots and generation
-    // fails outright. Off has the same problem: it wants the songs at their vanilla NPCs. The
-    // Seven Sages preset already sets Anywhere; this makes the other three impossible to pick
-    // rather than a generation failure, the same shape as the Starting Age coercion above.
-    if (mOptions[RSK_SHUFFLE_SONGS].IsNot(RO_SONG_SHUFFLE_ANYWHERE)) {
-        mOptions[RSK_SHUFFLE_SONGS].Set(RO_SONG_SHUFFLE_ANYWHERE);
+        // Seven Sages: songs have to go in the world pool, because the sages who taught them are
+        // gone. Both restricted song modes are exact bijections - Song Locations is 12 songs into
+        // the 12 RCTYPE_SONG_LOCATION slots, and Dungeon Rewards is 12 songs into 10 boss rewards
+        // plus RC_SHEIK_IN_ICE_CAVERN and RC_SONG_FROM_IMPA (fill.cpp:1459). Six of those slots
+        // belong to Sheik and one to Saria, so excluding them above leaves more songs than slots
+        // and generation fails outright. Off has the same problem: it wants the songs at their
+        // vanilla NPCs. The Seven Sages preset already sets Anywhere; this makes the other three
+        // impossible to pick rather than a generation failure, the same shape as the Starting Age
+        // coercion above.
+        if (mOptions[RSK_SHUFFLE_SONGS].IsNot(RO_SONG_SHUFFLE_ANYWHERE)) {
+            mOptions[RSK_SHUFFLE_SONGS].Set(RO_SONG_SHUFFLE_ANYWHERE);
+        }
     }
 
     // Tricks

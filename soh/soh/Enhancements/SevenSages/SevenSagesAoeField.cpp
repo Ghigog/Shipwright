@@ -212,7 +212,7 @@ void SevenSagesSpawnAoeField(PlayState* play, float x, float y, float z, float m
 }
 
 static void RegisterSevenSagesAoeField() {
-    COND_HOOK(OnGameFrameUpdate, IS_RANDO, SevenSagesAoeFieldFrameUpdate);
+    COND_HOOK(OnGameFrameUpdate, IS_SEVENSAGES, SevenSagesAoeFieldFrameUpdate);
 }
 
 static RegisterShipInitFunc sevenSagesAoeFieldInitFunc(RegisterSevenSagesAoeField, { "IS_RANDO" });

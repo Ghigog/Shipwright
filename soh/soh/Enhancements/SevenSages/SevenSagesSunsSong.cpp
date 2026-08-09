@@ -74,7 +74,7 @@ void SevenSagesSunsSongPlayed() {
 } // namespace
 
 static void RegisterSevenSagesSunsSong() {
-    COND_HOOK(OnOcarinaSongAction, IS_RANDO, SevenSagesSunsSongPlayed);
+    COND_HOOK(OnOcarinaSongAction, IS_SEVENSAGES, SevenSagesSunsSongPlayed);
 }
 
 static RegisterShipInitFunc sevenSagesSunsSongInitFunc(RegisterSevenSagesSunsSong, { "IS_RANDO" });

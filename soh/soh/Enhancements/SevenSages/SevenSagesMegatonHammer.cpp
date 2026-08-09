@@ -274,7 +274,7 @@ bool SevenSagesHammerKnockedDown(const Actor* actor) {
 }
 
 bool SevenSagesHammerCountsAsExplosive(const Actor* attacker) {
-    if (!IS_RANDO || attacker == nullptr || attacker->category != ACTORCAT_PLAYER) {
+    if (!IS_SEVENSAGES || attacker == nullptr || attacker->category != ACTORCAT_PLAYER) {
         return false;
     }
     const Player* player = reinterpret_cast<const Player*>(attacker);
@@ -282,14 +282,14 @@ bool SevenSagesHammerCountsAsExplosive(const Actor* attacker) {
 }
 
 uint32_t SevenSagesHammerMeleeDmgFlags(const Player* player, uint32_t dmgFlags) {
-    if (!IS_RANDO || player == nullptr || player->heldItemAction != PLAYER_IA_HAMMER) {
+    if (!IS_SEVENSAGES || player == nullptr || player->heldItemAction != PLAYER_IA_HAMMER) {
         return dmgFlags;
     }
     return dmgFlags | DMG_FLAG_EXPLOSIVE;
 }
 
 void SevenSagesHammerShockwave(PlayState* play, float x, float y, float z) {
-    if (!IS_RANDO) {
+    if (!IS_SEVENSAGES) {
         return;
     }
     // ONE field, not two. An earlier build spawned a stun field and a breaker field at the same
@@ -327,7 +327,7 @@ static void RegisterSevenSagesMegatonHammer() {
     // Breakables are untouched by this: they have no damage table, so the guard skips them and
     // their hit stands as the explosive one that broke them. That asymmetry is the whole trick -
     // scenery reads the field as a bomb, enemies read it as a nut, from a single collider.
-    COND_VB_SHOULD(VB_MODIFY_RESOLVED_DAMAGE, IS_RANDO, {
+    COND_VB_SHOULD(VB_MODIFY_RESOLVED_DAMAGE, IS_SEVENSAGES, {
         Actor* target = va_arg(args, Actor*);
         f32* damage = va_arg(args, f32*);
         uint32_t dmgFlags = va_arg(args, uint32_t);
@@ -381,7 +381,7 @@ static void RegisterSevenSagesMegatonHammer() {
         }
     });
 
-    COND_HOOK(OnGameFrameUpdate, IS_RANDO, SevenSagesHammerKnockdownFrameUpdate);
+    COND_HOOK(OnGameFrameUpdate, IS_SEVENSAGES, SevenSagesHammerKnockdownFrameUpdate);
 }
 
 static RegisterShipInitFunc sevenSagesMegatonHammerInitFunc(RegisterSevenSagesMegatonHammer, { "IS_RANDO" });

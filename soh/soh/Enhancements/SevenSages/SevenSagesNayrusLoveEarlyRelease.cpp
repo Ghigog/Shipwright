@@ -62,7 +62,7 @@ void OnMagicDarkUpdate(void* actorPtr) {
 } // namespace
 
 static void RegisterSevenSagesNayrusLoveEarlyRelease() {
-    COND_ID_HOOK(OnActorUpdate, ACTOR_MAGIC_DARK, IS_RANDO, OnMagicDarkUpdate);
+    COND_ID_HOOK(OnActorUpdate, ACTOR_MAGIC_DARK, IS_SEVENSAGES, OnMagicDarkUpdate);
 }
 
 static RegisterShipInitFunc sevenSagesNayrusLoveEarlyReleaseInitFunc(RegisterSevenSagesNayrusLoveEarlyRelease,

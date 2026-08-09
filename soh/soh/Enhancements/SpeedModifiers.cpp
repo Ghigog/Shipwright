@@ -83,7 +83,7 @@ static void RegisterSpeedModifiers() {
     // would be answered once at load (Kokiri Boots) and the hook would never exist. The condition
     // has to be the widest thing that is knowable at registration time, with the actual boots test
     // living inside the hook body.
-    bool sevenSagesBootsActive = IS_RANDO;
+    bool sevenSagesBootsActive = IS_SEVENSAGES;
 
     // Airborne (jump) velocity. z_player clamps linearVelocity to the vanilla run speed limit when this returns true;
     // skip that clamp so the amplified running velocity carries into the jump.

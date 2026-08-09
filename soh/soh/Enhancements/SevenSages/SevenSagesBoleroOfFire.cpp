@@ -45,7 +45,7 @@ void SevenSagesBoleroOfFireDeclined() {
 } // namespace
 
 static void RegisterSevenSagesBoleroOfFire() {
-    COND_HOOK(OnWarpSongDeclined, IS_RANDO, SevenSagesBoleroOfFireDeclined);
+    COND_HOOK(OnWarpSongDeclined, IS_SEVENSAGES, SevenSagesBoleroOfFireDeclined);
 }
 
 static RegisterShipInitFunc sevenSagesBoleroOfFireInitFunc(RegisterSevenSagesBoleroOfFire, { "IS_RANDO" });

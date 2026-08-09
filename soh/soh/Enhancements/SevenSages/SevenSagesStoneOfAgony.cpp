@@ -81,7 +81,7 @@ static void RegisterSevenSagesStoneOfAgony() {
     // Reads the vanilla condition without changing it: when the rumble fires, so does the sound.
     // The quest-item check lives in Player_DetectRumbleSecrets around this, so there is no need to
     // re-test for the Stone here - this hook is only reached by a player who has it.
-    COND_VB_SHOULD(VB_RUMBLE_FOR_SECRET, IS_RANDO, {
+    COND_VB_SHOULD(VB_RUMBLE_FOR_SECRET, IS_SEVENSAGES, {
         [[maybe_unused]] Player* player = va_arg(args, Player*);
         if (*should) {
             Audio_PlaySoundGeneral(SECRET_SFX, &gSfxDefaultPos, 4, &gSfxDefaultFreqAndVolScale,
@@ -89,7 +89,7 @@ static void RegisterSevenSagesStoneOfAgony() {
         }
     });
 
-    COND_HOOK(OnActorUpdate, IS_RANDO, SevenSagesStoneOfAgonySenseLensActor);
+    COND_HOOK(OnActorUpdate, IS_SEVENSAGES, SevenSagesStoneOfAgonySenseLensActor);
 }
 
 static RegisterShipInitFunc sevenSagesStoneOfAgonyInitFunc(RegisterSevenSagesStoneOfAgony, { "IS_RANDO" });

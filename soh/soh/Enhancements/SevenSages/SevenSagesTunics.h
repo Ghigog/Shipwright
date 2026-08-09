@@ -22,7 +22,7 @@
  * Nayru's Love already implemented most of the fire half for itself, so
  * these predicates fold both sources into one condition rather than
  * duplicating the logic. Every site that previously read
- * `IS_RANDO && gSaveContext.nayrusLoveTimer != 0` now calls through here,
+ * `IS_SEVENSAGES && gSaveContext.nayrusLoveTimer != 0` now calls through here,
  * which is why widening the tunics could not change Nayru's Love behaviour
  * by accident — the two share one definition.
  */

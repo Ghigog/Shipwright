@@ -80,8 +80,8 @@ void SevenSagesSerenadeOfWaterFrameUpdate() {
 } // namespace
 
 static void RegisterSevenSagesSerenadeOfWater() {
-    COND_HOOK(OnWarpSongDeclined, IS_RANDO, SevenSagesSerenadeOfWaterDeclined);
-    COND_HOOK(OnGameFrameUpdate, IS_RANDO, SevenSagesSerenadeOfWaterFrameUpdate);
+    COND_HOOK(OnWarpSongDeclined, IS_SEVENSAGES, SevenSagesSerenadeOfWaterDeclined);
+    COND_HOOK(OnGameFrameUpdate, IS_SEVENSAGES, SevenSagesSerenadeOfWaterFrameUpdate);
 }
 
 static RegisterShipInitFunc sevenSagesSerenadeOfWaterInitFunc(RegisterSevenSagesSerenadeOfWater, { "IS_RANDO" });

@@ -52,9 +52,9 @@ void SevenSagesPreludeOfLightFrameUpdate() {
 } // namespace
 
 static void RegisterSevenSagesPreludeOfLight() {
-    COND_HOOK(OnWarpSongDeclined, IS_RANDO, SevenSagesPreludeOfLightDeclined);
-    COND_HOOK(OnGameFrameUpdate, IS_RANDO, SevenSagesPreludeOfLightFrameUpdate);
-    COND_VB_SHOULD(VB_PREVENT_PLAYER_DEATH, IS_RANDO, { *should = sBuffFramesRemaining > 0; });
+    COND_HOOK(OnWarpSongDeclined, IS_SEVENSAGES, SevenSagesPreludeOfLightDeclined);
+    COND_HOOK(OnGameFrameUpdate, IS_SEVENSAGES, SevenSagesPreludeOfLightFrameUpdate);
+    COND_VB_SHOULD(VB_PREVENT_PLAYER_DEATH, IS_SEVENSAGES, { *should = sBuffFramesRemaining > 0; });
 }
 
 static RegisterShipInitFunc sevenSagesPreludeOfLightInitFunc(RegisterSevenSagesPreludeOfLight, { "IS_RANDO" });

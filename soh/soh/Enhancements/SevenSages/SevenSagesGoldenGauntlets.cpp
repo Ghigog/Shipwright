@@ -183,9 +183,9 @@ void SevenSagesGauntletsBossDoorOpened(uint16_t mapIndex) {
 } // namespace
 
 static void RegisterSevenSagesGoldenGauntlets() {
-    COND_HOOK(OnBossDoorOpened, IS_RANDO, SevenSagesGauntletsBossDoorOpened);
+    COND_HOOK(OnBossDoorOpened, IS_SEVENSAGES, SevenSagesGauntletsBossDoorOpened);
 
-    COND_VB_SHOULD(VB_BOSS_DOOR_REQUIRE_BOSS_KEY, IS_RANDO, {
+    COND_VB_SHOULD(VB_BOSS_DOOR_REQUIRE_BOSS_KEY, IS_SEVENSAGES, {
         [[maybe_unused]] Actor* door = va_arg(args, Actor*);
         static bool sWasInsufficientLastFrame = false;
         PlayInsufficientMagicSoundOnRisingEdge(&sWasInsufficientLastFrame, CanUseGauntlets(STRENGTH_GOLDEN_GAUNTLETS), true);
@@ -194,7 +194,7 @@ static void RegisterSevenSagesGoldenGauntlets() {
         }
     });
 
-    COND_VB_SHOULD(VB_DOOR_SHUTTER_REQUIRE_SMALL_KEY, IS_RANDO, {
+    COND_VB_SHOULD(VB_DOOR_SHUTTER_REQUIRE_SMALL_KEY, IS_SEVENSAGES, {
         [[maybe_unused]] Actor* door = va_arg(args, Actor*);
         static bool sWasInsufficientLastFrame = false;
         PlayInsufficientMagicSoundOnRisingEdge(&sWasInsufficientLastFrame, HasSilverLockAccess(), true);
@@ -203,7 +203,7 @@ static void RegisterSevenSagesGoldenGauntlets() {
         }
     });
 
-    COND_VB_SHOULD(VB_DOOR_SHUTTER_CONSUME_SMALL_KEY, IS_RANDO, {
+    COND_VB_SHOULD(VB_DOOR_SHUTTER_CONSUME_SMALL_KEY, IS_SEVENSAGES, {
         [[maybe_unused]] Actor* door = va_arg(args, Actor*);
         // *should is already false when the player has no key, which is only reachable via the
         // bypass above - the approach check would otherwise have refused. Suppressing the
@@ -218,7 +218,7 @@ static void RegisterSevenSagesGoldenGauntlets() {
     // are spread across three unrelated actors, and Door_Shutter (hooked above) is the sliding
     // kind. Upstream already provides both hooks here, so nothing new was needed in the actor -
     // they just had to be registered for.
-    COND_VB_SHOULD(VB_NOT_HAVE_SMALL_KEY, IS_RANDO, {
+    COND_VB_SHOULD(VB_NOT_HAVE_SMALL_KEY, IS_SEVENSAGES, {
         [[maybe_unused]] Actor* door = va_arg(args, Actor*);
         // Called unconditionally (not nested under `if (*should)`) so the rising-edge tracker inside
         // sees every call this hook makes, including the "*should already false" ones - otherwise a
@@ -235,7 +235,7 @@ static void RegisterSevenSagesGoldenGauntlets() {
         }
     });
 
-    COND_VB_SHOULD(VB_CONSUME_SMALL_KEY, IS_RANDO, {
+    COND_VB_SHOULD(VB_CONSUME_SMALL_KEY, IS_SEVENSAGES, {
         Actor* door = va_arg(args, Actor*);
         // Reaching the consume with no keys means the gate above let the player through, since
         // vanilla would otherwise have refused - so this is a bypass, and the decrement has to be

@@ -54,7 +54,7 @@ void OnMagicFireInit(void* actorPtr) {
 } // namespace
 
 static void RegisterSevenSagesDinsFireBomb() {
-    COND_ID_HOOK(OnActorInit, ACTOR_MAGIC_FIRE, IS_RANDO, OnMagicFireInit);
+    COND_ID_HOOK(OnActorInit, ACTOR_MAGIC_FIRE, IS_SEVENSAGES, OnMagicFireInit);
 }
 
 static RegisterShipInitFunc sevenSagesDinsFireBombInitFunc(RegisterSevenSagesDinsFireBomb, { "IS_RANDO" });

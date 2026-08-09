@@ -88,11 +88,11 @@ void SevenSagesNoSageNPCsOnVanillaBehavior(GIVanillaBehavior id, bool* should, v
 }
 
 void RegisterSevenSagesNoSageNPCs() {
-    COND_ID_HOOK(ShouldActorInit, ACTOR_EN_SA, IS_RANDO, SevenSagesRemoveSageActor);
-    COND_ID_HOOK(ShouldActorInit, ACTOR_EN_DU, IS_RANDO, SevenSagesRemoveSageActor);
-    COND_ID_HOOK(ShouldActorInit, ACTOR_EN_XC, IS_RANDO, SevenSagesRemoveSageActor);
-    COND_ID_HOOK(ShouldActorInit, ACTOR_EN_NB, IS_RANDO, SevenSagesRemoveNabooru);
-    COND_HOOK(OnVanillaBehavior, IS_RANDO, SevenSagesNoSageNPCsOnVanillaBehavior);
+    COND_ID_HOOK(ShouldActorInit, ACTOR_EN_SA, IS_SEVENSAGES, SevenSagesRemoveSageActor);
+    COND_ID_HOOK(ShouldActorInit, ACTOR_EN_DU, IS_SEVENSAGES, SevenSagesRemoveSageActor);
+    COND_ID_HOOK(ShouldActorInit, ACTOR_EN_XC, IS_SEVENSAGES, SevenSagesRemoveSageActor);
+    COND_ID_HOOK(ShouldActorInit, ACTOR_EN_NB, IS_SEVENSAGES, SevenSagesRemoveNabooru);
+    COND_HOOK(OnVanillaBehavior, IS_SEVENSAGES, SevenSagesNoSageNPCsOnVanillaBehavior);
 }
 
 } // namespace

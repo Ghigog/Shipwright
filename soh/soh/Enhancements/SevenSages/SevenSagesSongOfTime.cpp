@@ -74,7 +74,7 @@ void SevenSagesSongOfTimePlayed() {
 } // namespace
 
 static void RegisterSevenSagesSongOfTime() {
-    COND_HOOK(OnOcarinaSongAction, IS_RANDO, SevenSagesSongOfTimePlayed);
+    COND_HOOK(OnOcarinaSongAction, IS_SEVENSAGES, SevenSagesSongOfTimePlayed);
 }
 
 static RegisterShipInitFunc sevenSagesSongOfTimeInitFunc(RegisterSevenSagesSongOfTime, { "IS_RANDO" });

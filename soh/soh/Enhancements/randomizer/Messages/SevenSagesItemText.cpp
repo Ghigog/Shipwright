@@ -276,7 +276,7 @@ void RegisterSevenSagesItemText() {
     static HOOK_ID hookId = 0;
     GameInteractor::Instance->UnregisterGameHookForFilter<GameInteractor::OnOpenText>(hookId);
     hookId = 0;
-    if (!IS_RANDO) {
+    if (!IS_SEVENSAGES) {
         return;
     }
     hookId = GameInteractor::Instance->RegisterGameHookForFilter<GameInteractor::OnOpenText>(

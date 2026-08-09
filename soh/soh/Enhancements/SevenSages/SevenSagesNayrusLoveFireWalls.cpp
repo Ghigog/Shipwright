@@ -68,9 +68,9 @@ void OnCurtainUpdate(void* actorPtr) {
 } // namespace
 
 static void RegisterSevenSagesNayrusLoveFireWalls() {
-    COND_ID_HOOK(OnActorUpdate, ACTOR_BG_HIDAN_FIREWALL, IS_RANDO, OnFirewallUpdate);
-    COND_ID_HOOK(OnActorUpdate, ACTOR_BG_HIDAN_FWBIG, IS_RANDO, OnFwbigUpdate);
-    COND_ID_HOOK(OnActorUpdate, ACTOR_BG_HIDAN_CURTAIN, IS_RANDO, OnCurtainUpdate);
+    COND_ID_HOOK(OnActorUpdate, ACTOR_BG_HIDAN_FIREWALL, IS_SEVENSAGES, OnFirewallUpdate);
+    COND_ID_HOOK(OnActorUpdate, ACTOR_BG_HIDAN_FWBIG, IS_SEVENSAGES, OnFwbigUpdate);
+    COND_ID_HOOK(OnActorUpdate, ACTOR_BG_HIDAN_CURTAIN, IS_SEVENSAGES, OnCurtainUpdate);
 }
 
 static RegisterShipInitFunc sevenSagesNayrusLoveFireWallsInitFunc(RegisterSevenSagesNayrusLoveFireWalls,

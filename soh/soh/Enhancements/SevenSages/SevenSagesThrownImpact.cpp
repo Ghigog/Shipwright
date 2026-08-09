@@ -220,9 +220,9 @@ void SevenSagesThrownImpact(PlayState* play, Actor* actor) {
 }
 
 static void RegisterSevenSagesThrownImpact() {
-    COND_HOOK(OnPlayerUpdate, IS_RANDO, SevenSagesThrownImpactPlayerUpdate);
-    COND_HOOK(OnActorUpdate, IS_RANDO, SevenSagesThrownImpactActorUpdate);
-    COND_HOOK(OnActorKill, IS_RANDO, SevenSagesThrownImpactActorKill);
+    COND_HOOK(OnPlayerUpdate, IS_SEVENSAGES, SevenSagesThrownImpactPlayerUpdate);
+    COND_HOOK(OnActorUpdate, IS_SEVENSAGES, SevenSagesThrownImpactActorUpdate);
+    COND_HOOK(OnActorKill, IS_SEVENSAGES, SevenSagesThrownImpactActorKill);
 }
 
 static RegisterShipInitFunc sevenSagesThrownImpactInitFunc(RegisterSevenSagesThrownImpact, { "IS_RANDO" });

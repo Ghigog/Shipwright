@@ -347,7 +347,12 @@ void BuildNpcHintMessage(uint16_t* textId, bool* loadFromMessageTable) {
 }
 
 void RegisterSevenSagesNpcHints() {
-    COND_HOOK(OnOpenText, RAND_GET_OPTION(RSK_NPC_HINTS), BuildNpcHintMessage);
+    // IS_SEVENSAGES as well as the setting, and it has to come first. RSK_NPC_HINTS is a real
+    // randomizer option living in the Hints menu, so a player who applied the Seven Sages preset
+    // and then generated a plain Randomizer seed would otherwise get this mod's in-character
+    // rewrites in a quest that has no story to tell them. Reading RAND_GET_OPTION at all is only
+    // meaningful on a randomized save, so the quest test guards the option read too.
+    COND_HOOK(OnOpenText, IS_SEVENSAGES && RAND_GET_OPTION(RSK_NPC_HINTS), BuildNpcHintMessage);
 }
 
 static RegisterShipInitFunc sevenSagesNpcHintsInitFunc(RegisterSevenSagesNpcHints, { "IS_RANDO" });

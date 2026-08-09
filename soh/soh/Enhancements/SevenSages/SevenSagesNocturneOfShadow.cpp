@@ -69,9 +69,9 @@ void SevenSagesNocturneOfShadowFrameUpdate() {
 } // namespace
 
 static void RegisterSevenSagesNocturneOfShadow() {
-    COND_HOOK(OnWarpSongDeclined, IS_RANDO, SevenSagesNocturneOfShadowDeclined);
-    COND_HOOK(OnGameFrameUpdate, IS_RANDO, SevenSagesNocturneOfShadowFrameUpdate);
-    COND_VB_SHOULD(VB_GUARD_DETECT_PLAYER, IS_RANDO, {
+    COND_HOOK(OnWarpSongDeclined, IS_SEVENSAGES, SevenSagesNocturneOfShadowDeclined);
+    COND_HOOK(OnGameFrameUpdate, IS_SEVENSAGES, SevenSagesNocturneOfShadowFrameUpdate);
+    COND_VB_SHOULD(VB_GUARD_DETECT_PLAYER, IS_SEVENSAGES, {
         [[maybe_unused]] Actor* guard = va_arg(args, Actor*);
         if (sBuffFramesRemaining > 0) {
             *should = false;

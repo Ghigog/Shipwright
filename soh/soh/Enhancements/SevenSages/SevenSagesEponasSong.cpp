@@ -61,9 +61,9 @@ void SevenSagesEponasSongFrameUpdate() {
 } // namespace
 
 static void RegisterSevenSagesEponasSong() {
-    COND_HOOK(OnOcarinaSongAction, IS_RANDO, SevenSagesEponasSongPlayed);
-    COND_HOOK(OnGameFrameUpdate, IS_RANDO, SevenSagesEponasSongFrameUpdate);
-    COND_VB_SHOULD(VB_PLAYER_MODIFY_RUN_SPEED, IS_RANDO, {
+    COND_HOOK(OnOcarinaSongAction, IS_SEVENSAGES, SevenSagesEponasSongPlayed);
+    COND_HOOK(OnGameFrameUpdate, IS_SEVENSAGES, SevenSagesEponasSongFrameUpdate);
+    COND_VB_SHOULD(VB_PLAYER_MODIFY_RUN_SPEED, IS_SEVENSAGES, {
         [[maybe_unused]] Player* player = va_arg(args, Player*);
         f32* speedTarget = va_arg(args, f32*);
         if (sBuffFramesRemaining > 0) {

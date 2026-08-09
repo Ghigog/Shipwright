@@ -62,9 +62,30 @@
  * ShipInit::Init(CVAR_CHEAT("ClimbEverything")), which is what the Enhancements-menu checkbox
  * does after every toggle (UIWidgets.cpp's CVarCheckbox); a bare CVarSetInteger doesn't trigger
  * that. Fixed by calling ShipInit::Init ourselves right after each CVarSetInteger, both turning
- * the buff on and restoring the prior value when it ends - deliberately not also calling
- * SaveConsoleVariablesNextFrame() the way the menu checkbox does, since this is a transient
- * buff state that should never get written to the user's saved settings.
+ * the buff on and restoring the prior value when it ends.
+ *
+ * ── Ending the buff is four paths, not one (fixed 2026-08-09) ───────────────────────────────
+ *
+ * The timer expiring used to be the ONLY thing that restored the CVar, which made every other way
+ * of ending a buff a way of leaving a cheat switched on permanently. This is a cheat the player
+ * also owns from the Enhancements menu, it is global rather than per-save, and nothing in the game
+ * would ever turn it back off - so "quit while Saria's Song is up" meant climbing every wall in
+ * every file, in this session and every session after it, until the player found the checkbox.
+ *
+ * All four now route through EndClimbBuff(), which is idempotent so each can fire blind:
+ *
+ *   timer expiry          the ordinary case, in the frame update
+ *   save unloaded         the frame update's own guard - catches quitting to the file select,
+ *                         where frames keep running
+ *   any file load         RegisterSevenSagesSariasSong(), which ShipInit re-runs on OnLoadGame.
+ *                         Necessary on top of the above because loading a non-Seven-Sages file
+ *                         UNREGISTERS the frame update - the hook that would otherwise clean up
+ *   next boot             the same call at startup, reading the on-disk breadcrumb
+ *
+ * The last one is why a CVar gets written to disk here despite this being transient buff state.
+ * Not calling CVarSave() is not protection: anything else that saves the config while the buff is
+ * live (opening the menu and toggling something is enough) writes ClimbEverything=1 out anyway,
+ * and then only a record of what it was before can undo it. See CVAR_CLIMB_FORCED below.
  */
 #include "soh/ShipInit.hpp"
 #include "functions.h"
@@ -84,9 +105,48 @@ constexpr s32 SARIAS_SONG_BUFF_FRAMES = 20 * 20;
 s32 sBuffFramesRemaining = 0;
 s32 sPriorClimbEverythingValue = 0;
 
+// Persistent breadcrumb recording that the buff - not the player - is what turned the cheat on,
+// and what it was set to beforehand. Stored as prior + 1 so that "no buff active" (absent/0) stays
+// distinguishable from "buff active, prior value was 0", which is the overwhelmingly common case.
+//
+// This exists because the buff drives a CVar the player also owns, and every way of ending a buff
+// except the timer used to be a way of leaving it on forever. Restoring on the paths we control
+// (below) fixes quitting, loading another file and exiting normally; it cannot fix the process
+// dying mid-buff. Only something on disk can, so this goes to disk deliberately and is undone at
+// boot. CVAR_GENERAL, so applyPreset's whole-block overwrite of gRandoSettings/gCheats can't erase
+// the record of a cheat it is simultaneously overwriting.
+constexpr const char* CVAR_CLIMB_FORCED = CVAR_GENERAL("SevenSages.ClimbEverythingForced");
+
 void SetClimbEverything(s32 value) {
     CVarSetInteger(CVAR_CHEAT("ClimbEverything"), value);
     ShipInit::Init(CVAR_CHEAT("ClimbEverything"));
+}
+
+void BeginClimbBuff() {
+    sPriorClimbEverythingValue = CVarGetInteger(CVAR_CHEAT("ClimbEverything"), 0);
+    CVarSetInteger(CVAR_CLIMB_FORCED, sPriorClimbEverythingValue + 1);
+    CVarSave();
+    SetClimbEverything(1);
+}
+
+// Idempotent, and safe to call when no buff is running - which is the point, because every caller
+// below is a "this might be stale" path rather than a known-active one.
+//
+// Prefers the on-disk breadcrumb over sPriorClimbEverythingValue: after a crash-and-relaunch the
+// in-memory value is gone and the breadcrumb is the only surviving record of what to restore.
+void EndClimbBuff() {
+    const s32 marker = CVarGetInteger(CVAR_CLIMB_FORCED, 0);
+    if (marker == 0 && sBuffFramesRemaining <= 0) {
+        return;
+    }
+
+    const s32 prior = marker != 0 ? marker - 1 : sPriorClimbEverythingValue;
+    sBuffFramesRemaining = 0;
+    sPriorClimbEverythingValue = 0;
+
+    CVarClear(CVAR_CLIMB_FORCED);
+    SetClimbEverything(prior);
+    CVarSave();
 }
 
 void SevenSagesSariasSongPlayed() {
@@ -99,26 +159,33 @@ void SevenSagesSariasSongPlayed() {
 
     SevenSagesRequestSongMagic(SARIAS_SONG_MAGIC_COST, []() {
         if (sBuffFramesRemaining <= 0) {
-            sPriorClimbEverythingValue = CVarGetInteger(CVAR_CHEAT("ClimbEverything"), 0);
-            SetClimbEverything(1);
+            BeginClimbBuff();
         }
         sBuffFramesRemaining = SARIAS_SONG_BUFF_FRAMES;
     });
 }
 
 void SevenSagesSariasSongFrameUpdate() {
+    // Leaving the save behind ends the buff, and this is the branch that catches quitting to the
+    // file select - frames keep running there, so it fires before any new file can be loaded.
+    // Without it the cheat stayed on across the rest of the session and into every other save.
+    if (!GameInteractor::IsSaveLoaded(true)) {
+        EndClimbBuff();
+        return;
+    }
+
     if (sBuffFramesRemaining <= 0) {
         return;
     }
 
     sBuffFramesRemaining--;
     if (sBuffFramesRemaining == 0) {
-        SetClimbEverything(sPriorClimbEverythingValue);
+        EndClimbBuff();
     }
 }
 
 // Skip vanilla's "talk to Saria?" / "talk to Navi instead?" chain entirely - see the header
-// comment. Unconditional under IS_RANDO: the buff above fires on every play of the song, so there
+// comment. Unconditional under IS_SEVENSAGES: the buff above fires on every play of the song, so there
 // is no branch of the prompt left that still leads anywhere this project wants the player to go.
 void SevenSagesSariasSongOnVanillaBehavior(GIVanillaBehavior id, bool* should, va_list originalArgs) {
     if (id != VB_NAVI_ASK_TO_TALK_AFTER_SARIAS_SONG) {
@@ -130,9 +197,22 @@ void SevenSagesSariasSongOnVanillaBehavior(GIVanillaBehavior id, bool* should, v
 } // namespace
 
 static void RegisterSevenSagesSariasSong() {
-    COND_HOOK(OnOcarinaSongAction, IS_RANDO, SevenSagesSariasSongPlayed);
-    COND_HOOK(OnVanillaBehavior, IS_RANDO, SevenSagesSariasSongOnVanillaBehavior);
-    COND_HOOK(OnGameFrameUpdate, IS_RANDO, SevenSagesSariasSongFrameUpdate);
+    // Unconditional, and before the COND_HOOKs rather than inside one. This function runs at boot
+    // and again on every OnLoadGame (see the RegisterShipInitFunc below), which makes it both
+    // recovery points at once:
+    //
+    //   at boot     - undo a buff the process died in the middle of, from the on-disk breadcrumb
+    //   on load     - end a buff left over from the previous file, INCLUDING when the file being
+    //                 loaded is vanilla or plain Randomizer, where the COND_HOOKs below are about
+    //                 to be unregistered and the frame update would never run again to do it
+    //
+    // That second case is why this cannot live in the frame update alone: unregistering a hook is
+    // not the same as ending what it started.
+    EndClimbBuff();
+
+    COND_HOOK(OnOcarinaSongAction, IS_SEVENSAGES, SevenSagesSariasSongPlayed);
+    COND_HOOK(OnVanillaBehavior, IS_SEVENSAGES, SevenSagesSariasSongOnVanillaBehavior);
+    COND_HOOK(OnGameFrameUpdate, IS_SEVENSAGES, SevenSagesSariasSongFrameUpdate);
 }
 
 static RegisterShipInitFunc sevenSagesSariasSongInitFunc(RegisterSevenSagesSariasSong, { "IS_RANDO" });

@@ -1,10 +1,12 @@
 #include "savefile.h"
 #include "soh/OTRGlobals.h"
 #include "soh/ResourceManagerHelpers.h"
+#include "soh/cvar_prefixes.h"
 #include "soh/Enhancements/game-interactor/GameInteractor.h"
 #include "soh/Enhancements/randomizer/logic.h"
 #include "soh/Enhancements/randomizer/randomizer.h"
 
+#include <libultraship/bridge.h>
 #include <spdlog/spdlog.h>
 
 extern "C" {
@@ -710,12 +712,33 @@ static const SageDefinition* FindSageDefinition(uint8_t sage) {
     return nullptr;
 }
 
-// The selected sage, or nullptr when the randomizer isn't active.
+// The selected sage, or nullptr when this isn't a Seven Sages save.
+//
+// IS_SEVENSAGES, not IS_RANDO. RSK_SELECTED_SAGE defaults to RO_SAGE_RAURU (0) and every value in
+// that enum maps to a real sage, so FindSageDefinition never returns nullptr on its own - the quest
+// check is the ONLY thing standing between a plain Randomizer file and Rauru's kit, starting age
+// and Lon Lon Ranch respawn being forced onto it. It was IS_RANDO until 2026-08-09, and that is
+// exactly what happened. See the IS_RANDO/IS_SEVENSAGES note in z64save.h.
 static const SageDefinition* GetSelectedSageDefinition() {
-    if (!IS_RANDO) {
+    if (!IS_SEVENSAGES) {
         return nullptr;
     }
     return FindSageDefinition(Randomizer_GetSettingValue(RSK_SELECTED_SAGE));
+}
+
+// Seven Sages: the generation-time counterpart of IS_SEVENSAGES, and it has to be a CVar rather
+// than a quest check because at generation time there is no save file yet - the seed is built from
+// the file-select screen, and gSaveContext.ship.quest.id still describes whatever was last loaded
+// (or nothing at all on a fresh launch). Asking IS_SEVENSAGES here would answer for the previous
+// session.
+//
+// Written by FileChoose_UpdateQuestMenu the moment a quest is chosen, in both directions, so
+// picking Randomizer after Seven Sages clears it. Deliberately under CVAR_GENERAL rather than
+// CVAR_RANDOMIZER_SETTING: applyPreset does a whole-block SetBlock on `gRandoSettings`, so a flag
+// living there would be wiped the moment either Seven Sages preset was applied - which is the one
+// thing guaranteed to happen right next to where this gets set.
+extern "C" bool Randomizer_IsSevenSagesGeneration() {
+    return CVarGetInteger(CVAR_GENERAL("SevenSages.QuestSelected"), 0) != 0;
 }
 
 // Generation-time hook: fold the selected sage's fixed starting state into the real settings the
@@ -726,6 +749,12 @@ static const SageDefinition* GetSelectedSageDefinition() {
 // no CVar write), so this is scoped to the seed being generated and never leaks back into the
 // user's saved settings UI.
 extern "C" void Randomizer_ApplySageGenerationSettings() {
+    // No-op for a plain Randomizer seed. Called unconditionally from Context::FinalizeSettings,
+    // which runs for every generation regardless of which quest asked for it.
+    if (!Randomizer_IsSevenSagesGeneration()) {
+        return;
+    }
+
     auto ctx = Rando::Context::GetInstance();
     const SageDefinition* def = FindSageDefinition(ctx->GetOption(RSK_SELECTED_SAGE).Get());
     if (def == nullptr) {
@@ -770,7 +799,9 @@ extern "C" uint8_t Randomizer_GetSageStartingAge() {
     return def == nullptr ? RO_AGE_CHILD : def->age;
 }
 
-// RR_NONE-equivalent isn't meaningful here; callers check IS_RANDO first via HasSageHomeRegion.
+// RR_NONE-equivalent isn't meaningful here; 0 means "no sage", which only happens off a Seven
+// Sages save. Currently unused - the solver's starting region is still the vanilla Child/Adult
+// Spawn, see the note in location_access/root.cpp.
 extern "C" uint16_t Randomizer_GetSageHomeRegion() {
     const SageDefinition* def = GetSelectedSageDefinition();
     return def == nullptr ? 0 : def->homeRegion;

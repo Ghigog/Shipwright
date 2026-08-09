@@ -100,11 +100,11 @@ void SevenSagesElementalArrowImpact(void* arrowPtr) {
 } // namespace
 
 static void RegisterSevenSagesElementalArrows() {
-    COND_HOOK(OnArrowImpact, IS_RANDO, SevenSagesElementalArrowImpact);
+    COND_HOOK(OnArrowImpact, IS_SEVENSAGES, SevenSagesElementalArrowImpact);
 
     // Light arrow damage. Has to happen here rather than on the arrow, because the attacker's
     // toucher.damage is ignored whenever the target has a damageTable - which every enemy does.
-    COND_VB_SHOULD(VB_MODIFY_RESOLVED_DAMAGE, IS_RANDO, {
+    COND_VB_SHOULD(VB_MODIFY_RESOLVED_DAMAGE, IS_SEVENSAGES, {
         [[maybe_unused]] Actor* target = va_arg(args, Actor*);
         f32* damage = va_arg(args, f32*);
         uint32_t dmgFlags = va_arg(args, uint32_t);
@@ -117,7 +117,7 @@ static void RegisterSevenSagesElementalArrows() {
     // Vanilla charges sMagicArrowCosts[] - 4/4/8 for fire/ice/light - at the moment the arrow is
     // nocked. Returning false suppresses that entirely so the light arrow can be charged at its own
     // rate; fire and ice keep vanilla's price by letting the default through.
-    COND_VB_SHOULD(VB_PLAYER_ARROW_MAGIC_CONSUMPTION, IS_RANDO, {
+    COND_VB_SHOULD(VB_PLAYER_ARROW_MAGIC_CONSUMPTION, IS_SEVENSAGES, {
         [[maybe_unused]] Player* player = va_arg(args, Player*);
         int32_t magicArrowType = va_arg(args, int32_t);
         [[maybe_unused]] int8_t* arrowType = va_arg(args, int8_t*);

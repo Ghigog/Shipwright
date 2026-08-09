@@ -195,7 +195,7 @@ void PlaySageOpening() {
 // (Saria, Darunia) don't need this fix but aren't hurt by it either - moved along with the rest
 // rather than splitting the hook.
 void RegisterSevenSagesSageOpenings() {
-    COND_HOOK(OnSceneSpawnActors, IS_RANDO, PlaySageOpening);
+    COND_HOOK(OnSceneSpawnActors, IS_SEVENSAGES, PlaySageOpening);
 }
 
 } // namespace
