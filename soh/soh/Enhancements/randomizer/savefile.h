@@ -61,6 +61,17 @@ bool Randomizer_IsSevenSagesGeneration(void);
 // so a new one doesn't silently miss the sage override again.
 int32_t Randomizer_GetSageHomeEntrance(void);
 
+// Where the file should actually SPAWN right now: the sage's home entrance while they are in
+// their own age, or their off-age substitute once they have switched at the pedestal. Identical
+// to Randomizer_GetSageHomeEntrance() for any sage with no off-age entrance defined, and -1 when
+// this isn't a Seven Sages save.
+//
+// This, not the home accessor, is what the two savewarp recomputes must call. The home base is
+// also the reload point, so a sage who changed age and quit was coming back to a spawn chosen for
+// the age they are no longer in - stranded above the meadow's adult Moblin maze in Saria's case.
+// Use the home accessor only when you mean the sage's identity (openings, "is a sage selected").
+int32_t Randomizer_GetSageSpawnEntrance(void);
+
 // Generation-time: folds the selected sage's age and kit into the real settings the generator
 // reads, so the logic solver, the item pool, and the spoiler log all agree with what the player
 // will actually start with. Must run before Fill(); called from Context::FinalizeSettings.

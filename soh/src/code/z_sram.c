@@ -140,8 +140,13 @@ void Sram_OpenSave() {
             // starting entrance set in Sram_InitSave on every single load (not just the first one, since
             // entranceIndex isn't a persisted field - it's recomputed here each time the file is opened).
             // Reapply the sage's home-base entrance here instead of falling through to the Link default.
+            //
+            // Spawn, not Home: because this runs on every load and linkAge IS persisted, a sage who
+            // switched age at the pedestal and quit came back to a home base picked for the age they
+            // are no longer in. The accessor substitutes an age-appropriate entrance for the sages
+            // where that mattered - see savefile.cpp's sSageDefinitions.
             {
-                s32 sageEntrance = Randomizer_GetSageHomeEntrance();
+                s32 sageEntrance = Randomizer_GetSageSpawnEntrance();
                 if (sageEntrance != -1) {
                     gSaveContext.entranceIndex = sageEntrance;
                     break;

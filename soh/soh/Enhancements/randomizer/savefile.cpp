@@ -464,7 +464,12 @@ struct SageDefinition {
     uint8_t sage;
     uint8_t age;          // RO_AGE_CHILD / RO_AGE_ADULT
     int32_t homeEntrance; // ENTR_* - the runtime spawn point
-    uint16_t homeRegion;  // RandomizerRegion - the solver's starting position
+    // ENTR_* used in place of homeEntrance when the file is RELOADED while the sage is in the
+    // other age, or -1 to keep using homeEntrance in both ages. Only reachable after an age
+    // switch, so it never affects generation or the seed's starting state - see the note above
+    // sSageDefinitions.
+    int32_t offAgeEntrance;
+    uint16_t homeRegion; // RandomizerRegion - the solver's starting position
     SageStartingOption kit[SAGE_MAX_KIT_OPTIONS];
     uint8_t kitCount;
     // World-state options, kept separate from `kit` on purpose even though both are applied by the
@@ -506,6 +511,30 @@ struct SageDefinition {
 //     shots are absolute world coordinates, so a shot reused in its own scene is pixel-identical).
 //     Ruto is the exception in the good direction - her new spawn has an entrance cutscene of its
 //     own, so vanilla still handles her and Openings must NOT double-fire.
+//
+// ── offAgeEntrance: the home base is also the RELOAD point, in both ages ────────────────────────
+//
+// homeEntrance is not just where a file starts. Sram_OpenSave and Entrance_SetSavewarpEntrance
+// both re-apply it every time the file is loaded from the file-select screen, and neither looked
+// at linkAge - so a sage who switched age at the pedestal and then quit came back to a spawn
+// picked for the age they are no longer in. (Death is NOT affected: that path is
+// Play_TriggerRespawn -> last entrance, and never reaches either function.)
+//
+// The age-swapped spawn is usually harmless, because most home bases are the same place in both
+// ages. Two were not, so they get an explicit off-age entrance and the other five stay -1:
+//
+//   Saria  - the meadow swaps to its Moblin layer for adult (OBJECT_MB appears only in spot05
+//            room 0's alternate headers), and her home is the warp pad at the TOP, on the far
+//            side of the maze from the exit. Reloading there as adult with no weapon means
+//            fighting back down through it, and dying just returns to the same pad.
+//   Zelda  - her home is a child-only scene reached in vanilla only via the guard sneak, and
+//            SCENE_CASTLE_COURTYARD_ZELDA has no meaningful adult state to arrive in.
+//
+// An off-age entrance is under the SAME two constraints above, plus a third: because it is picked
+// per age, prefer an index whose entrance-table group already splits by age. Both picks below do,
+// which is what makes them correct without any extra code - ENTR_CASTLE_GROUNDS_SOUTH_EXIT's
+// child rows are SCENE_HYRULE_CASTLE and its adult rows are SCENE_OUTSIDE_GANONS_CASTLE, so
+// naming the one index lands each age in its own version of that place.
 static const SageDefinition sSageDefinitions[] = {
     // Light Arrows are an arrow *type* - useless without a Bow to fire them, and firing one costs
     // magic. All three have to be present together or none of them function.
@@ -514,6 +543,7 @@ static const SageDefinition sSageDefinitions[] = {
     { RO_SAGE_RAURU,
       RO_AGE_ADULT,
       ENTR_LON_LON_RANCH_OUTSIDE_TOWER,
+      -1, // ranch tower interior is the same room in both ages
       RR_LON_LON_RANCH,
       { { RSK_STARTING_MEGATON_HAMMER, 1 },
         { RSK_STARTING_BOW, 1 },
@@ -544,9 +574,17 @@ static const SageDefinition sSageDefinitions[] = {
     // song cost) would be dead in the water from minute one, same class of gap as Rauru's Light
     // Arrows and Impa's Lens of Truth before their kits got the same fix (see "Magic is part of a
     // kit, not an extra" in characters.md).
+    // Off-age (adult): the meadow's south entryway, in from the Lost Woods - the one part of the
+    // scene that is on the safe side of the Moblin maze, with the exit to the woods at her back
+    // rather than the whole maze between her and it. Deliberately still INSIDE the meadow rather
+    // than out in the woods (ENTR_LOST_WOODS_NORTH_EXIT, the other half of this connector): the
+    // Sage of Forest reloading in her own region is the point, she just no longer does it stranded
+    // at the top of it. EntranceType::Overworld both directions (entrance.cpp:496), unshuffled
+    // here, and absent from sEntranceCutsceneTable so nothing fires on arrival.
     { RO_SAGE_SARIA,
       RO_AGE_CHILD,
       ENTR_SACRED_FOREST_MEADOW_WARP_PAD,
+      ENTR_SACRED_FOREST_MEADOW_SOUTH_EXIT,
       RR_SACRED_FOREST_MEADOW,
       { { RSK_STARTING_STICKS, 1 },
         { RSK_STARTING_NUTS, 1 },
@@ -567,6 +605,7 @@ static const SageDefinition sSageDefinitions[] = {
     { RO_SAGE_DARUNIA,
       RO_AGE_CHILD,
       ENTR_GORON_CITY_DARUNIA_ROOM_EXIT,
+      -1, // his chamber is open and exitable in both ages
       RR_GC_DARUNIAS_CHAMBER,
       { { RSK_STARTING_BOMB_BAG, 1 },
         { RSK_STARTING_BOMBCHU_BAG, 1 },
@@ -589,6 +628,7 @@ static const SageDefinition sSageDefinitions[] = {
     { RO_SAGE_RUTO,
       RO_AGE_CHILD,
       ENTR_ZORAS_FOUNTAIN_TUNNEL_EXIT,
+      -1, // adult's fountain is frozen over, but the tunnel back to the domain is still open
       RR_ZORAS_FOUNTAIN,
       { { RSK_STARTING_SCALE, 2 }, // golden scale - the max tier, i.e. "all diving scales"
         { RSK_STARTING_IRON_BOOTS, 1 },
@@ -617,6 +657,7 @@ static const SageDefinition sSageDefinitions[] = {
     { RO_SAGE_IMPA,
       RO_AGE_ADULT,
       ENTR_GRAVEYARD_ENTRANCE,
+      -1, // the graveyard is the same walk-in, walk-out yard for both ages
       RR_THE_GRAVEYARD,
       { { RSK_STARTING_BUNNY_HOOD, 1 },
         { RSK_STARTING_HOOKSHOT, 1 },
@@ -648,6 +689,7 @@ static const SageDefinition sSageDefinitions[] = {
     { RO_SAGE_NABOORU,
       RO_AGE_ADULT,
       ENTR_GERUDOS_FORTRESS_GATE_EXIT,
+      -1, // child at the fortress is safe on her kit's Gerudo Card, and capture only ejects anyway
       RR_GF_OUTSIDE_GATE,
       { { RSK_STARTING_HOVER_BOOTS, 1 }, { RSK_STARTING_GERUDO_CARD, 1 }, { RSK_STARTING_MIRROR_SHIELD, 1 } },
       3,
@@ -684,9 +726,22 @@ static const SageDefinition sSageDefinitions[] = {
     // of which is in her kit - so it would take real engine work. It is also worth less than it
     // looks: five of the six fountains are adult-only, leaving just the Hyrule Castle one in reach
     // of a child sage.
+    // Off-age (adult): the castle grounds' south entrance, in from the market. One index covers
+    // both halves of the age split on its own - ENTR_CASTLE_GROUNDS_SOUTH_EXIT's child rows are
+    // SCENE_HYRULE_CASTLE and its adult rows are SCENE_OUTSIDE_GANONS_CASTLE (entrance_table.h:392,
+    // 0x138-0x13B), so an adult reload arrives at the foot of Ganon's castle, on her own castle's
+    // grounds, with the ruined market open behind her. EntranceType::Overworld (entrance.cpp:522).
+    //
+    // It also has a matching entry in sEntranceCutsceneTable that the child spawn cannot reach:
+    // { ENTR_CASTLE_GROUNDS_SOUTH_EXIT, 0, 0xBA, gGanonsCastleIntroCs }, ageRestriction 0 = adult
+    // only. So adult Zelda gets vanilla's own establishing shot of the castle, free, once per file
+    // (flag-gated like every other one) - the same "vanilla handles it, Openings must not
+    // double-fire" case Ruto's spawn is in. Its respawnFlag <= 0 guard is satisfied on a
+    // file-select load (z_file_choose.c:2675 zeroes it).
     { RO_SAGE_ZELDA,
       RO_AGE_CHILD,
       ENTR_CASTLE_COURTYARD_ZELDA_0,
+      ENTR_CASTLE_GROUNDS_SOUTH_EXIT,
       RR_HC_GARDEN,
       { { RSK_STARTING_FARORES_WIND, 1 },
         { RSK_STARTING_NAYRUS_LOVE, 1 },
@@ -811,6 +866,28 @@ extern "C" uint16_t Randomizer_GetSageHomeRegion() {
 int32_t Randomizer_GetSageHomeEntrance() {
     const SageDefinition* def = GetSelectedSageDefinition();
     return def == nullptr ? -1 : def->homeEntrance;
+}
+
+// Seven Sages: see savefile.h. Same answer as Randomizer_GetSageHomeEntrance() while the sage is
+// in their own age, which is every case at file creation and most cases after - it only diverges
+// once the player has switched age at the pedestal AND that sage defines an offAgeEntrance.
+//
+// Callers are only the two "where does this file spawn" recomputes. Deliberately NOT used by
+// SevenSagesOpenings.cpp or SevenSagesSageCosmetics.cpp: an opening belongs to the sage's real
+// home and must not fire at the off-age substitute, and cosmetics only use the home accessor as
+// an "is a sage selected" test.
+int32_t Randomizer_GetSageSpawnEntrance() {
+    const SageDefinition* def = GetSelectedSageDefinition();
+    if (def == nullptr) {
+        return -1;
+    }
+
+    const uint8_t ownAge = def->age == RO_AGE_ADULT ? LINK_AGE_ADULT : LINK_AGE_CHILD;
+    if (gSaveContext.linkAge != ownAge && def->offAgeEntrance != -1) {
+        return def->offAgeEntrance;
+    }
+
+    return def->homeEntrance;
 }
 
 extern "C" void Randomizer_InitSaveFile() {
