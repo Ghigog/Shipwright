@@ -12,8 +12,9 @@
  * moment of spawning, and only *position* is read back off the actor (world.pos survives, and
  * reading it is what lets you drag a prop around and have the move stick).
  *
- * The prop list is filtered to objects actually loaded in the current room, which makes the
- * mod's one hard rule unreachable by hand - see EnrichWorldPalette.cpp.
+ * The prop list drops anything that would Actor_Kill itself in this room, which makes the mod's
+ * one hard rule unreachable by hand, and sorts the rest so the room's own props come first - see
+ * EnrichWorldPalette.cpp.
  */
 #include "soh/SohGui/UIWidgets.hpp"
 #include "soh/Enhancements/game-interactor/GameInteractor.h"
@@ -50,13 +51,30 @@ float GroundBelow(float x, float y, float z) {
     return (floorY <= BGCHECK_Y_MIN) ? y : floorY;
 }
 
-/** Palette entries whose object is loaded right now, paired with their index in AllProps(). */
-std::vector<std::pair<int, const PropDef*>> AvailableProps() {
-    std::vector<std::pair<int, const PropDef*>> out;
+struct Choice {
+    const PropDef* def;
+    bool native;
+};
+
+/**
+ * Everything placeable in this room, natives first.
+ *
+ * Only props that would kill themselves here are left out - see IsPropUsable. Non-native props
+ * stay in the list because they genuinely work: SoH resolves models by OTR resource name, so
+ * "the room doesn't load that object" costs nothing at draw time. Sorting them below a heading
+ * keeps the vanilla-looking choice the obvious one without making the others unreachable.
+ */
+std::vector<Choice> PlaceableProps() {
+    std::vector<Choice> out;
     const auto& all = EnrichWorld::AllProps();
-    for (int i = 0; i < static_cast<int>(all.size()); i++) {
-        if (EnrichWorld::IsPropAvailable(all[i])) {
-            out.emplace_back(i, &all[i]);
+    for (const auto& def : all) {
+        if (EnrichWorld::IsPropUsable(def) && EnrichWorld::IsPropNative(def)) {
+            out.push_back({ &def, true });
+        }
+    }
+    for (const auto& def : all) {
+        if (EnrichWorld::IsPropUsable(def) && !EnrichWorld::IsPropNative(def)) {
+            out.push_back({ &def, false });
         }
     }
     return out;
@@ -98,23 +116,26 @@ void EnrichWorldPlacerWindow::DrawElement() {
 
     // ---- Place a new prop ----
 
-    const auto available = AvailableProps();
-    if (available.empty()) {
-        ImGui::TextWrapped("No palette props are available in this room.");
+    const auto choices = PlaceableProps();
+    if (choices.empty()) {
+        ImGui::TextWrapped("No palette props can be placed in this room.");
     } else {
-        if (selectedProp >= static_cast<int>(available.size())) {
+        if (selectedProp >= static_cast<int>(choices.size())) {
             selectedProp = 0;
         }
 
-        std::vector<std::string> labels;
-        labels.reserve(available.size());
-        for (const auto& [_, def] : available) {
-            labels.push_back(def->label);
-        }
-
-        if (ImGui::BeginCombo("Prop", labels[selectedProp].c_str())) {
-            for (int i = 0; i < static_cast<int>(labels.size()); i++) {
-                if (ImGui::Selectable(labels[i].c_str(), i == selectedProp)) {
+        if (ImGui::BeginCombo("Prop", choices[selectedProp].def->label)) {
+            bool headed = false;
+            for (int i = 0; i < static_cast<int>(choices.size()); i++) {
+                // One heading, at the boundary between the two halves PlaceableProps sorted into.
+                if (!choices[i].native && !headed) {
+                    headed = true;
+                    if (i > 0) {
+                        ImGui::Separator();
+                    }
+                    ImGui::TextDisabled("Not native to this room");
+                }
+                if (ImGui::Selectable(choices[i].def->label, i == selectedProp)) {
                     selectedProp = i;
                     paramsEdited = false; // a new prop means a new sensible default
                 }
@@ -122,9 +143,12 @@ void EnrichWorldPlacerWindow::DrawElement() {
             ImGui::EndCombo();
         }
 
-        const PropDef* def = available[selectedProp].second;
+        const PropDef* def = choices[selectedProp].def;
         if (!paramsEdited) {
             paramsOverride = def->params;
+        }
+        if (!choices[selectedProp].native) {
+            ImGui::TextWrapped("Not a vanilla prop for this room - it will work, but it won't look native.");
         }
         if (def->note[0] != '\0') {
             ImGui::TextWrapped("%s", def->note);

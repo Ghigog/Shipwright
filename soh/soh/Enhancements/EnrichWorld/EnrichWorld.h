@@ -36,14 +36,35 @@ struct Placement {
 };
 
 /**
- * A prop the placer offers. `objectId` is what the room must have loaded for this prop to
- * work; it is checked against the live object context rather than a baked table, so the list
- * automatically reflects the room's actual header (day/night, child/adult).
+ * A prop the placer offers.
+ *
+ * Two different object ids, because "which room is this prop from" and "will this prop work
+ * here" turn out to be different questions:
+ *
+ * - `nativeObjectId` is the object the prop's model lives in vanilla. It decides whether the
+ *   placer lists the prop as native to the current room, which is a *recommendation*.
+ * - `requiredObjectId` is an object without which the prop provably breaks, because the actor
+ *   itself calls Object_GetIndex and Actor_Kills on a miss. OBJECT_ID_MAX means nothing is
+ *   required. This is the only hard gate.
+ *
+ * They differ for almost every entry, because SoH resolves display lists by OTR resource name
+ * rather than through segment 6, so an actor renders correctly whether or not its object is
+ * resident. Only actors that explicitly check for their object care - En_Kusa (z_en_kusa.c:263)
+ * and Obj_Tsubo (z_obj_tsubo.c:141) are the two in this palette.
+ *
+ * For a spawner, `requiredObjectId` is what its *children* need, not what the spawner needs.
+ * Obj_Mure2 is declared in gameplay_keep - resident everywhere - but its grass children are
+ * En_Kusa type 0 and die without the field keep.
+ *
+ * Both are checked against the live object context rather than a baked table, so the list
+ * reflects the room's actual header (day/night, child/adult) and self-corrects if upstream
+ * changes a scene.
  */
 struct PropDef {
     const char* label;
     int16_t actorId;
-    int16_t objectId;
+    int16_t nativeObjectId;
+    int16_t requiredObjectId; // OBJECT_ID_MAX when the prop works without any object loaded
     int16_t params;
     const char* note;
 };
@@ -53,8 +74,11 @@ struct PropDef {
 /** The full curated list, regardless of what's currently loadable. */
 const std::vector<PropDef>& AllProps();
 
-/** True if `def`'s object is loaded in the current room right now. */
-bool IsPropAvailable(const PropDef& def);
+/** True if `def` is vanilla-native to the current room, i.e. its object is already loaded. */
+bool IsPropNative(const PropDef& def);
+
+/** True unless `def` needs an object the current room hasn't loaded. False means it would die. */
+bool IsPropUsable(const PropDef& def);
 
 /** Human-readable name for an actor id, falling back to the raw number. */
 std::string ActorLabel(int16_t actorId, int16_t params);
