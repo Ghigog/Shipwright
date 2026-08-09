@@ -509,8 +509,11 @@ struct SageDefinition {
 //     and handled elsewhere: SevenSagesOpenings.cpp re-fires the same vanilla cutscene from the
 //     new spawn, which works because each new spawn is in the SAME SCENE as the old one (camera
 //     shots are absolute world coordinates, so a shot reused in its own scene is pixel-identical).
-//     Ruto is the exception in the good direction - her new spawn has an entrance cutscene of its
-//     own, so vanilla still handles her and Openings must NOT double-fire.
+//     Ruto and Impa are the exception - each spawn has an entrance cutscene of its own, so for a
+//     while vanilla handled them and Openings deliberately had no entry. That ended 2026-08-09,
+//     when the preset took up SkipCutscene.Entrances: vanilla now SPENDS the EVENTCHKINF and then
+//     suppresses the shot, so Openings restores those two through its own earlier-armed path
+//     (sVanillaSpawnOpenings) rather than the ordinary re-fire table.
 //
 // ── offAgeEntrance: the home base is also the RELOAD point, in both ages ────────────────────────
 //
@@ -622,9 +625,10 @@ static const SageDefinition sSageDefinitions[] = {
     // returns true unconditionally on Open - the preset's global RO_ZF_CLOSED_CHILD would leave her
     // walled into the fountain. Setting it per-sage at generation time rather than globally keeps
     // the other six seeds unaffected.
-    // Note this is the one sage whose new spawn is itself in sEntranceCutsceneTable
-    // (gZorasFountainIntroCs, age-2 so child qualifies), so vanilla plays her opening and
-    // SevenSagesOpenings.cpp deliberately has no entry for her.
+    // Note her spawn is itself in sEntranceCutsceneTable (gZorasFountainIntroCs, age-2 so child
+    // qualifies). That used to mean vanilla played her opening unaided; since the preset started
+    // skipping entrance cutscenes (2026-08-09) she is in SevenSagesOpenings.cpp's
+    // sVanillaSpawnOpenings instead - same shot, same flag, triggered from there.
     { RO_SAGE_RUTO,
       RO_AGE_CHILD,
       ENTR_ZORAS_FOUNTAIN_TUNNEL_EXIT,
@@ -734,10 +738,13 @@ static const SageDefinition sSageDefinitions[] = {
     //
     // It also has a matching entry in sEntranceCutsceneTable that the child spawn cannot reach:
     // { ENTR_CASTLE_GROUNDS_SOUTH_EXIT, 0, 0xBA, gGanonsCastleIntroCs }, ageRestriction 0 = adult
-    // only. So adult Zelda gets vanilla's own establishing shot of the castle, free, once per file
-    // (flag-gated like every other one) - the same "vanilla handles it, Openings must not
-    // double-fire" case Ruto's spawn is in. Its respawnFlag <= 0 guard is satisfied on a
-    // file-select load (z_file_choose.c:2675 zeroes it).
+    // only. Its respawnFlag <= 0 guard is satisfied on a file-select load (z_file_choose.c:2675
+    // zeroes it), so adult Zelda used to get vanilla's own establishing shot of the castle free,
+    // once per file. SkipCutscene.Entrances (preset, 2026-08-09) suppresses it and it is NOT
+    // restored: SevenSagesOpenings.cpp is keyed on Randomizer_GetSageHomeEntrance() by design -
+    // "an opening belongs to the sage's real home and must not fire at the off-age substitute"
+    // (see Randomizer_GetSageSpawnEntrance below) - and this is an off-age reload spawn. Known
+    // and accepted; reversing it means deciding that rule was wrong, not adding a table row.
     { RO_SAGE_ZELDA,
       RO_AGE_CHILD,
       ENTR_CASTLE_COURTYARD_ZELDA_0,

@@ -28,10 +28,11 @@
  * No race to handle with vanilla's own entrance-cutscene trigger: for every sage listed here (and
  * Zelda, Saria, Darunia below) the entrance table has no matching sEntranceCutsceneTable row, so
  * nothing else ever touches csCtx.segment for these entrances regardless of hook timing. Ruto and
- * Impa are deliberately absent for the opposite reason: each one's new spawn IS in the entrance
- * table in its own right (gZorasFountainIntroCs for Ruto, age-2 so a child qualifies;
- * gGraveyardIntroCs for Impa, moved to ENTR_GRAVEYARD_ENTRANCE 2026-07-31), so vanilla already
- * plays that opening and an entry here would fight it.
+ * Impa are the opposite case - each one's spawn IS in the entrance table in its own right
+ * (gZorasFountainIntroCs for Ruto, age-2 so a child qualifies; gGraveyardIntroCs for Impa, moved to
+ * ENTR_GRAVEYARD_ENTRANCE 2026-07-31) - and they get their own path, sVanillaSpawnOpenings below.
+ * Until 2026-08-09 they needed no path at all, because vanilla played those two for us; the preset
+ * now skips entrance cutscenes globally, so it doesn't any more.
  *
  * Hooked on OnSceneSpawnActors, not OnSceneInit - see the comment above
  * RegisterSevenSagesSageOpenings for why (Player doesn't exist yet at OnSceneInit, which broke
@@ -51,7 +52,8 @@ extern "C" {
 extern PlayState* gPlayState;
 }
 
-#include <scenes/overworld/spot01/spot01_scene.h>
+#include <scenes/overworld/spot02/spot02_scene.h>
+#include <scenes/overworld/spot08/spot08_scene.h>
 #include <scenes/overworld/spot12/spot12_scene.h>
 #include <scenes/overworld/spot20/spot20_scene.h>
 
@@ -79,14 +81,76 @@ const SageOpening sSageOpenings[] = {
     // nothing here should be hand-authored blind either - see the relativeToPlayer note in
     // data/cutscenes.json for the real fix to chase before reattempting this one. Chamber spawn
     // kept (the doors are now open, see z_bg_spot18_shutter.c) - just no establishing shot.
-    // Impa is deliberately absent here now (moved to ENTR_GRAVEYARD_ENTRANCE, 2026-07-31) - same
-    // reasoning as Ruto: her spawn is itself a vanilla entrance-cutscene trigger (gGraveyardIntroCs),
-    // not a re-fire target, and needs no entry or code of any kind in this file.
+    // Impa is absent here (moved to ENTR_GRAVEYARD_ENTRANCE, 2026-07-31) - same reasoning as Ruto:
+    // her spawn is itself a vanilla entrance-cutscene trigger (gGraveyardIntroCs), so she is in
+    // sVanillaSpawnOpenings below rather than here.
     // Nabooru - the fortress west gate. Was ENTR_GERUDOS_FORTRESS_EAST_EXIT.
     { ENTR_GERUDOS_FORTRESS_GATE_EXIT, EVENTCHKINF_ENTERED_GERUDOS_FORTRESS, gGerudoFortressIntroCs },
     // Zelda is deliberately absent here - see kZeldaHomeEntrance below, handled the same way as
     // Saria and Darunia because her shot is ours, not a whole vanilla cutscene.
 };
+
+// Ruto and Impa spawn ON a vanilla sEntranceCutsceneTable row, so until 2026-08-09 vanilla played
+// their opening and this file needed nothing for them. The preset now sets SkipCutscene.Entrances,
+// which takes that away - and it cannot be won back through sSageOpenings above, because of the
+// order inside Cutscene_HandleEntranceTriggers (z_demo.c): it calls Flags_SetEventChkInf
+// UNCONDITIONALLY and only then asks VB_PLAY_ENTRANCE_CS whether to play. The flag is therefore set
+// even when the shot is suppressed, so by the time PlaySageOpening runs, a check-then-set entry
+// would read "already played" and stay silent forever.
+//
+// These two are armed a step earlier instead, at OnSceneInit - which fires from OTRPlay_SpawnScene
+// via Play_SpawnScene (z_play.c:476), before Cutscene_HandleEntranceTriggers (z_play.c:493) - so
+// the flag can still be read while it means what it says.
+//
+// The vanilla flag stays the once-per-file gate; we only observe it earlier, and re-set it on the
+// firing path for the case where vanilla's own guards (cutsceneIndex < 0xFFF0, respawnFlag <= 0)
+// stopped it setting the flag at all. Behaviour is therefore identical to vanilla's: plays once,
+// survives a quit because EventChkInf lives in the save, and doesn't replay when the player later
+// walks into the region the normal way.
+struct VanillaSpawnOpening {
+    int32_t homeEntrance; // must match the sage's homeEntrance in savefile.cpp exactly
+    uint16_t playedFlag;  // the EVENTCHKINF sEntranceCutsceneTable uses for this same cutscene
+    const char* cutscene;
+};
+
+const VanillaSpawnOpening sVanillaSpawnOpenings[] = {
+    // Ruto - the King Zora tunnel mouth in Zora's Fountain.
+    { ENTR_ZORAS_FOUNTAIN_TUNNEL_EXIT, EVENTCHKINF_ENTERED_ZORAS_FOUNTAIN, gZorasFountainIntroCs },
+    // Impa - the Graveyard proper. Was mid-Kakariko before 2026-07-31.
+    { ENTR_GRAVEYARD_ENTRANCE, EVENTCHKINF_ENTERED_GRAVEYARD, gGraveyardIntroCs },
+};
+
+// Written by ArmVanillaSpawnOpening (OnSceneInit) and consumed by PlaySageOpening
+// (OnSceneSpawnActors) later in the same Play_Init. Process-local is right here, and only here:
+// this never has to survive a quit, because the vanilla EVENTCHKINF it defers to already does -
+// which is exactly what the reverted 4c opening got wrong with its process-local ARM flag.
+const VanillaSpawnOpening* sArmedVanillaOpening = nullptr;
+
+// The scene number the hook hands us is ignored on purpose - the gate is the entrance, which is
+// strictly narrower (a scene has many entrances, and only one of them is the sage's spawn).
+void ArmVanillaSpawnOpening(int16_t) {
+    sArmedVanillaOpening = nullptr;
+
+    // Only arm when the skip is actually on. With Entrances off, vanilla plays these two itself and
+    // arming here would double-fire them - the hazard savefile.cpp's sage table warns about.
+    if (!CVarGetInteger(CVAR_ENHANCEMENT("TimeSavers.SkipCutscene.Entrances"), IS_RANDO)) {
+        return;
+    }
+
+    // Same "the SELECTED sage's own home entrance" gate as PlaySageOpening, for the same reason -
+    // see the comment there.
+    const int32_t sageEntrance = Randomizer_GetSageHomeEntrance();
+    if (sageEntrance == -1 || gSaveContext.entranceIndex != sageEntrance) {
+        return;
+    }
+
+    for (const VanillaSpawnOpening& opening : sVanillaSpawnOpenings) {
+        if (opening.homeEntrance == sageEntrance && !Flags_GetEventChkInf(opening.playedFlag)) {
+            sArmedVanillaOpening = &opening;
+            return;
+        }
+    }
+}
 
 // Saria is handled separately from the table above because her shot is ours, not a whole vanilla
 // cutscene. The Sacred Forest Meadow has no vanilla ENTRANCE cutscene - it only has two NPC
@@ -132,6 +196,19 @@ void PlaySageOpening() {
     // Play_Init (see the OnSceneSpawnActors note above RegisterSevenSagesSageOpenings).
     const int32_t sageEntrance = Randomizer_GetSageHomeEntrance();
     if (sageEntrance == -1 || gSaveContext.entranceIndex != sageEntrance) {
+        return;
+    }
+
+    // Ruto and Impa, whose openings vanilla owns and SkipCutscene.Entrances suppressed - see
+    // sVanillaSpawnOpenings. Consumed unconditionally so a scene change that doesn't re-arm can
+    // never leave a stale pointer behind for a later spawn to fire.
+    if (const VanillaSpawnOpening* vanillaOpening = sArmedVanillaOpening) {
+        sArmedVanillaOpening = nullptr;
+        if (vanillaOpening->homeEntrance == sageEntrance) {
+            Flags_SetEventChkInf(vanillaOpening->playedFlag);
+            Cutscene_SetSegment(gPlayState, const_cast<char*>(vanillaOpening->cutscene));
+            gSaveContext.cutsceneTrigger = 1;
+        }
         return;
     }
 
@@ -190,11 +267,18 @@ void PlaySageOpening() {
 // (z_actor.c) right after the room's actor-spawn loop, confirmed GET_PLAYER is valid there
 // (see the reposition code this file used to have, now removed). This is later than Play_Init
 // - specifically the first real game-loop frame after it - which matters only if a sage's home
-// entrance also has a vanilla auto-trigger row in sEntranceCutsceneTable; none of them do, so the
-// original race this file's header describes doesn't apply here. Absolute-coordinate openings
+// entrance also has a vanilla auto-trigger row in sEntranceCutsceneTable. Ruto's and Impa's do
+// (2026-08-09), and being late is precisely what breaks them: the flag is already spent by then.
+// That is what ArmVanillaSpawnOpening exists to read early, and it is the only thing that needs
+// to; the triggering still belongs here. For every other sage the entrance table has no matching
+// row, so the original race this file's header describes doesn't apply. Absolute-coordinate openings
 // (Saria, Darunia) don't need this fix but aren't hurt by it either - moved along with the rest
 // rather than splitting the hook.
 void RegisterSevenSagesSageOpenings() {
+    // OnSceneInit is deliberately the earlier half of a pair, not an alternative to the hook below:
+    // it only records whether vanilla was about to consume Ruto's or Impa's EVENTCHKINF, and
+    // PlaySageOpening still does all the triggering a frame later, where Player exists.
+    COND_HOOK(OnSceneInit, IS_SEVENSAGES, ArmVanillaSpawnOpening);
     COND_HOOK(OnSceneSpawnActors, IS_SEVENSAGES, PlaySageOpening);
 }
 
