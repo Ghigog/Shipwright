@@ -35,12 +35,15 @@ void SevenSagesMinuetOfForestDeclined() {
         return;
     }
 
-    SevenSagesRequestSongMagic(MINUET_MAGIC_COST, []() {
-        Inventory_ChangeAmmo(ITEM_STICK, RESTOCK_AMOUNT);
-        Inventory_ChangeAmmo(ITEM_NUT, RESTOCK_AMOUNT);
-        Inventory_ChangeAmmo(ITEM_SLINGSHOT, RESTOCK_AMOUNT);
-        Inventory_ChangeAmmo(ITEM_BOW, RESTOCK_AMOUNT);
-    }, kNotAnOcarinaPerformance);
+    SevenSagesRequestSongMagic(
+        MINUET_MAGIC_COST,
+        []() {
+            Inventory_ChangeAmmo(ITEM_STICK, RESTOCK_AMOUNT);
+            Inventory_ChangeAmmo(ITEM_NUT, RESTOCK_AMOUNT);
+            Inventory_ChangeAmmo(ITEM_SLINGSHOT, RESTOCK_AMOUNT);
+            Inventory_ChangeAmmo(ITEM_BOW, RESTOCK_AMOUNT);
+        },
+        kNotAnOcarinaPerformance);
 }
 
 } // namespace

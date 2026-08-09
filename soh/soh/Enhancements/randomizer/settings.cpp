@@ -2709,13 +2709,12 @@ void Context::FinalizeSettings(const std::set<RandomizerCheck>& excludedLocation
         // Letter on (savefile.cpp:966), so their items are never out of reach. RC_LW_GIFT_FROM_SARIA
         // is a bridge cutscene rather than an NPC, and stock SoH already skips it in rando.
         static constexpr RandomizerCheck sevenSagesRemovedNpcLocations[] = {
-            RC_SONG_FROM_SARIA,             // Saria, Sacred Forest Meadow (EN_SA removed)
-            RC_GC_DARUNIAS_JOY,             // Darunia, Goron City (EN_DU removed)
-            RC_SHEIK_IN_FOREST,             // the six warp-song Sheiks (EN_XC removed)
-            RC_SHEIK_IN_CRATER,      RC_SHEIK_IN_ICE_CAVERN,
-            RC_SHEIK_AT_COLOSSUS,    RC_SHEIK_IN_KAKARIKO,
-            RC_SHEIK_AT_TEMPLE,
-            RC_TOT_LIGHT_ARROWS_CUTSCENE,   // the cutscene itself is suppressed, not just its cast
+            RC_SONG_FROM_SARIA, // Saria, Sacred Forest Meadow (EN_SA removed)
+            RC_GC_DARUNIAS_JOY, // Darunia, Goron City (EN_DU removed)
+            RC_SHEIK_IN_FOREST, // the six warp-song Sheiks (EN_XC removed)
+            RC_SHEIK_IN_CRATER,           RC_SHEIK_IN_ICE_CAVERN, RC_SHEIK_AT_COLOSSUS,
+            RC_SHEIK_IN_KAKARIKO,         RC_SHEIK_AT_TEMPLE,
+            RC_TOT_LIGHT_ARROWS_CUTSCENE, // the cutscene itself is suppressed, not just its cast
         };
         for (const auto rc : sevenSagesRemovedNpcLocations) {
             this->GetItemLocation(rc)->SetExcludedOption(1);

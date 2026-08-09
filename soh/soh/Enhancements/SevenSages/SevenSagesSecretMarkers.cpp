@@ -107,8 +107,10 @@ Mtx sMarkerMtx[MAX_MARKERS];
 // Not in gbi.h. The colour variant of the vertex literal (SevenSagesAoeField.cpp defines the normal
 // variant for the same reason): these markers are drawn with lighting off, so SHADE comes from the
 // vertex colours below and gives the gem its top-lit ramp with no light source involved.
-#define gdSPDefVtxC(x, y, z, r, g, b, a) \
-    { .v = { .ob = { x, y, z }, .flag = 0, .tc = { 0, 0 }, .cn = { r, g, b, a } } }
+#define gdSPDefVtxC(x, y, z, r, g, b, a)                                           \
+    {                                                                              \
+        .v = {.ob = { x, y, z }, .flag = 0, .tc = { 0, 0 }, .cn = { r, g, b, a } } \
+    }
 
 std::vector<Vtx> sMarkerVtx;
 std::vector<Gfx> sMarkerGfx;
@@ -201,7 +203,6 @@ void SevenSagesSecretMarkersDraw() {
     // the stone gets grottos, only the mask gets chests, and both gets both. An early-out here
     // would have to duplicate that condition and could drift from it.
 
-
     std::vector<Marker> markers;
     CollectMarkers(markers);
     if (markers.empty()) {
@@ -246,9 +247,10 @@ void SevenSagesSecretMarkersDraw() {
     gSPTexture(POLY_XLU_DISP++, 0, 0, 0, G_TX_RENDERTILE, G_OFF);
     gDPPipeSync(POLY_XLU_DISP++);
     gDPSetCycleType(POLY_XLU_DISP++, G_CYC_1CYCLE);
-    gDPSetRenderMode(POLY_XLU_DISP++,
-                     IM_RD | CVG_DST_FULL | FORCE_BL | ZMODE_XLU | GBL_c1(G_BL_CLR_IN, G_BL_A_IN, G_BL_CLR_MEM, G_BL_1MA),
-                     IM_RD | CVG_DST_FULL | FORCE_BL | ZMODE_XLU | GBL_c2(G_BL_CLR_IN, G_BL_A_IN, G_BL_CLR_MEM, G_BL_1MA));
+    gDPSetRenderMode(
+        POLY_XLU_DISP++,
+        IM_RD | CVG_DST_FULL | FORCE_BL | ZMODE_XLU | GBL_c1(G_BL_CLR_IN, G_BL_A_IN, G_BL_CLR_MEM, G_BL_1MA),
+        IM_RD | CVG_DST_FULL | FORCE_BL | ZMODE_XLU | GBL_c2(G_BL_CLR_IN, G_BL_A_IN, G_BL_CLR_MEM, G_BL_1MA));
     gDPSetCombineLERP(POLY_XLU_DISP++, PRIMITIVE, 0, SHADE, 0, 0, 0, 0, PRIMITIVE, PRIMITIVE, 0, SHADE, 0, 0, 0, 0,
                       PRIMITIVE);
 

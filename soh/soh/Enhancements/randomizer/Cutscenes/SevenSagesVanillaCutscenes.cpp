@@ -178,8 +178,7 @@ int32_t PlayVanillaCutsceneCommand(std::shared_ptr<Ship::Console> console, std::
             Cutscene_SetSegment(gPlayState, const_cast<char*>(cs.segment));
             gSaveContext.cutsceneTrigger = 1;
             if (output != nullptr) {
-                *output = "playing " + args[1] +
-                          " (actor shots only render correctly in the scene that owns them)";
+                *output = "playing " + args[1] + " (actor shots only render correctly in the scene that owns them)";
             }
             return 0;
         }
@@ -247,9 +246,7 @@ int32_t ChamberOfSagesCommand(std::shared_ptr<Ship::Console> console, std::vecto
     int32_t which = -1;
     try {
         which = std::stoi(args[1]);
-    } catch (...) {
-        which = -1;
-    }
+    } catch (...) { which = -1; }
     if (which < 0 || which > 4) {
         if (output != nullptr) {
             *output = "expected 0-4 (0 Saria, 1 Darunia, 2 Ruto, 3 Nabooru, 4 Impa)";
@@ -293,11 +290,10 @@ int32_t ChamberOfSagesCommand(std::shared_ptr<Ship::Console> console, std::vecto
 void RegisterSevenSagesVanillaCutsceneCommands() {
     auto console = Ship::Context::GetRawInstance()->GetConsole();
     console->AddCommand("gc_play_vanilla_cs",
-                        { PlayVanillaCutsceneCommand,
-                          "Seven Sages (dev): play a named vanilla cutscene by symbol." });
-    console->AddCommand("gc_list_vanilla_cs",
-                        { ListVanillaCutscenesCommand,
-                          "Seven Sages (dev): list named vanilla cutscenes, optionally filtered." });
+                        { PlayVanillaCutsceneCommand, "Seven Sages (dev): play a named vanilla cutscene by symbol." });
+    console->AddCommand(
+        "gc_list_vanilla_cs",
+        { ListVanillaCutscenesCommand, "Seven Sages (dev): list named vanilla cutscenes, optionally filtered." });
     console->AddCommand("gc_chamber",
                         { ChamberOfSagesCommand,
                           "Seven Sages (dev): enter the Chamber of Sages set up for one sage's cutscene (0-4)." });

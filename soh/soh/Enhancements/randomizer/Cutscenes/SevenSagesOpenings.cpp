@@ -58,8 +58,8 @@ extern PlayState* gPlayState;
 namespace {
 
 struct SageOpening {
-    int32_t homeEntrance;   // must match the sage's homeEntrance in savefile.cpp exactly
-    uint16_t playedFlag;    // the vanilla EVENTCHKINF for this cutscene - see the header comment
+    int32_t homeEntrance; // must match the sage's homeEntrance in savefile.cpp exactly
+    uint16_t playedFlag;  // the vanilla EVENTCHKINF for this cutscene - see the header comment
     // The scene headers define these g*Cs symbols as OTR resource PATHS, not as CutsceneData
     // arrays - Cutscene_SetSegment resolves the path. Same handling as
     // SevenSagesVanillaCutscenes.cpp's table, which is where this pattern is already proven.

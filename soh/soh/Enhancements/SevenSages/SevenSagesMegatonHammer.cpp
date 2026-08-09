@@ -99,17 +99,17 @@ PendingShockwave sPending = { { 0.0f, 0.0f, 0.0f }, 0 };
 // leaving them out keeps the list meaning what its name says.
 bool VanillaReactsToHammer(s16 actorId) {
     switch (actorId) {
-        case ACTOR_EN_BW:        // Torch Slug
-        case ACTOR_EN_DEKUBABA:  // Deku Baba
-        case ACTOR_EN_DEKUNUTS:  // Deku Scrub
-        case ACTOR_EN_DODOJR:    // Baby Dodongo
-        case ACTOR_EN_FD:        // Flare Dancer
-        case ACTOR_EN_HINTNUTS:  // hint-giving Deku Scrub
-        case ACTOR_EN_SHOPNUTS:  // Business Scrub
-        case ACTOR_EN_SSH:       // Skullwalltula
-        case ACTOR_EN_ST:        // Skulltula
-        case ACTOR_EN_SW:        // Gold/wall Skulltula
-        case ACTOR_EN_TITE:      // Tektite
+        case ACTOR_EN_BW:       // Torch Slug
+        case ACTOR_EN_DEKUBABA: // Deku Baba
+        case ACTOR_EN_DEKUNUTS: // Deku Scrub
+        case ACTOR_EN_DODOJR:   // Baby Dodongo
+        case ACTOR_EN_FD:       // Flare Dancer
+        case ACTOR_EN_HINTNUTS: // hint-giving Deku Scrub
+        case ACTOR_EN_SHOPNUTS: // Business Scrub
+        case ACTOR_EN_SSH:      // Skullwalltula
+        case ACTOR_EN_ST:       // Skulltula
+        case ACTOR_EN_SW:       // Gold/wall Skulltula
+        case ACTOR_EN_TITE:     // Tektite
             return true;
         default:
             return false;
@@ -176,7 +176,6 @@ bool MeleeQuadHit(const Actor* target) {
     }
     return false;
 }
-
 
 // The shockwave's dmgFlags: the explosive bit, plus the Deku Nut bit (0x1).
 //

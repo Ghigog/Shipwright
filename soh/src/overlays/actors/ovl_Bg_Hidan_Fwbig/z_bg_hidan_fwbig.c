@@ -226,9 +226,9 @@ void BgHidanFwbig_Update(Actor* thisx, PlayState* play) {
 
     if (this->collider.base.atFlags & AT_HIT) {
         this->collider.base.atFlags &= ~AT_HIT;
-        // Seven Sages: fire protection (Nayru's Love or Red Tunic) passes through instead of being knocked back - see the matching
-        // comment in z_bg_hidan_curtain.c for why this is the missing piece, not OC1. The lower-on-
-        // touch state transition below is left untouched, unrelated to the shield.
+        // Seven Sages: fire protection (Nayru's Love or Red Tunic) passes through instead of being knocked back - see
+        // the matching comment in z_bg_hidan_curtain.c for why this is the missing piece, not OC1. The lower-on- touch
+        // state transition below is left untouched, unrelated to the shield.
         if (!SevenSagesFireProtectionActive()) {
             Actor_SetPlayerKnockbackLargeNoDamage(play, &this->actor, 5.0f, this->actor.world.rot.y, 1.0f);
         }

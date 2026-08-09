@@ -183,8 +183,8 @@ void BgHidanFirewall_Update(Actor* thisx, PlayState* play) {
 
     if (this->collider.base.atFlags & AT_HIT) {
         this->collider.base.atFlags &= ~AT_HIT;
-        // Seven Sages: fire protection (Nayru's Love or Red Tunic) passes through instead of being knocked back - see the matching
-        // comment in z_bg_hidan_curtain.c for why this is the missing piece, not OC1.
+        // Seven Sages: fire protection (Nayru's Love or Red Tunic) passes through instead of being knocked back - see
+        // the matching comment in z_bg_hidan_curtain.c for why this is the missing piece, not OC1.
         if (!SevenSagesFireProtectionActive()) {
             BgHidanFirewall_Collide(this, play);
         }

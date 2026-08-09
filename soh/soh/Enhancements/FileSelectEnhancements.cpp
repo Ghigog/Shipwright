@@ -118,17 +118,16 @@ void SohFileSelect_ShowSevenSagesModal() {
     if (modal->IsPopupOpen("Set up Seven Sages?")) {
         modal->DismissPopup();
     } else {
-        modal->RegisterPopup(
-            "Set up Seven Sages?",
-            "\nSeven Sages needs two presets applied before you generate a seed, and it's easy to\n"
-            "apply one and miss the other. This does both for you.\n"
-            "\n"
-            "After that, pick who you're playing: Randomizer -> Logic -> Selected Sage. Each sage\n"
-            "starts somewhere different with a different kit, so it's the biggest choice you make.\n"
-            "\n"
-            "Then Generate Randomizer Seed, and Start Randomizer.\n",
-            "Set it up for me", "I'll do it myself", SohFileSelect_ApplySevenSagesPresets,
-            SohFileSelect_DismissSevenSagesModal);
+        modal->RegisterPopup("Set up Seven Sages?",
+                             "\nSeven Sages needs two presets applied before you generate a seed, and it's easy to\n"
+                             "apply one and miss the other. This does both for you.\n"
+                             "\n"
+                             "After that, pick who you're playing: Randomizer -> Logic -> Selected Sage. Each sage\n"
+                             "starts somewhere different with a different kit, so it's the biggest choice you make.\n"
+                             "\n"
+                             "Then Generate Randomizer Seed, and Start Randomizer.\n",
+                             "Set it up for me", "I'll do it myself", SohFileSelect_ApplySevenSagesPresets,
+                             SohFileSelect_DismissSevenSagesModal);
     }
 }
 

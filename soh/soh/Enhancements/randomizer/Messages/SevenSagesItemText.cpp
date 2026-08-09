@@ -84,22 +84,17 @@ struct EnhancedItemText {
 
 // Generated from data/item-enhanced-text.json in the seven-sages repo - edit that file, not this.
 constexpr EnhancedItemText enhancedItemText[] = {
-// >>> SEVEN_SAGES_GENERATED: ENHANCED_TEXT - edit data/item-enhanced-text.json, not this
+    // >>> SEVEN_SAGES_GENERATED: ENHANCED_TEXT - edit data/item-enhanced-text.json, not this
     // RG_MEGATON_HAMMER
-    { 0x38, RG_NONE,
-      "A ground strike stuns everything nearby, and the hammer smashes whatever a bomb would." },
+    { 0x38, RG_NONE, "A ground strike stuns everything nearby, and the hammer smashes whatever a bomb would." },
     // RG_IRON_BOOTS
-    { 0x53, RG_NONE,
-      "No slow walk. Nothing knocks you back, and steep ground no longer makes you slide." },
+    { 0x53, RG_NONE, "No slow walk. Nothing knocks you back, and steep ground no longer makes you slide." },
     // RG_HOVER_BOOTS
-    { 0x54, RG_NONE,
-      "Faster, and less slippery. Hold a direction as a hover ends and you jump instead of dropping." },
+    { 0x54, RG_NONE, "Faster, and less slippery. Hold a direction as a hover ends and you jump instead of dropping." },
     // RG_GORON_TUNIC
-    { 0x50, RG_NONE,
-      "Fire cannot touch you at all. Walk straight through walls of flame, and across lava." },
+    { 0x50, RG_NONE, "Fire cannot touch you at all. Walk straight through walls of flame, and across lava." },
     // RG_ZORA_TUNIC
-    { 0x51, RG_NONE,
-      "Breathe underwater freely, and nothing can freeze you - ice traps included." },
+    { 0x51, RG_NONE, "Breathe underwater freely, and nothing can freeze you - ice traps included." },
     // RG_SILVER_GAUNTLETS
     { 0x5B, RG_NONE,
       "Force any small-key door for half your magic. Lift and throw ordinary rocks, and stunned small foes." },
@@ -107,54 +102,39 @@ constexpr EnhancedItemText enhancedItemText[] = {
     { 0x5C, RG_NONE,
       "Force any door, boss doors too, for half your magic. Lift and throw any rock, or any stunned foe." },
     // RG_MIRROR_SHIELD
-    { 0x4E, RG_NONE,
-      "Raise the shield and the light it throws stuns whatever stands in front of you." },
+    { 0x4E, RG_NONE, "Raise the shield and the light it throws stuns whatever stands in front of you." },
     // RG_DEKU_SHIELD
-    { 0x4C, RG_NONE,
-      "Fire no longer destroys it. The shield catches the flame and carries it, like a lit stick." },
+    { 0x4C, RG_NONE, "Fire no longer destroys it. The shield catches the flame and carries it, like a lit stick." },
     // RG_STONE_OF_AGONY
-    { 0x68, RG_NONE,
-      "It sounds whenever something hidden is near, and every hidden grotto is marked for you." },
+    { 0x68, RG_NONE, "It sounds whenever something hidden is near, and every hidden grotto is marked for you." },
     // RG_DINS_FIRE
-    { 0xAD, RG_NONE,
-      "The flames also blast apart anything a bomb could break." },
+    { 0xAD, RG_NONE, "The flames also blast apart anything a bomb could break." },
     // RG_NAYRUS_LOVE
-    { 0xAF, RG_NONE,
-      "Walk through walls of flame while it holds. Your magic is freed the moment the spell is cast." },
+    { 0xAF, RG_NONE, "Walk through walls of flame while it holds. Your magic is freed the moment the spell is cast." },
     // RG_FIRE_ARROWS
-    { 0x70, RG_NONE,
-      "Where the arrow lands, fire lingers. Anything standing in it keeps burning." },
+    { 0x70, RG_NONE, "Where the arrow lands, fire lingers. Anything standing in it keeps burning." },
     // RG_ICE_ARROWS
-    { 0x71, RG_NONE,
-      "Where the arrow lands, a freezing field lingers. Anything caught in it is held fast." },
+    { 0x71, RG_NONE, "Where the arrow lands, a freezing field lingers. Anything caught in it is held fast." },
     // RG_LIGHT_ARROWS
-    { 0x72, RG_NONE,
-      "Six times the damage, for 24 magic a shot. Spend it where it counts." },
+    { 0x72, RG_NONE, "Six times the damage, for 24 magic a shot. Spend it where it counts." },
     // RG_ZELDAS_LULLABY
-    { 0xD4, RG_NONE,
-      "For 24 magic, every enemy in the room falls asleep for 15 seconds." },
+    { 0xD4, RG_NONE, "For 24 magic, every enemy in the room falls asleep for 15 seconds." },
     // RG_EPONAS_SONG
-    { 0xD2, RG_NONE,
-      "For 24 magic, you move half again as fast for a full minute." },
+    { 0xD2, RG_NONE, "For 24 magic, you move half again as fast for a full minute." },
     // RG_SARIAS_SONG
-    { 0xD1, RG_NONE,
-      "For 24 magic, you can climb any surface at all for 20 seconds." },
+    { 0xD1, RG_NONE, "For 24 magic, you can climb any surface at all for 20 seconds." },
     // RG_SUNS_SONG
-    { 0xD3, RG_NONE,
-      "For 24 magic, every unlit torch in the room catches, and you gain temporary hearts." },
+    { 0xD3, RG_NONE, "For 24 magic, every unlit torch in the room catches, and you gain temporary hearts." },
     // RG_SONG_OF_TIME
-    { 0xD5, RG_NONE,
-      "For 24 magic, change between child and adult anywhere - no pedestal needed." },
+    { 0xD5, RG_NONE, "For 24 magic, change between child and adult anywhere - no pedestal needed." },
     // RG_SONG_OF_STORMS
-    { 0xD6, RG_NONE,
-      "For 24 magic, the rain puts out the room's torches and slowly refills your magic." },
+    { 0xD6, RG_NONE, "For 24 magic, the rain puts out the room's torches and slowly refills your magic." },
     // RG_MINUET_OF_FOREST
     { 0x73, RG_NONE,
       "Warping is unchanged. Refuse the warp instead and 24 magic refills your sticks, nuts, seeds and "
       "arrows." },
     // RG_BOLERO_OF_FIRE
-    { 0x74, RG_NONE,
-      "Warping is unchanged. Refuse the warp instead and 24 magic refills your bombs and bombchus." },
+    { 0x74, RG_NONE, "Warping is unchanged. Refuse the warp instead and 24 magic refills your bombs and bombchus." },
     // RG_SERENADE_OF_WATER
     { 0x75, RG_NONE,
       "Warping is unchanged. Refuse the warp instead and 24 magic heals you slowly for the next few "
@@ -173,11 +153,9 @@ constexpr EnhancedItemText enhancedItemText[] = {
     { TEXT_RANDOMIZER_CUSTOM_ITEM, RG_KEATON_MASK,
       "Worn, it halves every price in Hyrule and doubles everything that drops." },
     // RG_SKULL_MASK
-    { TEXT_RANDOMIZER_CUSTOM_ITEM, RG_SKULL_MASK,
-      "Worn, the dead take you for one of their own and pay you no mind." },
+    { TEXT_RANDOMIZER_CUSTOM_ITEM, RG_SKULL_MASK, "Worn, the dead take you for one of their own and pay you no mind." },
     // RG_GERUDO_MASK
-    { TEXT_RANDOMIZER_CUSTOM_ITEM, RG_GERUDO_MASK,
-      "Worn, you can force any small-key door for half your magic." },
+    { TEXT_RANDOMIZER_CUSTOM_ITEM, RG_GERUDO_MASK, "Worn, you can force any small-key door for half your magic." },
     // RG_GORON_MASK
     { TEXT_RANDOMIZER_CUSTOM_ITEM, RG_GORON_MASK,
       "Worn, it grants the Goron Tunic's protection - fire cannot touch you, lava included." },
@@ -190,7 +168,7 @@ constexpr EnhancedItemText enhancedItemText[] = {
     // RG_BOTTLE_WITH_BLUE_FIRE
     { TEXT_RANDOMIZER_CUSTOM_ITEM, RG_BOTTLE_WITH_BLUE_FIRE,
       "Set down, the flame freezes whatever comes near it - and you can bottle it again after." },
-// <<< SEVEN_SAGES_GENERATED: ENHANCED_TEXT
+    // <<< SEVEN_SAGES_GENERATED: ENHANCED_TEXT
 };
 
 const EnhancedItemText* FindEntry(uint16_t textId) {
@@ -219,8 +197,7 @@ CustomMessage MessageFromFont() {
     MessageContext* msgCtx = &gPlayState->msgCtx;
     Font* font = &msgCtx->font;
     const uint8_t typePos = font->charTexBuf[0];
-    return CustomMessage(std::string(font->msgBuf, font->msgLength),
-                         static_cast<TextBoxType>(typePos >> 4),
+    return CustomMessage(std::string(font->msgBuf, font->msgLength), static_cast<TextBoxType>(typePos >> 4),
                          static_cast<TextBoxPosition>(typePos & 0xF));
 }
 
@@ -230,8 +207,8 @@ void AppendEnhancedPage(uint16_t* textId, bool* loadFromMessageTable) {
         return;
     }
 
-    CustomMessage msg = *loadFromMessageTable ? CustomMessage::LoadVanillaMessageTableEntry(*textId)
-                                              : MessageFromFont();
+    CustomMessage msg =
+        *loadFromMessageTable ? CustomMessage::LoadVanillaMessageTableEntry(*textId) : MessageFromFont();
 
     // Read the English slot, not GetForCurrentLanguage, and note this is not an English-only
     // shortcut: both sources put the bytes for the language the player is ACTUALLY playing in
@@ -254,8 +231,8 @@ void AppendEnhancedPage(uint16_t* textId, bool* loadFromMessageTable) {
     CustomMessage enhanced(std::string("%bEnhanced:%w ") + entry->text);
     enhanced.AutoFormat();
 
-    const std::string combined = base.substr(0, base.size() - 1) + CustomMessage::WAIT_FOR_INPUT() +
-                                 enhanced.GetEnglish(MF_RAW);
+    const std::string combined =
+        base.substr(0, base.size() - 1) + CustomMessage::WAIT_FOR_INPUT() + enhanced.GetEnglish(MF_RAW);
     // All three language slots get the same string, and that is load-bearing rather than lazy:
     // LoadIntoFont copies whichever slot matches gSaveContext.language, and the single-string
     // constructor would leave the other two empty. An empty message is an UNTERMINATED one -
@@ -280,8 +257,7 @@ void RegisterSevenSagesItemText() {
         return;
     }
     hookId = GameInteractor::Instance->RegisterGameHookForFilter<GameInteractor::OnOpenText>(
-        [](uint16_t* textId, bool* loadFromMessageTable) { return FindEntry(*textId) != nullptr; },
-        AppendEnhancedPage);
+        [](uint16_t* textId, bool* loadFromMessageTable) { return FindEntry(*textId) != nullptr; }, AppendEnhancedPage);
 }
 
 static RegisterShipInitFunc sevenSagesItemTextInitFunc(RegisterSevenSagesItemText, { "IS_RANDO" });

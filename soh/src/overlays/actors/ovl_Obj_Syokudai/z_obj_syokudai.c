@@ -239,8 +239,8 @@ void ObjSyokudai_Update(Actor* thisx, PlayState* play2) {
                 // For the shield that is its own lit state; for the stick it stays the stick timer.
             } else if ((torchType != 0) &&
                        (((interactionType > 0) && (dmgFlags & 0x20800)) ||
-                        ((interactionType < 0) && (sevenSagesShieldInRange ? SevenSagesDekuShieldIsAflame()
-                                                                           : (player->unk_860 != 0))))) {
+                        ((interactionType < 0) &&
+                         (sevenSagesShieldInRange ? SevenSagesDekuShieldIsAflame() : (player->unk_860 != 0))))) {
 
                 if ((interactionType < 0) && !sevenSagesShieldInRange && (player->unk_860 < 200)) {
                     player->unk_860 = 200;

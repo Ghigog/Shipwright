@@ -56,13 +56,13 @@ struct SageRingEntry {
 };
 
 const SageRingEntry sSageRing[SAGE_COUNT] = {
-    { gFileSelLightMedallionTex, 200, 200, 0, 0, -1000, false },     // Rauru - Light
-    { gFileSelForestMedallionTex, 0, 255, 0, 866, -500, false },     // Saria - Forest
-    { gFileSelFireMedallionTex, 255, 60, 0, 866, 500, false },       // Darunia - Fire
-    { gFileSelWaterMedallionTex, 0, 100, 255, 0, 1000, false },      // Ruto - Water
-    { gFileSelShadowMedallionTex, 200, 50, 255, -866, 500, false },  // Impa - Shadow
-    { gFileSelSpiritMedallionTex, 255, 130, 0, -866, -500, false },  // Nabooru - Spirit
-    { nullptr, 255, 255, 255, 0, 0, true },                          // Zelda - crest, centre (RGBA, so white prim)
+    { gFileSelLightMedallionTex, 200, 200, 0, 0, -1000, false },    // Rauru - Light
+    { gFileSelForestMedallionTex, 0, 255, 0, 866, -500, false },    // Saria - Forest
+    { gFileSelFireMedallionTex, 255, 60, 0, 866, 500, false },      // Darunia - Fire
+    { gFileSelWaterMedallionTex, 0, 100, 255, 0, 1000, false },     // Ruto - Water
+    { gFileSelShadowMedallionTex, 200, 50, 255, -866, 500, false }, // Impa - Shadow
+    { gFileSelSpiritMedallionTex, 255, 130, 0, -866, -500, false }, // Nabooru - Spirit
+    { nullptr, 255, 255, 255, 0, 0, true },                         // Zelda - crest, centre (RGBA, so white prim)
 };
 
 // Left half of the window; the detail pane will take the right.
@@ -135,19 +135,24 @@ struct SageInfo {
 };
 
 const SageInfo sSageInfo[SAGE_COUNT] = {
-    { "Rauru", "Lon Lon Ranch", "Adult",
+    { "Rauru",
+      "Lon Lon Ranch",
+      "Adult",
       { "Megaton Hammer", "Bow + Light Arrows", "Magic", "Stone of Agony", nullptr } },
-    { "Saria", "Sacred Forest Meadow", "Child",
+    { "Saria",
+      "Sacred Forest Meadow",
+      "Child",
       { "Deku Sticks & Nuts", "Fairy Ocarina", "Saria's Song", "Magic", nullptr } },
-    { "Darunia", "Goron City", "Child",
+    { "Darunia",
+      "Goron City",
+      "Child",
       { "Bomb Bag + Bombchus", "Goron's Bracelet", "Goron Tunic", nullptr, nullptr } },
-    { "Ruto", "Zora's Fountain", "Child",
-      { "Golden Scale", "Iron Boots", "Zora Tunic", nullptr, nullptr } },
-    { "Impa", "The Graveyard", "Adult",
-      { "Bunny Hood", "Hookshot", "Lens of Truth", "Magic", nullptr } },
-    { "Nabooru", "Gerudo Fortress", "Adult",
-      { "Hover Boots", "Gerudo Card", "Mirror Shield", nullptr, nullptr } },
-    { "Zelda", "Hyrule Castle", "Child",
+    { "Ruto", "Zora's Fountain", "Child", { "Golden Scale", "Iron Boots", "Zora Tunic", nullptr, nullptr } },
+    { "Impa", "The Graveyard", "Adult", { "Bunny Hood", "Hookshot", "Lens of Truth", "Magic", nullptr } },
+    { "Nabooru", "Gerudo Fortress", "Adult", { "Hover Boots", "Gerudo Card", "Mirror Shield", nullptr, nullptr } },
+    { "Zelda",
+      "Hyrule Castle",
+      "Child",
       { "Farore's Wind", "Nayru's Love", "Din's Fire", "Ocarina + Lullaby", "Double Magic" } },
 };
 
@@ -167,7 +172,8 @@ extern "C" void FileChoose_UpdateSevenSagesMenu(GameState* gameState) {
     // Left/right, not up/down: the sages are arranged in a ring, so right should carry you
     // clockwise around it. Index order is the ring's clockwise order, so this is a plain
     // increment - Zelda in the centre is simply the last step before wrapping back to Rauru.
-    if (ABS(fileChooseContext->stickRelX) > 30 || (dpad && CHECK_BTN_ANY(input->press.button, BTN_DRIGHT | BTN_DLEFT))) {
+    if (ABS(fileChooseContext->stickRelX) > 30 ||
+        (dpad && CHECK_BTN_ANY(input->press.button, BTN_DRIGHT | BTN_DLEFT))) {
         if (fileChooseContext->stickRelX > 30 || (dpad && CHECK_BTN_ANY(input->press.button, BTN_DRIGHT))) {
             fileChooseContext->sevenSagesIndex = (uint8_t)((fileChooseContext->sevenSagesIndex + 1) % SAGE_COUNT);
             // Track the cursor rather than waiting for A, so the detail pane can just ask the
@@ -255,8 +261,8 @@ extern "C" void FileChoose_DrawSevenSagesMenuWindowContents(FileChooseContext* f
         // stopping - that is what drew a grey bar to the right of and below every medallion.
         gDPLoadTextureBlock(POLY_OPA_DISP++, entry.medallion, G_IM_FMT_IA, G_IM_SIZ_8b, 16, 16, 0,
                             G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMIRROR | G_TX_CLAMP, 4, 4, G_TX_NOLOD, G_TX_NOLOD);
-        gSPWideTextureRectangle(POLY_OPA_DISP++, x << 2, y << 2, (x + ICON_DRAW_SIZE) << 2,
-                                (y + ICON_DRAW_SIZE) << 2, G_TX_RENDERTILE, 0, 0, ICON_DSDX, ICON_DSDX);
+        gSPWideTextureRectangle(POLY_OPA_DISP++, x << 2, y << 2, (x + ICON_DRAW_SIZE) << 2, (y + ICON_DRAW_SIZE) << 2,
+                                G_TX_RENDERTILE, 0, 0, ICON_DSDX, ICON_DSDX);
     }
 
     // Zelda's Triforce, at the centre. i8 so intensity carries alpha too - MODULATEIA_PRIM
@@ -276,10 +282,9 @@ extern "C" void FileChoose_DrawSevenSagesMenuWindowContents(FileChooseContext* f
         gDPSetCombineMode(POLY_OPA_DISP++, G_CC_MODULATERGBA_PRIM, G_CC_MODULATERGBA_PRIM);
         gDPSetPrimColor(POLY_OPA_DISP++, 0, 0, r, g, b, alpha);
         gDPLoadTextureBlock(POLY_OPA_DISP++, gChildZelda1HeaddressTriforceEmblemTex, G_IM_FMT_RGBA, G_IM_SIZ_16b, 16,
-                            32, 0, G_TX_MIRROR | G_TX_WRAP, G_TX_NOMIRROR | G_TX_CLAMP, 4, 5, G_TX_NOLOD,
-                            G_TX_NOLOD);
-        gSPWideTextureRectangle(POLY_OPA_DISP++, x << 2, y << 2, (x + TRIFORCE_DRAW_W) << 2,
-                                (y + TRIFORCE_DRAW_H) << 2, G_TX_RENDERTILE, 0, 0, TRIFORCE_DSDX, TRIFORCE_DTDY);
+                            32, 0, G_TX_MIRROR | G_TX_WRAP, G_TX_NOMIRROR | G_TX_CLAMP, 4, 5, G_TX_NOLOD, G_TX_NOLOD);
+        gSPWideTextureRectangle(POLY_OPA_DISP++, x << 2, y << 2, (x + TRIFORCE_DRAW_W) << 2, (y + TRIFORCE_DRAW_H) << 2,
+                                G_TX_RENDERTILE, 0, 0, TRIFORCE_DSDX, TRIFORCE_DTDY);
     }
 
     // Right-hand detail pane. Name and starting age for now; starting location and kit need a

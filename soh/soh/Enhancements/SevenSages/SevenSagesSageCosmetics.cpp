@@ -182,7 +182,8 @@ void ClearCosmeticColor(const char* valueCvar, const char* changedCvar, const ch
 }
 
 #define COSMETIC_SET(id, color) SetCosmeticColor(CVAR_COSMETIC(id ".Value"), CVAR_COSMETIC(id ".Changed"), color)
-#define COSMETIC_CLEAR(id) ClearCosmeticColor(CVAR_COSMETIC(id ".Value"), CVAR_COSMETIC(id ".Changed"), CVAR_COSMETIC(id ".Rainbow"))
+#define COSMETIC_CLEAR(id) \
+    ClearCosmeticColor(CVAR_COSMETIC(id ".Value"), CVAR_COSMETIC(id ".Changed"), CVAR_COSMETIC(id ".Rainbow"))
 
 // ── Per-sage data ───────────────────────────────────────────────────────────────────────────
 // Only what cannot be derived from `base` lives here. See docs/sage-cosmetics.md for the reasoning
@@ -269,16 +270,7 @@ constexpr SagePalette kSagePalette[] = {
     // Rauru - black. Base lifted off pure-black {25,25,25} to {45,45,45} so the Goron (darker) and
     // Zora (lighter) tunics have somewhere to go; at the old value all three collapsed together.
     // Magic is white for time. Hearts near-black, hence darkHearts.
-    { RO_SAGE_RAURU,
-      { 45, 45, 45 },
-      { 245, 245, 245 },
-      false,
-      false,
-      {},
-      false,
-      {},
-      kTrailDurationMin,
-      true },
+    { RO_SAGE_RAURU, { 45, 45, 45 }, { 245, 245, 245 }, false, false, {}, false, {}, kTrailDurationMin, true },
     // Saria - green. Magic is an earthy red-brown. Wooden sword, and no trail.
     { RO_SAGE_SARIA,
       { 110, 225, 70 },
@@ -316,16 +308,7 @@ constexpr SagePalette kSagePalette[] = {
       false },
     // Impa - shadow. Magic is "black"; a true {0,0,0} bar is invisible against the HUD, so this is
     // a very dark violet instead, which reads black in motion but still has an edge.
-    { RO_SAGE_IMPA,
-      { 130, 60, 170 },
-      { 35, 20, 50 },
-      false,
-      false,
-      {},
-      false,
-      {},
-      kTrailDurationMin,
-      false },
+    { RO_SAGE_IMPA, { 130, 60, 170 }, { 35, 20, 50 }, false, false, {}, false, {}, kTrailDurationMin, false },
     // Nabooru - spirit. Golden blade, yellow trail. Magic is poison green.
     { RO_SAGE_NABOORU,
       { 235, 190, 20 },
@@ -1015,11 +998,11 @@ void ApplyHudLayout(const SageHudLayout& layout) {
 
     // Every element above is positioned explicitly, so the global margin offsets must not also be
     // applied on top - they would drag everything off by the margin amount.
-    for (const char* cvar : { CVAR_COSMETIC("HUD.MagicBar"), CVAR_COSMETIC("HUD.BButton"),
-                              CVAR_COSMETIC("HUD.AButton"), CVAR_COSMETIC("HUD.CUpButton"),
-                              CVAR_COSMETIC("HUD.CDownButton"), CVAR_COSMETIC("HUD.CLeftButton"),
-                              CVAR_COSMETIC("HUD.CRightButton"), CVAR_COSMETIC("HUD.Dpad"),
-                              CVAR_COSMETIC("HUD.Minimap"), CVAR_COSMETIC("HUD.StartButton") }) {
+    for (const char* cvar :
+         { CVAR_COSMETIC("HUD.MagicBar"), CVAR_COSMETIC("HUD.BButton"), CVAR_COSMETIC("HUD.AButton"),
+           CVAR_COSMETIC("HUD.CUpButton"), CVAR_COSMETIC("HUD.CDownButton"), CVAR_COSMETIC("HUD.CLeftButton"),
+           CVAR_COSMETIC("HUD.CRightButton"), CVAR_COSMETIC("HUD.Dpad"), CVAR_COSMETIC("HUD.Minimap"),
+           CVAR_COSMETIC("HUD.StartButton") }) {
         CVarSetInteger((std::string(cvar) + ".UseMargins").c_str(), 0);
     }
 }
@@ -1090,33 +1073,47 @@ void ApplyWorldNpcColors() {
 
 // Colour options: `.Value` + `.Changed` + `.Rainbow`.
 constexpr const char* kSageColorOptions[] = {
-    "Link.KokiriTunic",     "Link.GoronTunic",      "Link.ZoraTunic",
-    "Swords.MasterBlade",   "Trails.MasterSword",
-    "Consumable.Hearts",    "Consumable.DDHearts",  "Consumable.HeartBorder",
-    "Consumable.Magic",     "Consumable.MagicActive",
-    "Magic.DinsPrimary",    "Magic.DinsSecondary",
-    "Magic.FaroresPrimary", "Magic.FaroresSecondary",
-    "Magic.NayrusPrimary",  "Magic.NayrusSecondary",
-    "HUD.BButton",          "HUD.AButton",          "HUD.StartButton",
-    "HUD.CButtons",         "HUD.Dpad",
-    "HUD.CUpButton",        "HUD.CDownButton",      "HUD.CLeftButton",      "HUD.CRightButton",
-    "NPC.Kokiri",           "NPC.Gerudo",
+    "Link.KokiriTunic",
+    "Link.GoronTunic",
+    "Link.ZoraTunic",
+    "Swords.MasterBlade",
+    "Trails.MasterSword",
+    "Consumable.Hearts",
+    "Consumable.DDHearts",
+    "Consumable.HeartBorder",
+    "Consumable.Magic",
+    "Consumable.MagicActive",
+    "Magic.DinsPrimary",
+    "Magic.DinsSecondary",
+    "Magic.FaroresPrimary",
+    "Magic.FaroresSecondary",
+    "Magic.NayrusPrimary",
+    "Magic.NayrusSecondary",
+    "HUD.BButton",
+    "HUD.AButton",
+    "HUD.StartButton",
+    "HUD.CButtons",
+    "HUD.Dpad",
+    "HUD.CUpButton",
+    "HUD.CDownButton",
+    "HUD.CLeftButton",
+    "HUD.CRightButton",
+    "NPC.Kokiri",
+    "NPC.Gerudo",
 };
 
 // Positioned elements: `.PosType` + `.PosX` + `.PosY` + `.UseMargins`. Note HUD.HeartsCount rather
 // than HUD.Hearts - the life meter's position and its margin flag live under different roots, see
 // the ApplyHudLayout comment.
 constexpr const char* kSagePositionedElements[] = {
-    "HUD.HeartsCount", "HUD.MagicBar",    "HUD.BButton",     "HUD.AButton",
-    "HUD.CUpButton",   "HUD.CDownButton", "HUD.CLeftButton", "HUD.CRightButton",
-    "HUD.Dpad",        "HUD.Minimap",     "HUD.StartButton",
+    "HUD.HeartsCount", "HUD.MagicBar",     "HUD.BButton", "HUD.AButton", "HUD.CUpButton",   "HUD.CDownButton",
+    "HUD.CLeftButton", "HUD.CRightButton", "HUD.Dpad",    "HUD.Minimap", "HUD.StartButton",
 };
 
 void RevertSageCosmetics() {
     for (const char* id : kSageColorOptions) {
         const std::string base = std::string(CVAR_PREFIX_COSMETIC ".") + id;
-        ClearCosmeticColor((base + ".Value").c_str(), (base + ".Changed").c_str(),
-                           (base + ".Rainbow").c_str());
+        ClearCosmeticColor((base + ".Value").c_str(), (base + ".Changed").c_str(), (base + ".Rainbow").c_str());
     }
 
     for (const char* id : kSagePositionedElements) {
@@ -1162,8 +1159,7 @@ extern "C" void SevenSages_ApplySageCosmetics() {
     // -1 from the home-entrance accessor means no sage applies to this file. Reusing it as the "is
     // there a sage at all" probe avoids a second copy of "which sages exist" gating the entry
     // point, and it stays correct if the sage list ever changes.
-    const bool wantSageLook =
-        IS_SEVENSAGES && SageCosmeticsEnabled() && Randomizer_GetSageHomeEntrance() != -1;
+    const bool wantSageLook = IS_SEVENSAGES && SageCosmeticsEnabled() && Randomizer_GetSageHomeEntrance() != -1;
 
     const SagePalette* palette =
         wantSageLook ? FindSagePalette(Randomizer_GetSettingValue(RSK_SELECTED_SAGE)) : nullptr;

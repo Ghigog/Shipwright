@@ -3024,8 +3024,7 @@ void CollisionCheck_ApplyDamage(PlayState* play, CollisionCheckContext* colChkCt
         damage = tbl->table[i] & 0xF;
         collider->actor->colChkInfo.damageEffect = tbl->table[i] >> 4 & 0xF;
     }
-    GameInteractor_Should(VB_MODIFY_RESOLVED_DAMAGE, true, collider->actor, &damage,
-                          info->acHitInfo->toucher.dmgFlags);
+    GameInteractor_Should(VB_MODIFY_RESOLVED_DAMAGE, true, collider->actor, &damage, info->acHitInfo->toucher.dmgFlags);
 
     if (!(collider->acFlags & AC_HARD)) {
         collider->actor->colChkInfo.damage += damage;

@@ -201,8 +201,7 @@ u8 RequiredTierForEnemy(const Actor* actor) {
 // ordinary rule.
 bool EnemyIsLiftable(const Actor* actor) {
     return actor->category == ACTORCAT_ENEMY && actor->update != nullptr &&
-           (IsStunned(actor) || SevenSagesHammerKnockedDown(actor)) &&
-           CanUseGauntlets(RequiredTierForEnemy(actor));
+           (IsStunned(actor) || SevenSagesHammerKnockedDown(actor)) && CanUseGauntlets(RequiredTierForEnemy(actor));
 }
 
 bool BoulderIsLiftable(const Actor* actor) {

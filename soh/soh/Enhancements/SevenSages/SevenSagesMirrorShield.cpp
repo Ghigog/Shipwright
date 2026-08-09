@@ -264,8 +264,7 @@ void SevenSagesMirrorShieldDraw() {
     Matrix_Scale(1.0f, 1.0f, BEAM_GLOW_STRETCH, MTXMODE_APPLY);
 
     Gfx_SetupDL_25Xlu(gPlayState->state.gfxCtx);
-    gSPMatrix(POLY_XLU_DISP++, MATRIX_NEWMTX(gPlayState->state.gfxCtx),
-              G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
+    gSPMatrix(POLY_XLU_DISP++, MATRIX_NEWMTX(gPlayState->state.gfxCtx), G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
     gDPSetPrimColor(POLY_XLU_DISP++, 0, 0, 255, 255, 150, BEAM_GLOW_ALPHA);
     // The cast is the C++ tax on the OTR-path trick above: in C the char[] converts to Gfx*
     // implicitly, in C++ it does not. Same shape as CustomLogoTitle.cpp:60 and ShuffleTrees.cpp:76,

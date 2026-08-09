@@ -1041,8 +1041,8 @@ void SohMenu::AddMenuEnhancements() {
             "be used in more places."));
     AddWidget(path, "Faster Magic Spells", WIDGET_CVAR_CHECKBOX)
         .CVar(CVAR_ENHANCEMENT("FastFarores"))
-        .Options(CheckboxOptions().Tooltip(
-            "Greatly decreases cast time of Din's Fire, Farore's Wind, and Nayru's Love."));
+        .Options(
+            CheckboxOptions().Tooltip("Greatly decreases cast time of Din's Fire, Farore's Wind, and Nayru's Love."));
 
     AddWidget(path, "Bottles", WIDGET_SEPARATOR_TEXT);
     AddWidget(path, "Rebottle Blue Fire", WIDGET_CVAR_CHECKBOX)

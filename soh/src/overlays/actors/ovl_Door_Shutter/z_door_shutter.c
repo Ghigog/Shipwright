@@ -421,8 +421,7 @@ void DoorShutter_Idle(DoorShutter* this, PlayState* play) {
                             return;
                         }
                     } else if (gSaveContext.inventory.dungeonKeys[gSaveContext.mapIndex] <= 0 &&
-                               GameInteractor_Should(VB_DOOR_SHUTTER_REQUIRE_SMALL_KEY, true,
-                                                     &this->dyna.actor)) {
+                               GameInteractor_Should(VB_DOOR_SHUTTER_REQUIRE_SMALL_KEY, true, &this->dyna.actor)) {
                         player->naviTextId = -0x203;
                         return;
                     }

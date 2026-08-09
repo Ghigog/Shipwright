@@ -56,5 +56,4 @@ enum SevenSagesAoeVisual {
 // call is a no-op rather than displacing a live field. Passing a lifetime of 1 gives the
 // instantaneous case (a hammer swing) through the same mechanism.
 void SevenSagesSpawnAoeField(PlayState* play, float x, float y, float z, float maxRadius, float height,
-                             int32_t lifetimeFrames, uint32_t damageFlags, uint8_t damage,
-                             SevenSagesAoeVisual visual);
+                             int32_t lifetimeFrames, uint32_t damageFlags, uint8_t damage, SevenSagesAoeVisual visual);

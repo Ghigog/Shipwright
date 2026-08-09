@@ -44,12 +44,15 @@ void SevenSagesSerenadeOfWaterDeclined() {
         return;
     }
 
-    SevenSagesRequestSongMagic(SERENADE_MAGIC_COST, []() {
-        // Replaying while already regenerating restarts the three minutes rather than stacking a
-        // second trickle on top, same refresh-not-stack pattern every other song uses.
-        sRegenFramesRemaining = SERENADE_REGEN_FRAMES;
-        sRegenAccumulator = 0;
-    }, kNotAnOcarinaPerformance);
+    SevenSagesRequestSongMagic(
+        SERENADE_MAGIC_COST,
+        []() {
+            // Replaying while already regenerating restarts the three minutes rather than stacking a
+            // second trickle on top, same refresh-not-stack pattern every other song uses.
+            sRegenFramesRemaining = SERENADE_REGEN_FRAMES;
+            sRegenAccumulator = 0;
+        },
+        kNotAnOcarinaPerformance);
 }
 
 void SevenSagesSerenadeOfWaterFrameUpdate() {

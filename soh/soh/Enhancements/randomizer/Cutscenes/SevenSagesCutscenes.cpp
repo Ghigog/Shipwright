@@ -63,9 +63,9 @@ struct CutsceneTextEntry {
 // Generated from data/cutscenes.json in the seven-sages repo - edit that file,
 // not this table.
 constexpr CutsceneTextEntry cutsceneTextEntries[] = {
-// >>> SEVEN_SAGES_GENERATED: TEXT_IDS - edit data/cutscenes.json, not this
+    // >>> SEVEN_SAGES_GENERATED: TEXT_IDS - edit data/cutscenes.json, not this
 
-// <<< SEVEN_SAGES_GENERATED: TEXT_IDS
+    // <<< SEVEN_SAGES_GENERATED: TEXT_IDS
     // Sentinel, deliberately outside the generated markers so regenerating keeps it. No
     // cutscene declares dialogue right now, so without this the generated region is empty
     // and the array is zero-length - a clang extension, but hard error C2466 on MSVC
@@ -109,11 +109,11 @@ namespace {
 // Generated from data/cutscenes.json - edit that file, not this. Backs the
 // gc_play_cutscene debug console command below.
 const std::unordered_map<std::string, CutsceneData*> cutsceneById = {
-// >>> SEVEN_SAGES_GENERATED: CUTSCENE_REGISTRY - edit data/cutscenes.json, not this
+    // >>> SEVEN_SAGES_GENERATED: CUTSCENE_REGISTRY - edit data/cutscenes.json, not this
     { "SARIA_FOREST_TEMPLE_OPENING", gSevenSagesSariaForestTempleOpening },
     { "ZELDA_CASTLE_COURTYARD_OPENING", gSevenSagesZeldaCastleCourtyardOpening },
     { "DARUNIA_CHAMBER_OPENING", gSevenSagesDaruniaChamberOpening },
-// <<< SEVEN_SAGES_GENERATED: CUTSCENE_REGISTRY
+    // <<< SEVEN_SAGES_GENERATED: CUTSCENE_REGISTRY
 };
 
 // Dev-only trigger for the 4b pipeline: `gc_play_cutscene <id>` plays a
@@ -125,7 +125,7 @@ const std::unordered_map<std::string, CutsceneData*> cutsceneById = {
 // z_demo.c) and only consumes it once state returns to idle, so calling this
 // mid-cutscene is a safe no-op rather than a stomp.
 int32_t SevenSagesPlayCutsceneCommand(std::shared_ptr<Ship::Console> console, std::vector<std::string> args,
-                                       std::string* output) {
+                                      std::string* output) {
     if (gPlayState == nullptr) {
         if (output != nullptr) {
             *output = "no active play session";

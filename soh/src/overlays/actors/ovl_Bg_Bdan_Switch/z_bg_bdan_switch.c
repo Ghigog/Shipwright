@@ -371,8 +371,8 @@ void func_8086DA1C(BgBdanSwitch* this, PlayState* play) {
     Actor* heldActor = GET_PLAYER(play)->heldActor;
 
     if (DynaPolyActor_IsPlayerOnTop(&this->dyna)) {
-        if (GameInteractor_Should(VB_JABU_SWITCH_BE_WEIGHED_DOWN,
-                                  heldActor != NULL && heldActor->id == ACTOR_EN_RU1, this)) {
+        if (GameInteractor_Should(VB_JABU_SWITCH_BE_WEIGHED_DOWN, heldActor != NULL && heldActor->id == ACTOR_EN_RU1,
+                                  this)) {
             if (this->unk_1D8 <= 0) {
                 func_8086D944(this);
                 func_8086D4B4(this, play);

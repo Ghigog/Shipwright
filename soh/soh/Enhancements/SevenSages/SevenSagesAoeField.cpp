@@ -167,8 +167,7 @@ void SevenSagesAoeFieldFrameUpdate() {
 // effect is gEffShockwaveDL, a flat ground ring, a barely-grown one viewed edge-on from a wall hit
 // is invisible. Proven parameters first; tune only if it renders and is the wrong size.
 void SevenSagesSpawnAoeField(PlayState* play, float x, float y, float z, float maxRadius, float height,
-                             int32_t lifetimeFrames, uint32_t damageFlags, uint8_t damage,
-                             SevenSagesAoeVisual visual) {
+                             int32_t lifetimeFrames, uint32_t damageFlags, uint8_t damage, SevenSagesAoeVisual visual) {
     if (play == nullptr || lifetimeFrames <= 0 || maxRadius <= 0.0f) {
         return;
     }

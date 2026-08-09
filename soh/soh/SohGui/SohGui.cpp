@@ -149,7 +149,7 @@ void SetupGuiElements() {
         std::make_shared<ActorViewerWindow>(CVAR_WINDOW("ActorViewer"), "Actor Viewer", ImVec2(520, 600));
     gui->AddGuiWindow(mActorViewerWindow);
     mEnrichWorldPlacerWindow = std::make_shared<EnrichWorldPlacerWindow>(CVAR_WINDOW("EnrichWorldPlacer"),
-                                                                        "Enrich World Placer", ImVec2(520, 640));
+                                                                         "Enrich World Placer", ImVec2(520, 640));
     gui->AddGuiWindow(mEnrichWorldPlacerWindow);
     mColViewerWindow =
         std::make_shared<ColViewerWindow>(CVAR_WINDOW("CollisionViewer"), "Collision Viewer", ImVec2(520, 600));

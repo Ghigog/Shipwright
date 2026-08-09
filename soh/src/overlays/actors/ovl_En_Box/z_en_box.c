@@ -599,8 +599,7 @@ void EnBox_UpdateTexture(EnBox* this, PlayState* play) {
         renderAsBigChest = getItemCategory == ITEM_CATEGORY_MAJOR;
     } else {
         renderAsBigChest = this->type != ENBOX_TYPE_SMALL && this->type != ENBOX_TYPE_6 &&
-                            this->type != ENBOX_TYPE_ROOM_CLEAR_SMALL &&
-                            this->type != ENBOX_TYPE_SWITCH_FLAG_FALL_SMALL;
+                           this->type != ENBOX_TYPE_ROOM_CLEAR_SMALL && this->type != ENBOX_TYPE_SWITCH_FLAG_FALL_SMALL;
     }
 
     if (renderAsBigChest) {

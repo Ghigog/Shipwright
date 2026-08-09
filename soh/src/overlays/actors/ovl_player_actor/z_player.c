@@ -585,8 +585,8 @@ static s32 sFloorType = 0;
 #define SEVEN_SAGES_SKATE_MIN_SPEED 0.5f
 static s32 sSevenSagesSkateHoldFrames = 0; // ticks left in the current glide
 static s32 sSevenSagesSkateStepIndex = 0;  // pushes taken since this run began, capped at RAMP_STEPS
-static f32 sWaterSpeedFactor = 1.0f;    // Set to 0.5f in water, 1.0f otherwise. Influences different speed values.
-static f32 sInvWaterSpeedFactor = 1.0f; // Inverse of `sWaterSpeedFactor` (1.0f / sWaterSpeedFactor)
+static f32 sWaterSpeedFactor = 1.0f;       // Set to 0.5f in water, 1.0f otherwise. Influences different speed values.
+static f32 sInvWaterSpeedFactor = 1.0f;    // Inverse of `sWaterSpeedFactor` (1.0f / sWaterSpeedFactor)
 static u32 sTouchedWallFlags = 0;
 static u32 sConveyorSpeed = 0;
 static s16 sIsFloorConveyor = false;
@@ -5374,8 +5374,7 @@ s32 Player_HandleExitsAndVoids(PlayState* play, Player* this, CollisionPoly* pol
                 // rather than letting either source trivialize that puzzle too. floorProperty 12 (the
                 // other value this block handles) is an unrelated exit/void mechanism, untouched here.
                 // Widened from Nayru's-Love-only 2026-08-05; see SevenSagesTunics.h.
-                u8 fireProtectionBypassesLava = (this->floorProperty == 5) &&
-                                                SevenSagesFireProtectionActive() &&
+                u8 fireProtectionBypassesLava = (this->floorProperty == 5) && SevenSagesFireProtectionActive() &&
                                                 (play->sceneNum != SCENE_SHADOW_TEMPLE);
 
                 if (!fireProtectionBypassesLava &&
@@ -6003,10 +6002,10 @@ void func_8083AA10(Player* this, PlayState* play) {
                 if (SevenSagesHoverBootsActive(this) && !(this->actor.bgCheckFlags & BGCHECKFLAG_GROUND_LEAVE) &&
                     !Player_HoverBootsOverHoverableSurface(this) && (sControlStickMagnitude >= 55.0f)) {
                     s16 hoverJumpYawDiff = this->yaw - this->actor.shape.rot.y;
-                    LinkAnimationHeader* hoverJumpAnim = ((ABS(hoverJumpYawDiff) < 0x1000) &&
-                                                          (this->linearVelocity > 4.0f))
-                                                             ? &gPlayerAnim_link_normal_run_jump
-                                                             : &gPlayerAnim_link_normal_jump;
+                    LinkAnimationHeader* hoverJumpAnim =
+                        ((ABS(hoverJumpYawDiff) < 0x1000) && (this->linearVelocity > 4.0f))
+                            ? &gPlayerAnim_link_normal_run_jump
+                            : &gPlayerAnim_link_normal_jump;
 
                     func_80838940(this, hoverJumpAnim, REG(69) / 100.0f, play, NA_SE_VO_LI_AUTO_JUMP);
                     this->av2.actionVar2 = 1;

@@ -3883,8 +3883,7 @@ Actor* Actor_GetCollidedExplosive(PlayState* play, Collider* collider) {
     // Bg_Dodoago accept dmgFlags 0xFFCFFFFF, which includes the fire bit an elemental arrow's field
     // carries, so a Fire Arrow landing near the Dodongo mouth reached this line with `ac` NULL.
     if ((collider->acFlags & AC_HIT) && (collider->ac != NULL) &&
-        ((collider->ac->category == ACTORCAT_EXPLOSIVE) ||
-         (IS_SEVENSAGES && collider->ac->id == ACTOR_MAGIC_FIRE) ||
+        ((collider->ac->category == ACTORCAT_EXPLOSIVE) || (IS_SEVENSAGES && collider->ac->id == ACTOR_MAGIC_FIRE) ||
          SevenSagesHammerCountsAsExplosive(collider->ac))) {
         collider->acFlags &= ~AC_HIT;
         return collider->ac;

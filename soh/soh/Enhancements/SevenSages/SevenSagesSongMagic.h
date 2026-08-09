@@ -50,5 +50,4 @@ constexpr bool kNotAnOcarinaPerformance = false;
 // caller needing to know any of this happened. Only one request is tracked at a time, which is fine
 // in practice: songs are played one at a time through the same ocarina performance UI, and the
 // gauntlet bypass charges once per door open.
-void SevenSagesRequestSongMagic(short cost, std::function<void()> onSuccess,
-                                bool fromOcarinaPerformance = true);
+void SevenSagesRequestSongMagic(short cost, std::function<void()> onSuccess, bool fromOcarinaPerformance = true);

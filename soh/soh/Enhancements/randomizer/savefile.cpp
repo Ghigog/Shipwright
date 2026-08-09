@@ -462,9 +462,9 @@ struct SageStartingOption {
 
 struct SageDefinition {
     uint8_t sage;
-    uint8_t age;             // RO_AGE_CHILD / RO_AGE_ADULT
-    int32_t homeEntrance;    // ENTR_* - the runtime spawn point
-    uint16_t homeRegion;     // RandomizerRegion - the solver's starting position
+    uint8_t age;          // RO_AGE_CHILD / RO_AGE_ADULT
+    int32_t homeEntrance; // ENTR_* - the runtime spawn point
+    uint16_t homeRegion;  // RandomizerRegion - the solver's starting position
     SageStartingOption kit[SAGE_MAX_KIT_OPTIONS];
     uint8_t kitCount;
     // World-state options, kept separate from `kit` on purpose even though both are applied by the
@@ -649,9 +649,7 @@ static const SageDefinition sSageDefinitions[] = {
       RO_AGE_ADULT,
       ENTR_GERUDOS_FORTRESS_GATE_EXIT,
       RR_GF_OUTSIDE_GATE,
-      { { RSK_STARTING_HOVER_BOOTS, 1 },
-        { RSK_STARTING_GERUDO_CARD, 1 },
-        { RSK_STARTING_MIRROR_SHIELD, 1 } },
+      { { RSK_STARTING_HOVER_BOOTS, 1 }, { RSK_STARTING_GERUDO_CARD, 1 }, { RSK_STARTING_MIRROR_SHIELD, 1 } },
       3,
       {},
       0,

@@ -44,7 +44,7 @@ void SevenSagesZeldasLullabyPlayed() {
 
     SevenSagesRequestSongMagic(ZELDAS_LULLABY_MAGIC_COST, []() {
         SevenSagesForEachActorInRoom(gPlayState, ACTORCAT_ENEMY,
-                                      [](Actor* enemy) { enemy->freezeTimer = ZELDAS_LULLABY_STUN_FRAMES; });
+                                     [](Actor* enemy) { enemy->freezeTimer = ZELDAS_LULLABY_STUN_FRAMES; });
     });
 }
 

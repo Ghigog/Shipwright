@@ -153,8 +153,7 @@ std::vector<RandomizerCheck> CollectProgressionTargets() {
 // applied, so hop counts are per-seed rather than per-vanilla-map. Returns the nearest region that
 // holds a reachable progression check, skipping the region the player is standing in - being told
 // to go where you already are is worse than silence. RR_NONE if there is nothing to say.
-RandomizerRegion FindNearestRelevantRegion(RandomizerRegion from,
-                                           const std::unordered_set<uint16_t>& relevantRegions) {
+RandomizerRegion FindNearestRelevantRegion(RandomizerRegion from, const std::unordered_set<uint16_t>& relevantRegions) {
     if (from == RR_NONE || relevantRegions.empty()) {
         return RR_NONE;
     }

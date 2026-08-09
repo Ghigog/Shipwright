@@ -60,9 +60,8 @@ void SevenSagesBlueFireUpdate(void* actorPtr) {
 
     Actor* flame = static_cast<Actor*>(actorPtr);
     const Vec3f& pos = flame->world.pos;
-    SevenSagesSpawnAoeField(gPlayState, pos.x, pos.y, pos.z, BLUE_FIRE_RADIUS, BLUE_FIRE_HEIGHT,
-                            BLUE_FIRE_FIELD_FRAMES, SEVEN_SAGES_AOE_DMG_STUN, BLUE_FIRE_DAMAGE,
-                            SEVEN_SAGES_AOE_VISUAL_NONE);
+    SevenSagesSpawnAoeField(gPlayState, pos.x, pos.y, pos.z, BLUE_FIRE_RADIUS, BLUE_FIRE_HEIGHT, BLUE_FIRE_FIELD_FRAMES,
+                            SEVEN_SAGES_AOE_DMG_STUN, BLUE_FIRE_DAMAGE, SEVEN_SAGES_AOE_VISUAL_NONE);
 }
 
 } // namespace

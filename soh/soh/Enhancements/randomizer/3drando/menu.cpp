@@ -25,10 +25,9 @@ bool GenerateRandomizer(std::set<RandomizerCheck> excludedLocations, std::set<Ra
         }
         seedString[10] = '\0';
         seedInput = std::string(seedString);
-    } else if (const std::string batchPrefix =
-                   seedInput.rfind("seed_testing_count", 0) == 0   ? "seed_testing_count"
-                   : seedInput.rfind("seedtestingcount", 0) == 0   ? "seedtestingcount"
-                                                                   : "";
+    } else if (const std::string batchPrefix = seedInput.rfind("seed_testing_count", 0) == 0 ? "seed_testing_count"
+                                               : seedInput.rfind("seedtestingcount", 0) == 0 ? "seedtestingcount"
+                                                                                             : "";
                !batchPrefix.empty() && seedInput.length() > batchPrefix.length()) {
         // Seven Sages: upstream only accepts "seed_testing_count<N>", which is unreachable in
         // practice - the seed arrives here with the underscores gone (typed as

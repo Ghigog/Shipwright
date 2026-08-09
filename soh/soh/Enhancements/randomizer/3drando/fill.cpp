@@ -1496,8 +1496,8 @@ int Fill() {
         // by rendering now, so the big/small distinction no longer matters here). Chests get
         // first claim on advancement; whatever the reserve holds back still places anywhere.
         if (ctx->GetOption(RSK_TIERED_CHEST_PLACEMENT)) {
-            std::vector<RandomizerCheck> emptyChests = GetEmptyLocations(FilterFromPool(
-                ctx->allLocations, [](const auto loc) {
+            std::vector<RandomizerCheck> emptyChests =
+                GetEmptyLocations(FilterFromPool(ctx->allLocations, [](const auto loc) {
                     return Rando::StaticData::GetLocation(loc)->IsBigChest() ||
                            Rando::StaticData::GetLocation(loc)->IsSmallChest();
                 }));
@@ -1547,8 +1547,8 @@ int Fill() {
             // slip into chests. Guard against it directly: claim every still-empty chest (big or
             // small, no distinction needed anymore) with a non-junk item first, so only
             // non-chest locations are left for the catch-all fill to hand real junk to.
-            std::vector<RandomizerCheck> emptyChests = GetEmptyLocations(FilterFromPool(
-                ctx->allLocations, [](const auto loc) {
+            std::vector<RandomizerCheck> emptyChests =
+                GetEmptyLocations(FilterFromPool(ctx->allLocations, [](const auto loc) {
                     return Rando::StaticData::GetLocation(loc)->IsBigChest() ||
                            Rando::StaticData::GetLocation(loc)->IsSmallChest();
                 }));
@@ -1564,8 +1564,8 @@ int Fill() {
                     // items here would silently remove them from the seed entirely.
                     Shuffle(nonJunkFiller);
                     SohUtils::AppendVector(
-                        itemPool, std::vector<RandomizerGet>(nonJunkFiller.begin() + emptyChests.size(),
-                                                             nonJunkFiller.end()));
+                        itemPool,
+                        std::vector<RandomizerGet>(nonJunkFiller.begin() + emptyChests.size(), nonJunkFiller.end()));
                     nonJunkFiller.resize(emptyChests.size());
                 }
                 FastFill(nonJunkFiller, emptyChests, true);
@@ -1587,10 +1587,9 @@ int Fill() {
             if (!emptyNonTrivialLocations.empty() && !nonJunkResidual.empty()) {
                 if (nonJunkResidual.size() > emptyNonTrivialLocations.size()) {
                     Shuffle(nonJunkResidual);
-                    SohUtils::AppendVector(itemPool,
-                                           std::vector<RandomizerGet>(nonJunkResidual.begin() +
-                                                                           emptyNonTrivialLocations.size(),
-                                                                       nonJunkResidual.end()));
+                    SohUtils::AppendVector(
+                        itemPool, std::vector<RandomizerGet>(nonJunkResidual.begin() + emptyNonTrivialLocations.size(),
+                                                             nonJunkResidual.end()));
                     nonJunkResidual.resize(emptyNonTrivialLocations.size());
                 }
                 FastFill(nonJunkResidual, emptyNonTrivialLocations, true);

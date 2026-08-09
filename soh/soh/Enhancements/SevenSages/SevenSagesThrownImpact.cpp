@@ -77,14 +77,14 @@ ThrownSize SizeOf(const Actor* actor) {
             // The one prop whose own params carry its size: bit 0 is ROCK_SMALL/ROCK_LARGE
             // (z_en_ishi.c:320). The large one is the silver-gauntlet rock.
             return (actor->params & 1) == ROCK_LARGE ? THROWN_MEDIUM : THROWN_SMALL;
-        case ACTOR_OBJ_BOMBIWA:  // brown bombable boulder, liftable via SevenSagesGauntletLift
-        case ACTOR_OBJ_HAMISHI:  // bronze boulder, likewise
+        case ACTOR_OBJ_BOMBIWA:    // brown bombable boulder, liftable via SevenSagesGauntletLift
+        case ACTOR_OBJ_HAMISHI:    // bronze boulder, likewise
         case ACTOR_BG_HEAVY_BLOCK: // the heavy stone pillar, vanilla's own golden-gauntlet lift
             return THROWN_LARGE;
-        case ACTOR_EN_KUSA:   // bush
-        case ACTOR_OBJ_TSUBO: // pot
+        case ACTOR_EN_KUSA:    // bush
+        case ACTOR_OBJ_TSUBO:  // pot
         case ACTOR_OBJ_KIBAKO: // small crate
-        case ACTOR_EN_NIW:    // cucco
+        case ACTOR_EN_NIW:     // cucco
             return THROWN_SMALL;
         default:
             break;

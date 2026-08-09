@@ -65,7 +65,8 @@ void BgSpot18Shutter_Init(Actor* thisx, PlayState* play) {
             }
         }
     } else {
-        if (GameInteractor_Should(VB_GORON_CITY_DOORS_UNLOCKED, Flags_GetInfTable(INFTABLE_GORON_CITY_DOORS_UNLOCKED))) {
+        if (GameInteractor_Should(VB_GORON_CITY_DOORS_UNLOCKED,
+                                  Flags_GetInfTable(INFTABLE_GORON_CITY_DOORS_UNLOCKED))) {
             this->dyna.actor.world.pos.x += 125.0f * Math_CosS(this->dyna.actor.world.rot.y);
             this->dyna.actor.world.pos.z -= 125.0f * Math_SinS(this->dyna.actor.world.rot.y);
             this->actionFunc = func_808B95AC;
