@@ -82,52 +82,31 @@ void SohFileSelect_DismissPresetModal() {
 
 // Seven Sages ships as two presets that both have to be applied before the seed is generated: the
 // rando settings shape the seed itself, the enhancements shape how it plays. Applying one and
-// missing the other is the failure mode this modal exists to remove - it doesn't error, it just
-// produces a run that's subtly wrong rather than obviously broken, which is far worse to debug from
-// a player's chair.
+// missing the other doesn't error - it produces a run that's subtly wrong rather than obviously
+// broken, which is far worse to debug from a player's chair. So the quest applies both itself
+// rather than asking. This used to be a "Set up Seven Sages?" modal, from back when the mod rode on
+// the plain Randomizer entry and had no way to know you meant it; the dedicated quest type is that
+// signal, and the confirmation became a click with only one sensible answer.
 //
-// Deliberately hooked where the player picks the Randomizer quest (z_file_choose.c), NOT where the
-// vanilla preset modal fires. That one runs on "Start Randomizer", by which point the seed already
-// exists and applying rando settings would change nothing about it.
-constexpr const char* CVAR_SEVEN_SAGES_CONFIGURED = CVAR_GENERAL("SevenSages.Configured");
-
+// Deliberately called where the player confirms the Seven Sages quest (z_file_choose.c), NOT where
+// the vanilla preset modal fires. That one runs on "Start Randomizer", by which point the seed
+// already exists and applying rando settings would change nothing about it.
+//
+// Unconditional, every time the quest is confirmed - not once-ever behind a "configured" flag. A
+// player who applies "Enhancements - Curated Randomizer" for a normal rando run in between would
+// otherwise come back to Seven Sages in exactly the half-configured state described above, with
+// nothing left to tell them. The cost is that hand-tweaked enhancements don't survive starting
+// another Seven Sages file, which is the cheaper failure: it's visible, and the ESC menu undoes it.
 static const char* kSevenSagesPresets[] = {
     "Rando Seed Settings - Seven Sages",
     "Enhancements - Seven Sages",
 };
 
-void SohFileSelect_ApplySevenSagesPresets() {
+extern "C" void SohFileSelect_ApplySevenSagesPresets() {
     for (const char* preset : kSevenSagesPresets) {
         // Empty section list means "every section the preset declares". applyPreset handles the
         // randomizer-section refresh (UpdateAllOptions / UpdateMenuTricks) internally.
         applyPreset(preset, {});
-    }
-    CVarSetInteger(CVAR_SEVEN_SAGES_CONFIGURED, 1);
-}
-
-void SohFileSelect_DismissSevenSagesModal() {
-    CVarSetInteger(CVAR_SEVEN_SAGES_CONFIGURED, 1);
-}
-
-void SohFileSelect_ShowSevenSagesModal() {
-    if (CVarGetInteger(CVAR_SEVEN_SAGES_CONFIGURED, 0)) {
-        return;
-    }
-    std::shared_ptr<SohModalWindow> modal = static_pointer_cast<SohModalWindow>(
-        Ship::Context::GetRawInstance()->GetWindow()->GetGui()->GetGuiWindow("Modal Window"));
-    if (modal->IsPopupOpen("Set up Seven Sages?")) {
-        modal->DismissPopup();
-    } else {
-        modal->RegisterPopup("Set up Seven Sages?",
-                             "\nSeven Sages needs two presets applied before you generate a seed, and it's easy to\n"
-                             "apply one and miss the other. This does both for you.\n"
-                             "\n"
-                             "After that, pick who you're playing: Randomizer -> Logic -> Selected Sage. Each sage\n"
-                             "starts somewhere different with a different kit, so it's the biggest choice you make.\n"
-                             "\n"
-                             "Then Generate Randomizer Seed, and Start Randomizer.\n",
-                             "Set it up for me", "I'll do it myself", SohFileSelect_ApplySevenSagesPresets,
-                             SohFileSelect_DismissSevenSagesModal);
     }
 }
 

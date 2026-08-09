@@ -712,15 +712,19 @@ void FileChoose_UpdateQuestMenu(GameState* thisx) {
             // select screen rather than trusted to survive from here.)
             CVarSetInteger(CVAR_GENERAL("SevenSages.QuestSelected"),
                            this->questType[this->buttonIndex] == QUEST_SEVENSAGES ? 1 : 0);
+
+            // Seven Sages: apply both presets here, while the seed still doesn't exist. The
+            // vanilla preset modal fires on "Start Randomizer", too late for rando settings.
+            // Picking the quest is the consent - there is no separate confirmation any more.
+            //
+            // Before the rotate below, not after: applyPreset SetBlock()s the whole
+            // `gRandoSettings` block, which clears SelectedSage. The sage select screen writes it
+            // back as the cursor moves, so as long as the presets land first the choice sticks.
+            if (this->questType[this->buttonIndex] == QUEST_SEVENSAGES) {
+                SohFileSelect_ApplySevenSagesPresets();
+            }
             CVarSave();
 
-            // Seven Sages: offer one-click preset setup here, while the seed still doesn't exist.
-            // The vanilla preset modal fires on "Start Randomizer", too late for rando settings.
-            // Only on the Seven Sages entry now that it has its own - picking plain Randomizer
-            // should no longer be interrupted by an offer to set up a different mod.
-            if (this->questType[this->buttonIndex] == QUEST_SEVENSAGES) {
-                SohFileSelect_ShowSevenSagesModal();
-            }
             this->prevConfigMode = this->configMode;
             // Seven Sages picks its sage first; that screen hands off to the randomizer
             // settings menu itself once the choice is made.

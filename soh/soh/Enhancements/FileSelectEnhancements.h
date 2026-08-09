@@ -8,7 +8,7 @@ extern "C" {
 #endif
 const char* SohFileSelect_GetSettingText(u8 optionIndex, u8 language);
 void SohFileSelect_ShowPresetModal();
-void SohFileSelect_ShowSevenSagesModal();
+void SohFileSelect_ApplySevenSagesPresets();
 #ifdef __cplusplus
 };
 #endif
