@@ -113,6 +113,10 @@ void SpawnFromStore() {
             p.live = nullptr;
             continue;
         }
+        // Before the spawn, not after: Actor_Spawn records the object bank slot on the actor and
+        // Actor_Draw uses it for the rest of the actor's life, so an object arriving later would
+        // not be picked up.
+        EnrichWorld::EnsureObjectLoaded(EnrichWorld::NativeObjectForActor(p.actorId));
         p.live = Actor_Spawn(&gPlayState->actorCtx, gPlayState, p.actorId, p.pos.x, p.pos.y, p.pos.z, p.rot.x, p.rot.y,
                              p.rot.z, p.params);
     }

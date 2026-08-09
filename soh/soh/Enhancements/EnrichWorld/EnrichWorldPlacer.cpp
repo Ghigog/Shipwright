@@ -169,7 +169,8 @@ void EnrichWorldPlacerWindow::DrawElement() {
             paramsOverride = def->params;
         }
         if (!choices[selectedProp].native) {
-            ImGui::TextWrapped("Not a vanilla prop for this room - it will work, but it won't look native.");
+            ImGui::TextWrapped("Not a vanilla prop for this room. Its object is loaded on demand when you "
+                               "place it, so it will render correctly - it just won't look native.");
         }
         if (def->note[0] != '\0') {
             ImGui::TextWrapped("%s", def->note);
@@ -230,6 +231,8 @@ void EnrichWorldPlacerWindow::DrawElement() {
             // (En_Wood02 among them) treat a non-zero home.rot.z as packed data, not a rotation.
             p.rot = { 0, player->actor.world.rot.y, 0 };
             p.label = EnrichWorld::ActorLabel(p.actorId, p.params);
+            // Same ordering requirement as the store's respawn - the bank slot is bound at spawn.
+            EnrichWorld::EnsureObjectLoaded(def->nativeObjectId);
             p.live = Actor_Spawn(&gPlayState->actorCtx, gPlayState, p.actorId, p.pos.x, p.pos.y, p.pos.z, p.rot.x,
                                  p.rot.y, p.rot.z, p.params);
 

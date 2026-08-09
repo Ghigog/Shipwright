@@ -114,6 +114,26 @@ uint16_t VariantMask(int16_t actorId);
  */
 uint16_t OptionMask(int16_t actorId);
 
+/**
+ * The object an actor's model lives in, found from the first palette entry using it, or
+ * OBJECT_ID_MAX when the actor isn't in the palette.
+ *
+ * Needed because a saved Placement carries only an actor id and params - the store has to be
+ * able to work out what to load for a row it is about to respawn.
+ */
+int16_t NativeObjectForActor(int16_t actorId);
+
+/**
+ * Make sure `objectId` is resident in the current room, loading it into a spare object bank slot
+ * if it isn't. Returns false if it could not be made resident.
+ *
+ * This is what lets a prop be placed outside the scenes that carry its object. Actor_Spawn falls
+ * back to bank slot 0 when an object is missing, and Actor_Draw then points segment 6 at
+ * gameplay_keep - so the model's own vertices and textures resolve against the wrong data and
+ * the prop renders as garbage or not at all. Loading the object first is what makes it real.
+ */
+bool EnsureObjectLoaded(int16_t objectId);
+
 /** Subheading this prop belongs under in the placer, e.g. "Plants & ground". Never null. */
 const char* PropGroup(int16_t actorId);
 

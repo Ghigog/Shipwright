@@ -8,8 +8,16 @@
  *
  * `requiredObjectId` is a hard gate: props that would Actor_Kill themselves here are dropped
  * from the list entirely, so the silent failure documented in EnrichWorldProps.cpp can't be
- * reached by hand-placing. `nativeObjectId` only sorts the list - non-native props still work in
- * SoH and stay placeable, just under a "not native" heading.
+ * reached by hand-placing.
+ *
+ * `nativeObjectId` sorts the list AND is loaded on demand. An earlier version of this comment
+ * claimed non-native props render fine because SoH resolves display lists by OTR resource name -
+ * that is true of the display list symbol but not of the vertices and textures inside it, which
+ * still resolve through segment 6. Actor_Draw points segment 6 at the actor's object bank slot,
+ * and Actor_Spawn falls back to slot 0 (gameplay_keep) when the object is missing, so the model
+ * came out as garbage or nothing at all. EnsureObjectLoaded now loads the object into a spare
+ * bank slot before the spawn, which is what makes a prop genuinely placeable outside its home
+ * scene rather than merely offered.
  *
  * Variants are separate entries rather than a raw params box, because "Tree - oval, green" is a
  * choice a person can make and 0x0205 isn't. Params stay editable in the placer for the cases
@@ -27,6 +35,12 @@ extern "C" {
 #include "functions.h"
 #include "macros.h"
 extern PlayState* gPlayState;
+
+// Defined in z_scene.c but never prototyped in functions.h, which the rest of the object API
+// does live in. Declared here rather than added there on purpose: functions.h is included by
+// most of the tree, so a one-line addition to it costs a full rebuild (see CLAUDE.md) for a
+// function only this file calls.
+s32 Object_Spawn(ObjectContext* objectCtx, s16 objectId);
 }
 
 namespace EnrichWorld {
@@ -188,7 +202,6 @@ const std::vector<PropDef>& AllProps() {
         { "Block, clear", ACTOR_BG_GND_DARKMEIRO, OBJECT_DEMO_KEKKAI, kNoObjectNeeded, 0, "" },
         { "Shadow Temple trap", ACTOR_BG_HAKA_TRAP, OBJECT_HAKA_OBJECTS, kNoObjectNeeded, 0, "" },
         { "Statue, hammer", ACTOR_BG_HIDAN_DALM, OBJECT_HIDAN_OBJECTS, kNoObjectNeeded, 0, "" },
-        { "Archery target", ACTOR_EN_YABUSAME_MARK, OBJECT_GAMEPLAY_KEEP, kNoObjectNeeded, 0, "" },
         { "Ice platform", ACTOR_BG_SPOT08_ICEBLOCK, OBJECT_SPOT08_OBJ, kNoObjectNeeded, 0, "" },
         { "Window, stained glass", ACTOR_BG_TOKI_HIKARI, OBJECT_TOKI_OBJECTS, kNoObjectNeeded, 0, "" },
         { "Platform, stone (fire)", ACTOR_BG_HIDAN_SIMA, OBJECT_HIDAN_OBJECTS, kNoObjectNeeded, 0, "" },
@@ -417,7 +430,6 @@ static const struct {
     { ACTOR_BG_HIDAN_ROCK, "Structures" },         { ACTOR_BG_JYA_BLOCK, "Structures" },
     { ACTOR_BG_GND_DARKMEIRO, "Structures" },      { ACTOR_OBJ_OSHIHIKI, "Structures" },
     { ACTOR_OBJ_MAKEOSHIHIKI, "Structures" },      { ACTOR_OBJ_BLOCKSTOP, "Structures" },
-    { ACTOR_EN_YABUSAME_MARK, "Structures" },
 
     { ACTOR_BG_HIDAN_SIMA, "Machinery" },          { ACTOR_BG_HIDAN_HROCK, "Machinery" },
     { ACTOR_BG_HIDAN_SYOKU, "Machinery" },         { ACTOR_BG_HIDAN_FSLIFT, "Machinery" },
@@ -473,6 +485,36 @@ bool AreParamsSafe(int16_t actorId, int16_t params) {
         return true;
     }
     return (params & layout->variantMask) < layout->variantCount;
+}
+
+int16_t NativeObjectForActor(int16_t actorId) {
+    for (const auto& def : AllProps()) {
+        if (def.actorId == actorId) {
+            return def.nativeObjectId;
+        }
+    }
+    return kNoObjectNeeded;
+}
+
+bool EnsureObjectLoaded(int16_t objectId) {
+    if (gPlayState == nullptr || objectId <= 0 || objectId >= OBJECT_ID_MAX) {
+        return false;
+    }
+    if (Object_GetIndex(&gPlayState->objectCtx, objectId) >= 0) {
+        return true; // already resident, which is the common case
+    }
+
+    // Object_Spawn asserts rather than fails when the bank is full, and an assert that is
+    // compiled out in a release build would corrupt the object arena instead. Refuse early: a
+    // prop that doesn't appear is a far better outcome than heap damage. OBJECT_EXCHANGE_BANK_MAX
+    // is 128 and a busy vanilla room uses well under twenty, so this is headroom rather than a
+    // real constraint - Lon Lon Ranch loads ten.
+    if (gPlayState->objectCtx.num >= OBJECT_EXCHANGE_BANK_MAX - 1) {
+        return false;
+    }
+
+    Object_Spawn(&gPlayState->objectCtx, objectId);
+    return Object_GetIndex(&gPlayState->objectCtx, objectId) >= 0;
 }
 
 bool IsPropNative(const PropDef& def) {
