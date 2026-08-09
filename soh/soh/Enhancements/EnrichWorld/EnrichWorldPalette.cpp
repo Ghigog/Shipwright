@@ -10,14 +10,33 @@
  * from the list entirely, so the silent failure documented in EnrichWorldProps.cpp can't be
  * reached by hand-placing.
  *
- * `nativeObjectId` sorts the list AND is loaded on demand. An earlier version of this comment
- * claimed non-native props render fine because SoH resolves display lists by OTR resource name -
- * that is true of the display list symbol but not of the vertices and textures inside it, which
- * still resolve through segment 6. Actor_Draw points segment 6 at the actor's object bank slot,
- * and Actor_Spawn falls back to slot 0 (gameplay_keep) when the object is missing, so the model
- * came out as garbage or nothing at all. EnsureObjectLoaded now loads the object into a spare
- * bank slot before the spawn, which is what makes a prop genuinely placeable outside its home
- * scene rather than merely offered.
+ * `nativeObjectId` sorts the list and is registered in the bank on demand, but it does NOT decide
+ * whether a prop renders. SoH's DmaMgr_SendRequest1 is a no-op, so objects are never copied into
+ * the bank at all and every model resolves by OTR resource name - a prop draws correctly in a
+ * scene that has never heard of its object. Registering the object still matters for the actors
+ * that gate themselves on Object_GetIndex.
+ *
+ * When a prop does not appear, the cause is almost always the actor killing itself in Init on a
+ * condition the room cannot satisfy - a scene setup layer, an event flag, Link's age, the scene
+ * number. Bg_Toki_Hikari wants the Door of Time opened; Bg_Spot09_Obj wants a specific
+ * age/carpenter state; En_Yabusame_Mark wanted setup layer 4 and was dropped for it. The placer
+ * marks these [dead] in its placed list rather than trying to prove survivability up front.
+ *
+ * A separate and nastier screen: actors that index the *scene's* waterbox array. A room's
+ * collision header carries however many waterboxes that scene was authored with, and in SoH an
+ * empty one leaves colHeader->waterBoxes null (CollisionHeaderFactory hands over vector::data()
+ * on an empty vector). Every engine reader guards on numWaterBoxes == 0 first; these actors do
+ * not, because in their home scene the box is always there. Outside it they touch null:
+ *
+ *   Bg_Spot01_Idomizu  writes waterBoxes[0].ySurface every update - the Kakariko well's water
+ *                      level IS that field, so it cannot be made scene-independent.
+ *   Bg_Mizu_Bwall      reads waterBoxes[2].ySurface to pick its alpha - hardcoded to the Water
+ *                      Temple's third box.
+ *
+ * Both are dropped. Note this class fails on *update*, not on Init, so it survives the [dead]
+ * marker and every other screen here - the placer's list showed a healthy prop right up until
+ * it entered the update culling volume and took the process down. That is why the screen is a
+ * table entry rather than something checked at spawn.
  *
  * Variants are separate entries rather than a raw params box, because "Tree - oval, green" is a
  * choice a person can make and 0x0205 isn't. Params stay editable in the placer for the cases
@@ -205,7 +224,7 @@ const std::vector<PropDef>& AllProps() {
         { "Ice platform", ACTOR_BG_SPOT08_ICEBLOCK, OBJECT_SPOT08_OBJ, kNoObjectNeeded, 0, "" },
         { "Window, stained glass", ACTOR_BG_TOKI_HIKARI, OBJECT_TOKI_OBJECTS, kNoObjectNeeded, 0, "" },
         { "Platform, stone (fire)", ACTOR_BG_HIDAN_SIMA, OBJECT_HIDAN_OBJECTS, kNoObjectNeeded, 0, "" },
-        { "Well water", ACTOR_BG_SPOT01_IDOMIZU, OBJECT_SPOT01_OBJECTS, kNoObjectNeeded, 0, "" },
+        // Bg_Spot01_Idomizu (well water) dropped - see the waterbox note in the file header.
         { "Block stop", ACTOR_OBJ_BLOCKSTOP, OBJECT_GAMEPLAY_KEEP, kNoObjectNeeded, 0, "" },
         { "Water vortex", ACTOR_EN_STREAM, OBJECT_STREAM, kNoObjectNeeded, 0, "" },
         { "Drawbridge", ACTOR_BG_SPOT00_HANEBASI, OBJECT_SPOT00_OBJECTS, kNoObjectNeeded, 0, "" },
@@ -214,7 +233,8 @@ const std::vector<PropDef>& AllProps() {
         { "Waterfall, Zora's", ACTOR_BG_SPOT07_TAKI, OBJECT_SPOT07_OBJECT, kNoObjectNeeded, 0, "" },
         { "Bombable wall, desert", ACTOR_BG_SPOT11_BAKUDANKABE, OBJECT_SPOT11_OBJ, kNoObjectNeeded, 0, "" },
         { "Spike platform, huge", ACTOR_BG_HIDAN_HROCK, OBJECT_HIDAN_OBJECTS, kNoObjectNeeded, 0, "" },
-        { "Bombable wall, stone", ACTOR_BG_MIZU_BWALL, OBJECT_MIZU_OBJECTS, kNoObjectNeeded, 0, "" },
+        // Bg_Mizu_Bwall dropped - same waterbox reason, see the file header. The other four
+        // bombable walls below are safe; only the Water Temple one reads the waterbox array.
         { "Wall, climbable sliding", ACTOR_BG_JYA_ZURERUKABE, OBJECT_JYA_OBJ, kNoObjectNeeded, 0, "" },
         { "Eye statue", ACTOR_BG_MENKURI_EYE, OBJECT_MENKURI_OBJECTS, kNoObjectNeeded, 0, "" },
         { "Drawbridge, broken", ACTOR_BG_SPOT00_BREAK, OBJECT_SPOT00_BREAK, kNoObjectNeeded, 0, "" },
@@ -398,7 +418,7 @@ static const struct {
     { ACTOR_EN_BOMBF, "Rocks & breakables" },      { ACTOR_BG_HAKA_TUBO, "Rocks & breakables" },
     { ACTOR_BG_SPOT18_BASKET, "Rocks & breakables" }, { ACTOR_BG_SPOT15_RRBOX, "Rocks & breakables" },
     { ACTOR_EN_TUBO_TRAP, "Rocks & breakables" },  { ACTOR_BG_BOMBWALL, "Rocks & breakables" },
-    { ACTOR_BG_MIZU_BWALL, "Rocks & breakables" }, { ACTOR_BG_JYA_BOMBIWA, "Rocks & breakables" },
+    { ACTOR_BG_JYA_BOMBIWA, "Rocks & breakables" },
     { ACTOR_BG_SPOT08_BAKUDANKABE, "Rocks & breakables" },
     { ACTOR_BG_SPOT11_BAKUDANKABE, "Rocks & breakables" },
     { ACTOR_BG_SPOT17_BAKUDANKABE, "Rocks & breakables" }, { ACTOR_DEMO_GJ, "Rocks & breakables" },
@@ -415,7 +435,7 @@ static const struct {
     { ACTOR_BG_ICE_TURARA, "Water & ice" },        { ACTOR_BG_ICE_SHELTER, "Water & ice" },
     { ACTOR_EN_SIOFUKI, "Water & ice" },           { ACTOR_EN_STREAM, "Water & ice" },
     { ACTOR_BG_MIZU_UZU, "Water & ice" },          { ACTOR_BG_SPOT07_TAKI, "Water & ice" },
-    { ACTOR_BG_SPOT01_IDOMIZU, "Water & ice" },    { ACTOR_BG_ICE_OBJECTS, "Water & ice" },
+    { ACTOR_BG_ICE_OBJECTS, "Water & ice" },
     { ACTOR_BG_GND_ICEBLOCK, "Water & ice" },      { ACTOR_BG_SPOT08_ICEBLOCK, "Water & ice" },
 
     { ACTOR_EN_KANBAN, "Structures" },             { ACTOR_EN_GS, "Structures" },
@@ -485,6 +505,15 @@ bool AreParamsSafe(int16_t actorId, int16_t params) {
         return true;
     }
     return (params & layout->variantMask) < layout->variantCount;
+}
+
+bool IsInPalette(int16_t actorId) {
+    for (const auto& def : AllProps()) {
+        if (def.actorId == actorId) {
+            return true;
+        }
+    }
+    return false;
 }
 
 int16_t NativeObjectForActor(int16_t actorId) {

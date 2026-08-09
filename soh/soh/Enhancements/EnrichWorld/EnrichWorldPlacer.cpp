@@ -132,31 +132,66 @@ void EnrichWorldPlacerWindow::DrawElement() {
     if (choices.empty()) {
         ImGui::TextWrapped("No palette props can be placed in this room.");
     } else {
-        if (selectedProp >= static_cast<int>(choices.size())) {
-            selectedProp = 0;
+        // Categories present in this room, in palette order. Built per frame from `choices` so a
+        // category with nothing placeable here never appears at all.
+        std::vector<const char*> groups;
+        for (const auto& choice : choices) {
+            const char* group = EnrichWorld::PropGroup(choice.def->actorId);
+            const bool seen = std::any_of(groups.begin(), groups.end(),
+                                          [&](const char* g) { return std::strcmp(g, group) == 0; });
+            if (!seen) {
+                groups.push_back(group);
+            }
+        }
+        selectedGroup = std::clamp(selectedGroup, 0, static_cast<int>(groups.size()) - 1);
+
+        if (ImGui::BeginCombo("Category", groups[selectedGroup])) {
+            for (int i = 0; i < static_cast<int>(groups.size()); i++) {
+                if (ImGui::Selectable(groups[i], i == selectedGroup)) {
+                    selectedGroup = i;
+                    selectedProp = 0; // a new category starts at its first prop
+                    paramsEdited = false;
+                }
+            }
+            ImGui::EndCombo();
         }
 
-        if (ImGui::BeginCombo("Prop", choices[selectedProp].def->label)) {
+        // Props inside the chosen category, natives first - PlaceableProps already sorted that
+        // way, so filtering preserves it.
+        std::vector<int> inGroup;
+        for (int i = 0; i < static_cast<int>(choices.size()); i++) {
+            if (std::strcmp(EnrichWorld::PropGroup(choices[i].def->actorId), groups[selectedGroup]) == 0) {
+                inGroup.push_back(i);
+            }
+        }
+        selectedProp = std::clamp(selectedProp, 0, static_cast<int>(inGroup.size()) - 1);
+
+        // Step through the category one prop at a time. The arrows wrap, because with a category
+        // of two or three entries stepping off the end and stopping is just annoying.
+        if (UIWidgets::Button("-##prop")) {
+            selectedProp = (selectedProp + static_cast<int>(inGroup.size()) - 1) % static_cast<int>(inGroup.size());
+            paramsEdited = false;
+        }
+        ImGui::SameLine();
+        if (UIWidgets::Button("+##prop")) {
+            selectedProp = (selectedProp + 1) % static_cast<int>(inGroup.size());
+            paramsEdited = false;
+        }
+        ImGui::SameLine();
+        ImGui::Text("%d/%d", selectedProp + 1, static_cast<int>(inGroup.size()));
+
+        const int chosen = inGroup[selectedProp];
+        if (ImGui::BeginCombo("Prop", choices[chosen].def->label)) {
             bool headed = false;
-            const char* shownGroup = nullptr;
-            for (int i = 0; i < static_cast<int>(choices.size()); i++) {
-                // One heading at the boundary between the two halves PlaceableProps sorted into,
-                // then a subheading per group within each half. The group heading is reset at the
-                // boundary so both halves label their first group rather than inheriting it.
-                if (!choices[i].native && !headed) {
+            for (int i = 0; i < static_cast<int>(inGroup.size()); i++) {
+                if (!choices[inGroup[i]].native && !headed) {
                     headed = true;
-                    shownGroup = nullptr;
                     if (i > 0) {
                         ImGui::Separator();
                     }
                     ImGui::TextDisabled("Not native to this room");
                 }
-                const char* group = EnrichWorld::PropGroup(choices[i].def->actorId);
-                if (shownGroup == nullptr || std::strcmp(shownGroup, group) != 0) {
-                    shownGroup = group;
-                    ImGui::TextDisabled("  %s", group);
-                }
-                if (ImGui::Selectable(choices[i].def->label, i == selectedProp)) {
+                if (ImGui::Selectable(choices[inGroup[i]].def->label, i == selectedProp)) {
                     selectedProp = i;
                     paramsEdited = false; // a new prop means a new sensible default
                 }
@@ -164,11 +199,11 @@ void EnrichWorldPlacerWindow::DrawElement() {
             ImGui::EndCombo();
         }
 
-        const PropDef* def = choices[selectedProp].def;
+        const PropDef* def = choices[chosen].def;
         if (!paramsEdited) {
             paramsOverride = def->params;
         }
-        if (!choices[selectedProp].native) {
+        if (!choices[chosen].native) {
             ImGui::TextWrapped("Not a vanilla prop for this room. Its object is loaded on demand when you "
                                "place it, so it will render correctly - it just won't look native.");
         }
@@ -262,10 +297,28 @@ void EnrichWorldPlacerWindow::DrawElement() {
             if (p.sceneId != scene || p.room != room) {
                 continue;
             }
-            const std::string row =
-                fmt::format("{}##{}  ({:.0f}, {:.0f}, {:.0f})", p.label, i, p.pos.x, p.pos.y, p.pos.z);
+            // `live` is set at spawn and cleared by the OnActorDestroy hook, so a null pointer on
+            // a placement in the room you are standing in means the actor is not there - almost
+            // always because it Actor_Killed itself during Init. Dozens of actors do that on
+            // conditions a hand-placed prop can't satisfy: a scene setup layer, Link's age, an
+            // event flag, a switch flag, the scene number. Proving each one survivable in advance
+            // is not practical, but showing which ones actually made it costs nothing and turns a
+            // silent disappearance into something you can see.
+            const bool alive = p.live != nullptr;
+            if (!alive) {
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.45f, 0.45f, 1.0f));
+            }
+            const std::string row = fmt::format("{}{}##{}  ({:.0f}, {:.0f}, {:.0f})", alive ? "" : "[dead] ", p.label,
+                                                i, p.pos.x, p.pos.y, p.pos.z);
             if (ImGui::Selectable(row.c_str(), i == selectedPlacement)) {
                 selectedPlacement = i;
+            }
+            if (!alive) {
+                ImGui::PopStyleColor();
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("This actor killed itself on spawn. Usually it wants something this "
+                                      "scene doesn't provide - a setup layer, an event flag, Link's age.");
+                }
             }
         }
     }
@@ -320,7 +373,32 @@ void EnrichWorldPlacerWindow::DrawElement() {
                 }
             }
 
-            if (UIWidgets::Button("Delete")) {
+            bool duplicated = false;
+            if (UIWidgets::Button("Duplicate")) {
+                duplicated = true;
+                // Offset rather than placed exactly on top, so the copy is visible and clickable
+                // straight away instead of z-fighting with its original. 30 units is roughly a
+                // bush's width - close enough to read as a pair, far enough to grab.
+                Placement copy = p;
+                copy.pos.x += 30.0f;
+                copy.pos.z += 30.0f;
+                if (snapToGround) {
+                    copy.pos.y = GroundBelow(copy.pos.x, copy.pos.y, copy.pos.z);
+                }
+                EnrichWorld::EnsureObjectLoaded(EnrichWorld::NativeObjectForActor(copy.actorId));
+                copy.live = Actor_Spawn(&gPlayState->actorCtx, gPlayState, copy.actorId, copy.pos.x, copy.pos.y,
+                                        copy.pos.z, copy.rot.x, copy.rot.y, copy.rot.z, copy.params);
+
+                // push_back can reallocate, so `p` is dangling from here on - don't touch it.
+                EnrichWorld::Placements().push_back(copy);
+                EnrichWorld::MarkStoreDirty();
+                selectedPlacement = static_cast<int>(EnrichWorld::Placements().size()) - 1;
+            }
+            ImGui::SameLine();
+            // `p` is a reference into Placements() and Duplicate just push_back'd, so it is
+            // dangling now. Skipping the rest of the block is what makes that safe rather than
+            // relying on ImGui not reporting two buttons pressed in one frame.
+            if (!duplicated && UIWidgets::Button("Delete")) {
                 // The spawned instance goes too, otherwise it lingers until the room reloads and
                 // looks like the delete silently failed.
                 if (p.live != nullptr) {

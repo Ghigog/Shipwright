@@ -115,6 +115,17 @@ uint16_t VariantMask(int16_t actorId);
 uint16_t OptionMask(int16_t actorId);
 
 /**
+ * Whether the palette still offers this actor at all.
+ *
+ * The store is a JSON file that outlives the palette, so a row can name an actor that has since
+ * been withdrawn - and actors get withdrawn precisely because they were found to misbehave
+ * (En_Yabusame_Mark dies on spawn; Bg_Spot01_Idomizu and Bg_Mizu_Bwall take the process down on
+ * their first update). Respawning one would reintroduce the exact fault the withdrawal fixed, on
+ * a save the player can't easily connect to it.
+ */
+bool IsInPalette(int16_t actorId);
+
+/**
  * The object an actor's model lives in, found from the first palette entry using it, or
  * OBJECT_ID_MAX when the actor isn't in the palette.
  *
@@ -124,13 +135,18 @@ uint16_t OptionMask(int16_t actorId);
 int16_t NativeObjectForActor(int16_t actorId);
 
 /**
- * Make sure `objectId` is resident in the current room, loading it into a spare object bank slot
- * if it isn't. Returns false if it could not be made resident.
+ * Register `objectId` in the current room's object bank if it isn't there. Returns false if it
+ * could not be.
  *
- * This is what lets a prop be placed outside the scenes that carry its object. Actor_Spawn falls
- * back to bank slot 0 when an object is missing, and Actor_Draw then points segment 6 at
- * gameplay_keep - so the model's own vertices and textures resolve against the wrong data and
- * the prop renders as garbage or not at all. Loading the object first is what makes it real.
+ * NOT about rendering, despite an earlier version of this comment. SoH's DmaMgr_SendRequest1 is
+ * `return 0;` - a no-op (z_std_dma.c:437, the real body is #if 0'd out) - so no object has ever
+ * been copied into the bank and segment 6 points at nothing in particular. Models resolve
+ * entirely by OTR resource name, which is why props render correctly in scenes that never load
+ * their object.
+ *
+ * What this does buy is the object *bookkeeping*: Object_Spawn sets status[n].id, so the actors
+ * that gate on Object_GetIndex or Object_IsLoaded - En_Kusa and Obj_Tsubo in this palette - stop
+ * killing themselves outside their home scenes.
  */
 bool EnsureObjectLoaded(int16_t objectId);
 

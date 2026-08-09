@@ -113,6 +113,14 @@ void SpawnFromStore() {
             p.live = nullptr;
             continue;
         }
+        // Same reasoning one step further out: a stored row can name an actor the palette used to
+        // offer and has since withdrawn, and withdrawal is what we do to actors that misbehave.
+        // Anyone who placed a well water before it was dropped would otherwise crash on every
+        // load of that room with nothing on screen to say why.
+        if (!EnrichWorld::IsInPalette(p.actorId)) {
+            p.live = nullptr;
+            continue;
+        }
         // Before the spawn, not after: Actor_Spawn records the object bank slot on the actor and
         // Actor_Draw uses it for the rest of the actor's life, so an object arriving later would
         // not be picked up.
