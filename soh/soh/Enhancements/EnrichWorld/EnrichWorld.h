@@ -94,6 +94,17 @@ bool IsPropUsable(const PropDef& def);
  */
 bool AreParamsSafe(int16_t actorId, int16_t params);
 
+/**
+ * The bits of params that decide *which prop* an actor is, and which the placer therefore holds
+ * fixed to whatever the chosen palette entry says. 0 when the actor has no such field, in which
+ * case params is editable in full.
+ *
+ * This is what stops the prop dropdown and the params box contradicting each other. Obj_Mure's
+ * Bugs, Fish and Butterflies differ only in bits 0-4, so a free-form params box let you select
+ * Butterflies and edit it into a Fish - or into one of the two types the actor kills itself on.
+ */
+int16_t VariantMask(int16_t actorId);
+
 /** Human-readable name for an actor id, falling back to the raw number. */
 std::string ActorLabel(int16_t actorId, int16_t params);
 

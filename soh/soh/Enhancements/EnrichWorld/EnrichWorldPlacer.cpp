@@ -154,23 +154,36 @@ void EnrichWorldPlacerWindow::DrawElement() {
             ImGui::TextWrapped("%s", def->note);
         }
 
+        // Which prop this is lives in the same 16-bit word as its options, so the box edits only
+        // the bits outside the variant mask and the palette entry keeps the rest. Editing the
+        // whole word let "Butterflies" be turned into a Fish, or into an Obj_Mure type that kills
+        // itself on init - the dropdown and the box were two views of one value, fighting.
+        const uint16_t variantMask = static_cast<uint16_t>(EnrichWorld::VariantMask(def->actorId));
+        const uint16_t optionMask = static_cast<uint16_t>(~variantMask);
+        const uint16_t identity = static_cast<uint16_t>(def->params) & variantMask;
+
+        int options = static_cast<uint16_t>(paramsOverride) & optionMask;
         ImGui::PushItemWidth(ImGui::GetFontSize() * 6);
-        if (ImGui::InputInt("params", &paramsOverride)) {
+        if (ImGui::InputInt(variantMask != 0 ? "options" : "params", &options)) {
+            paramsOverride = identity | (static_cast<uint16_t>(options) & optionMask);
             paramsEdited = true;
         }
         ImGui::PopItemWidth();
         ImGui::SameLine();
-        ImGui::Text("(0x%X)", static_cast<uint16_t>(paramsOverride));
+        ImGui::Text("-> params 0x%X", static_cast<uint16_t>(paramsOverride));
 
-        // The params box is free-form on purpose (drop tables live in the high byte of several of
-        // these actors), but a handful of variant values crash the game outright rather than
-        // doing nothing - see AreParamsSafe. Refuse the placement rather than clamping, because
-        // silently placing a different prop than the number asked for is its own bug.
+        if (variantMask != 0) {
+            ImGui::TextWrapped("Bits 0x%X are the prop's identity and follow the dropdown. This box edits "
+                               "the rest - drop tables, flock sizes, flag slots.",
+                               variantMask);
+        }
+
+        // Belt and braces: the mask above means a palette entry can no longer produce an
+        // out-of-range variant, but actors with no known layout still take a free-form word.
         const bool paramsSafe = EnrichWorld::AreParamsSafe(def->actorId, static_cast<int16_t>(paramsOverride));
         if (!paramsSafe) {
-            ImGui::TextWrapped("This actor has no variant %d - placing it would read past the end of its "
-                               "table and crash. Pick a palette entry above for a valid variant.",
-                               paramsOverride & 3);
+            ImGui::TextWrapped("This actor has no such variant - placing it would read past the end of "
+                               "its table and crash.");
         }
 
         ImGui::Checkbox("Snap to ground", &snapToGround);

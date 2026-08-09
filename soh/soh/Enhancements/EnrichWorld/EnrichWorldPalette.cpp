@@ -110,39 +110,66 @@ const std::vector<PropDef>& AllProps() {
     return props;
 }
 
-// Actors that index a variant table with a mask wider than the table is long - see AreParamsSafe.
-// `mask` is the bits vanilla uses as the index, `count` how many entries actually exist.
-//
-// Verified against the tables themselves rather than assumed from the palette's own variants:
-//   Obj_Hana   sHanaParams[3]  indexed `params & 3` (z_obj_hana.c:79, and again in Destroy,
-//                              Update and Draw - Draw is the one that crashes, it feeds
-//                              Gfx_DrawDListOpa)
-//   En_Kusa    dLists[3]       indexed `params & 3` (z_en_kusa.c:516); sObjectIds[3] likewise
-//                              at :263
-//   Obj_Mure2  D_80B9A818[3]   indexed `params & 3` (z_obj_mure2.c:57 and six more)
-//
-// Not listed, and checked: En_Ishi masks `& 1` against two-entry tables, Obj_Tsubo uses
-// `(params >> 8) & 1` against two entries, Obj_Mure range-checks its type and Actor_Kills on a
-// miss, and En_Wood02 switches on params rather than indexing. Those are all safe as written.
-struct VariantTable {
+/**
+ * How each actor slices its params word.
+ *
+ * `variantMask` is the part that decides *which prop this is* - the palette entry owns it, and
+ * the placer holds it fixed. Everything outside the mask is a genuine per-placement option (drop
+ * tables, flock sizes, flag slots) and stays editable. Without this the two controls contradict
+ * each other: "Butterflies" and "Fish" are the same actor differing only in bits 0-4, so editing
+ * params turned one into the other, and the values in between are types the actor kills itself on.
+ *
+ * `variantCount` is how many variants the actor's own tables actually define, where the mask is a
+ * plain 0..n-1 index into them. 0 means it isn't one - Obj_Tsubo's bit is a flag, En_Wood02
+ * switches on the value rather than indexing - and no bounds check applies.
+ *
+ * Read off the actors themselves rather than inferred from the palette:
+ *   Obj_Mure    type = params & 0x1F (z_obj_mure.c:95); ptn, svNum and chNum live above it
+ *   Obj_Hana    sHanaParams[3] indexed `params & 3` (z_obj_hana.c:79, and in Draw at :113)
+ *   En_Kusa     dLists[3] indexed `params & 3` (z_en_kusa.c:516); sObjectIds[3] at :263
+ *   Obj_Mure2   D_80B9A818[3] indexed `params & 3` (z_obj_mure2.c:57 and six more)
+ *   En_Ishi     type = params & 1; high nibble of byte 1 is the drop table
+ *   Obj_Tsubo   object choice is `(params >> 8) & 1`
+ *   En_Wood02   low byte is the tree/bush type, high byte the drop table
+ *   En_Light    params & 0xF sets type and scale
+ *   Obj_Syokudai  params >> 0xC picks gold/timed/wooden
+ *
+ * Actors absent from this table get variantMask 0: params stays fully editable, which is right
+ * for the ones that treat it as flags or ignore it (signposts, crates, gossip stones). None of
+ * them has an out-of-bounds variant table - that was checked actor by actor, not assumed.
+ */
+struct ActorParamsLayout {
     int16_t actorId;
-    int16_t mask;
-    int16_t count;
+    int16_t variantMask;
+    int16_t variantCount;
 };
 
-static const VariantTable kVariantTables[] = {
-    { ACTOR_OBJ_HANA, 3, 3 },
-    { ACTOR_EN_KUSA, 3, 3 },
-    { ACTOR_OBJ_MURE2, 3, 3 },
+static const ActorParamsLayout kParamsLayouts[] = {
+    { ACTOR_OBJ_MURE, 0x1F, 0 },   { ACTOR_OBJ_HANA, 0x03, 3 },     { ACTOR_EN_KUSA, 0x03, 3 },
+    { ACTOR_OBJ_MURE2, 0x03, 3 },  { ACTOR_EN_ISHI, 0x01, 2 },      { ACTOR_OBJ_TSUBO, 0x0100, 0 },
+    { ACTOR_EN_WOOD02, 0x00FF, 0 }, { ACTOR_EN_LIGHT, 0x000F, 0 },  { ACTOR_OBJ_SYOKUDAI, (int16_t)0xF000, 0 },
 };
 
-bool AreParamsSafe(int16_t actorId, int16_t params) {
-    for (const auto& table : kVariantTables) {
-        if (table.actorId == actorId) {
-            return (params & table.mask) < table.count;
+static const ActorParamsLayout* FindLayout(int16_t actorId) {
+    for (const auto& layout : kParamsLayouts) {
+        if (layout.actorId == actorId) {
+            return &layout;
         }
     }
-    return true;
+    return nullptr;
+}
+
+int16_t VariantMask(int16_t actorId) {
+    const ActorParamsLayout* layout = FindLayout(actorId);
+    return layout == nullptr ? 0 : layout->variantMask;
+}
+
+bool AreParamsSafe(int16_t actorId, int16_t params) {
+    const ActorParamsLayout* layout = FindLayout(actorId);
+    if (layout == nullptr || layout->variantCount == 0) {
+        return true;
+    }
+    return (params & layout->variantMask) < layout->variantCount;
 }
 
 bool IsPropNative(const PropDef& def) {
