@@ -80,6 +80,20 @@ bool IsPropNative(const PropDef& def);
 /** True unless `def` needs an object the current room hasn't loaded. False means it would die. */
 bool IsPropUsable(const PropDef& def);
 
+/**
+ * True unless `params` would index one of `actorId`'s variant tables out of bounds.
+ *
+ * Several vanilla actors mask the variant out of params with `& 3` but only define three
+ * variants, so a params of 3 reads one entry past the end of the table. What's there decides how
+ * it fails: Obj_Hana and En_Kusa index arrays of Gfx*, so the garbage pointer reaches the display
+ * list interpreter and segfaults; Obj_Mure2 indexes child-spawn counts and spawns a garbage
+ * number of actors. None of this is reachable in vanilla, where params come from the archive.
+ *
+ * Keyed on actor id rather than PropDef because saved placements carry only an id and params -
+ * the store has to be able to check an entry it's about to respawn.
+ */
+bool AreParamsSafe(int16_t actorId, int16_t params);
+
 /** Human-readable name for an actor id, falling back to the raw number. */
 std::string ActorLabel(int16_t actorId, int16_t params);
 

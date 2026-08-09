@@ -106,6 +106,13 @@ void SpawnFromStore() {
             p.live = nullptr;
             continue;
         }
+        // The placer refuses to create these, but the store is a plain JSON file that predates
+        // that check and can be hand-edited besides. Spawning one crashes on the next draw, which
+        // would look like the mod breaking a save rather than one bad row - skip it instead.
+        if (!EnrichWorld::AreParamsSafe(p.actorId, p.params)) {
+            p.live = nullptr;
+            continue;
+        }
         p.live = Actor_Spawn(&gPlayState->actorCtx, gPlayState, p.actorId, p.pos.x, p.pos.y, p.pos.z, p.rot.x, p.rot.y,
                              p.rot.z, p.params);
     }

@@ -54,8 +54,14 @@ const std::vector<PropDef>& AllProps() {
           "Best pure decoration - no collision, no flags, no drops." },
         { "Rock fragments", ACTOR_OBJ_HANA, OBJECT_GAMEPLAY_FIELD_KEEP, kNoObjectNeeded, 1,
           "Small debris, cylinder r10 h18." },
-        { "Bush (field)", ACTOR_OBJ_HANA, OBJECT_GAMEPLAY_FIELD_KEEP, kNoObjectNeeded, 2,
-          "Decorative only - cannot be cut." },
+        // Vanilla uses this as the castle-approach hiding bush, so ObjHana_Init Actor_Kills it
+        // once EVENTCHKINF_OBTAINED_ZELDAS_LETTER is set (z_obj_hana.c:92). That is most of the
+        // game, and all of it for an adult-starting file - hence the warning rather than a
+        // quiet note. Kept in the palette because it is still the right prop for a child-era
+        // scene; there is no way to suppress the self-kill without editing the actor.
+        { "Bush (field, vanishes later)", ACTOR_OBJ_HANA, OBJECT_GAMEPLAY_FIELD_KEEP, kNoObjectNeeded, 2,
+          "WARNING: disappears for good once you have Zelda's Letter - vanilla behaviour, not a "
+          "bug in the placer. Decorative only, cannot be cut." },
         { "Grass, cuttable", ACTOR_EN_KUSA, OBJECT_GAMEPLAY_FIELD_KEEP, OBJECT_GAMEPLAY_FIELD_KEEP, 0,
           "Type 0 only. Types 1-2 need OBJECT_KUSA." },
         { "Rock, liftable (small)", ACTOR_EN_ISHI, OBJECT_GAMEPLAY_FIELD_KEEP, kNoObjectNeeded, 0,
@@ -102,6 +108,41 @@ const std::vector<PropDef>& AllProps() {
         { "Gravestone", ACTOR_BG_HAKA, OBJECT_HAKA, kNoObjectNeeded, 0, "Graveyard and Lake Hylia only." },
     };
     return props;
+}
+
+// Actors that index a variant table with a mask wider than the table is long - see AreParamsSafe.
+// `mask` is the bits vanilla uses as the index, `count` how many entries actually exist.
+//
+// Verified against the tables themselves rather than assumed from the palette's own variants:
+//   Obj_Hana   sHanaParams[3]  indexed `params & 3` (z_obj_hana.c:79, and again in Destroy,
+//                              Update and Draw - Draw is the one that crashes, it feeds
+//                              Gfx_DrawDListOpa)
+//   En_Kusa    dLists[3]       indexed `params & 3` (z_en_kusa.c:516); sObjectIds[3] likewise
+//                              at :263
+//   Obj_Mure2  D_80B9A818[3]   indexed `params & 3` (z_obj_mure2.c:57 and six more)
+//
+// Not listed, and checked: En_Ishi masks `& 1` against two-entry tables, Obj_Tsubo uses
+// `(params >> 8) & 1` against two entries, Obj_Mure range-checks its type and Actor_Kills on a
+// miss, and En_Wood02 switches on params rather than indexing. Those are all safe as written.
+struct VariantTable {
+    int16_t actorId;
+    int16_t mask;
+    int16_t count;
+};
+
+static const VariantTable kVariantTables[] = {
+    { ACTOR_OBJ_HANA, 3, 3 },
+    { ACTOR_EN_KUSA, 3, 3 },
+    { ACTOR_OBJ_MURE2, 3, 3 },
+};
+
+bool AreParamsSafe(int16_t actorId, int16_t params) {
+    for (const auto& table : kVariantTables) {
+        if (table.actorId == actorId) {
+            return (params & table.mask) < table.count;
+        }
+    }
+    return true;
 }
 
 bool IsPropNative(const PropDef& def) {

@@ -162,8 +162,20 @@ void EnrichWorldPlacerWindow::DrawElement() {
         ImGui::SameLine();
         ImGui::Text("(0x%X)", static_cast<uint16_t>(paramsOverride));
 
+        // The params box is free-form on purpose (drop tables live in the high byte of several of
+        // these actors), but a handful of variant values crash the game outright rather than
+        // doing nothing - see AreParamsSafe. Refuse the placement rather than clamping, because
+        // silently placing a different prop than the number asked for is its own bug.
+        const bool paramsSafe = EnrichWorld::AreParamsSafe(def->actorId, static_cast<int16_t>(paramsOverride));
+        if (!paramsSafe) {
+            ImGui::TextWrapped("This actor has no variant %d - placing it would read past the end of its "
+                               "table and crash. Pick a palette entry above for a valid variant.",
+                               paramsOverride & 3);
+        }
+
         ImGui::Checkbox("Snap to ground", &snapToGround);
 
+        ImGui::BeginDisabled(!paramsSafe);
         if (UIWidgets::Button("Place at Link")) {
             Player* player = GET_PLAYER(gPlayState);
 
@@ -187,6 +199,7 @@ void EnrichWorldPlacerWindow::DrawElement() {
             EnrichWorld::MarkStoreDirty();
             selectedPlacement = static_cast<int>(EnrichWorld::Placements().size()) - 1;
         }
+        ImGui::EndDisabled();
     }
 
     ImGui::Separator();
