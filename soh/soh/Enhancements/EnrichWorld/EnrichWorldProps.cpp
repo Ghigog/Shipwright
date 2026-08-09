@@ -77,10 +77,12 @@ const std::vector<EnrichedRoom> builtInRooms = {
     //
     // rot.z must stay 0 - EnWood02_Init treats a non-zero home.rot.z as a packed drop/flag value
     // and rewrites params. rot.y is free and is only varied here so the pair doesn't look cloned.
-    { SCENE_HYRULE_FIELD, 0, {
-        { ACTOR_EN_WOOD02, { -650, 0, 1400 }, { 0, 8000, 0 }, 517 },
-        { ACTOR_EN_WOOD02, { 650, 0, 1400 }, { 0, -12000, 0 }, 517 },
-    } },
+    { SCENE_HYRULE_FIELD,
+      0,
+      {
+          { ACTOR_EN_WOOD02, { -650, 0, 1400 }, { 0, 8000, 0 }, 517 },
+          { ACTOR_EN_WOOD02, { 650, 0, 1400 }, { 0, -12000, 0 }, 517 },
+      } },
 };
 
 void SpawnBuiltIns() {

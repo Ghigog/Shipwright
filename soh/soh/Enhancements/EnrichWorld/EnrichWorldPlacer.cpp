@@ -267,6 +267,5 @@ void EnrichWorldPlacerWindow::DrawElement() {
         EnrichWorld::LoadStore();
         selectedPlacement = -1;
     }
-    ImGui::TextWrapped("Saved props respawn on the next scene load. File: %s",
-                       EnrichWorld::StorePath().c_str());
+    ImGui::TextWrapped("Saved props respawn on the next scene load. File: %s", EnrichWorld::StorePath().c_str());
 }
