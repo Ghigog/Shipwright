@@ -114,6 +114,12 @@ uint16_t VariantMask(int16_t actorId);
  */
 uint16_t OptionMask(int16_t actorId);
 
+/** Subheading this prop belongs under in the placer, e.g. "Plants & ground". Never null. */
+const char* PropGroup(int16_t actorId);
+
+/** Sort position of a group name; larger sorts later. Unknown groups sort last. */
+int PropGroupRank(const char* group);
+
 /** Human-readable name for an actor id, falling back to the raw number. */
 std::string ActorLabel(int16_t actorId, int16_t params);
 

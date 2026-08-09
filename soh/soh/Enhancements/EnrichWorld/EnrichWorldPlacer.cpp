@@ -20,6 +20,8 @@
 #include "soh/Enhancements/game-interactor/GameInteractor.h"
 
 #include <spdlog/fmt/fmt.h>
+#include <algorithm>
+#include <cstring>
 #include <string>
 #include <vector>
 
@@ -77,6 +79,16 @@ std::vector<Choice> PlaceableProps() {
             out.push_back({ &def, false });
         }
     }
+    // Then by group within each half, so the dropdown reads as sections. stable_sort keeps the
+    // palette's own order inside a group, which is deliberate - variants of one prop were
+    // written next to each other and should stay that way.
+    std::stable_sort(out.begin(), out.end(), [](const Choice& a, const Choice& b) {
+        if (a.native != b.native) {
+            return a.native; // natives first, as before
+        }
+        return EnrichWorld::PropGroupRank(EnrichWorld::PropGroup(a.def->actorId)) <
+               EnrichWorld::PropGroupRank(EnrichWorld::PropGroup(b.def->actorId));
+    });
     return out;
 }
 
@@ -126,14 +138,23 @@ void EnrichWorldPlacerWindow::DrawElement() {
 
         if (ImGui::BeginCombo("Prop", choices[selectedProp].def->label)) {
             bool headed = false;
+            const char* shownGroup = nullptr;
             for (int i = 0; i < static_cast<int>(choices.size()); i++) {
-                // One heading, at the boundary between the two halves PlaceableProps sorted into.
+                // One heading at the boundary between the two halves PlaceableProps sorted into,
+                // then a subheading per group within each half. The group heading is reset at the
+                // boundary so both halves label their first group rather than inheriting it.
                 if (!choices[i].native && !headed) {
                     headed = true;
+                    shownGroup = nullptr;
                     if (i > 0) {
                         ImGui::Separator();
                     }
                     ImGui::TextDisabled("Not native to this room");
+                }
+                const char* group = EnrichWorld::PropGroup(choices[i].def->actorId);
+                if (shownGroup == nullptr || std::strcmp(shownGroup, group) != 0) {
+                    shownGroup = group;
+                    ImGui::TextDisabled("  %s", group);
                 }
                 if (ImGui::Selectable(choices[i].def->label, i == selectedProp)) {
                     selectedProp = i;

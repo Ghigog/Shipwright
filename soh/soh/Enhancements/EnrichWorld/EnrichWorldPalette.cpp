@@ -18,6 +18,7 @@
 #include "soh/ActorDB.h"
 
 #include <spdlog/fmt/fmt.h>
+#include <cstring>
 
 // After the headers above on purpose - see EnrichWorldPlacer.cpp for why z64.h has to come last.
 #include "EnrichWorld.h"
@@ -164,6 +165,71 @@ const std::vector<PropDef>& AllProps() {
         { "Bomb flower", ACTOR_EN_BOMBF, OBJECT_BOMBF, kNoObjectNeeded, 0, "" },
         { "Icicle", ACTOR_BG_ICE_TURARA, OBJECT_ICE_OBJECTS, kNoObjectNeeded, 0, "" },
         { "Gravestone", ACTOR_BG_HAKA, OBJECT_HAKA, kNoObjectNeeded, 0, "Graveyard and Lake Hylia only." },
+
+        // ---- Machinery, traps and structures: added 2026-08-09 ----
+        //
+        // Sourced the same way as the block above, but taking the puzzle mechanisms and dungeon
+        // furniture the first pass skipped, because breadth is worth more here than restraint.
+        // Every one was screened against the three failure modes this mod has actually hit:
+        // re-checking its own object, indexing a table by params, and dereferencing
+        // play->setupPathList. Anything matching was excluded rather than guarded, so none of
+        // these needs a required object or a params layout - and with no layout entry
+        // OptionMask returns 0, which means their params stay pinned at the value below.
+        //
+        // Several are scene-coupled by nature (a Fire Temple elevator wants a Fire Temple), so
+        // most will sit under "not native to this room" outside their home scene. That is the
+        // point of the grouping rather than a reason to leave them out.
+        { "Platform, falling", ACTOR_BG_GANON_OTYUKA, OBJECT_GANON, kNoObjectNeeded, 0, "" },
+        { "Fire wall, proximity", ACTOR_BG_HIDAN_FIREWALL, OBJECT_HIDAN_OBJECTS, kNoObjectNeeded, 0, "" },
+        { "Spike trap, sliding", ACTOR_EN_TRAP, OBJECT_TRAP, kNoObjectNeeded, 0, "" },
+        { "Rubble, ruined", ACTOR_DEMO_GJ, OBJECT_GJ, kNoObjectNeeded, 0, "" },
+        { "Weather trigger", ACTOR_EN_WEATHER_TAG, OBJECT_GAMEPLAY_KEEP, kNoObjectNeeded, 0, "" },
+        { "Gerudo Valley structures", ACTOR_BG_SPOT09_OBJ, OBJECT_SPOT09_OBJ, kNoObjectNeeded, 0, "" },
+        { "Block, clear", ACTOR_BG_GND_DARKMEIRO, OBJECT_DEMO_KEKKAI, kNoObjectNeeded, 0, "" },
+        { "Shadow Temple trap", ACTOR_BG_HAKA_TRAP, OBJECT_HAKA_OBJECTS, kNoObjectNeeded, 0, "" },
+        { "Statue, hammer", ACTOR_BG_HIDAN_DALM, OBJECT_HIDAN_OBJECTS, kNoObjectNeeded, 0, "" },
+        { "Archery target", ACTOR_EN_YABUSAME_MARK, OBJECT_GAMEPLAY_KEEP, kNoObjectNeeded, 0, "" },
+        { "Ice platform", ACTOR_BG_SPOT08_ICEBLOCK, OBJECT_SPOT08_OBJ, kNoObjectNeeded, 0, "" },
+        { "Window, stained glass", ACTOR_BG_TOKI_HIKARI, OBJECT_TOKI_OBJECTS, kNoObjectNeeded, 0, "" },
+        { "Platform, stone (fire)", ACTOR_BG_HIDAN_SIMA, OBJECT_HIDAN_OBJECTS, kNoObjectNeeded, 0, "" },
+        { "Well water", ACTOR_BG_SPOT01_IDOMIZU, OBJECT_SPOT01_OBJECTS, kNoObjectNeeded, 0, "" },
+        { "Block stop", ACTOR_OBJ_BLOCKSTOP, OBJECT_GAMEPLAY_KEEP, kNoObjectNeeded, 0, "" },
+        { "Water vortex", ACTOR_EN_STREAM, OBJECT_STREAM, kNoObjectNeeded, 0, "" },
+        { "Drawbridge", ACTOR_BG_SPOT00_HANEBASI, OBJECT_SPOT00_OBJECTS, kNoObjectNeeded, 0, "" },
+        { "Bombable wall, flat", ACTOR_BG_BOMBWALL, OBJECT_GAMEPLAY_FIELD_KEEP, kNoObjectNeeded, 0, "" },
+        { "Windmill machinery", ACTOR_BG_RELAY_OBJECTS, OBJECT_RELAY_OBJECTS, kNoObjectNeeded, 0, "" },
+        { "Waterfall, Zora's", ACTOR_BG_SPOT07_TAKI, OBJECT_SPOT07_OBJECT, kNoObjectNeeded, 0, "" },
+        { "Bombable wall, desert", ACTOR_BG_SPOT11_BAKUDANKABE, OBJECT_SPOT11_OBJ, kNoObjectNeeded, 0, "" },
+        { "Spike platform, huge", ACTOR_BG_HIDAN_HROCK, OBJECT_HIDAN_OBJECTS, kNoObjectNeeded, 0, "" },
+        { "Bombable wall, stone", ACTOR_BG_MIZU_BWALL, OBJECT_MIZU_OBJECTS, kNoObjectNeeded, 0, "" },
+        { "Wall, climbable sliding", ACTOR_BG_JYA_ZURERUKABE, OBJECT_JYA_OBJ, kNoObjectNeeded, 0, "" },
+        { "Eye statue", ACTOR_BG_MENKURI_EYE, OBJECT_MENKURI_OBJECTS, kNoObjectNeeded, 0, "" },
+        { "Drawbridge, broken", ACTOR_BG_SPOT00_BREAK, OBJECT_SPOT00_BREAK, kNoObjectNeeded, 0, "" },
+        { "Bombable wall, fountain", ACTOR_BG_SPOT08_BAKUDANKABE, OBJECT_SPOT08_OBJ, kNoObjectNeeded, 0, "" },
+        { "Block, stone (fire)", ACTOR_BG_HIDAN_ROCK, OBJECT_HIDAN_OBJECTS, kNoObjectNeeded, 0, "" },
+        { "Flamethrower, spinning", ACTOR_BG_HIDAN_RSEKIZOU, OBJECT_HIDAN_OBJECTS, kNoObjectNeeded, 0, "" },
+        { "Block, silver", ACTOR_BG_JYA_BLOCK, OBJECT_GAMEPLAY_DANGEON_KEEP, kNoObjectNeeded, 0, "" },
+        { "Boulder, rolling", ACTOR_BG_JYA_GOROIWA, OBJECT_GOROIWA, kNoObjectNeeded, 0, "" },
+        { "Ceiling hole, webbed", ACTOR_BG_GND_SOULMEIRO, OBJECT_DEMO_KEKKAI, kNoObjectNeeded, 0, "" },
+        { "Bombable wall, crater", ACTOR_BG_SPOT17_BAKUDANKABE, OBJECT_SPOT17_OBJ, kNoObjectNeeded, 0, "" },
+        { "Block puzzle spawner", ACTOR_OBJ_MAKEOSHIHIKI, OBJECT_GAMEPLAY_DANGEON_KEEP, kNoObjectNeeded, 0, "" },
+        { "Flamethrower statue", ACTOR_BG_HIDAN_SEKIZOU, OBJECT_HIDAN_OBJECTS, kNoObjectNeeded, 0, "" },
+        { "Whirlpool", ACTOR_BG_MIZU_UZU, OBJECT_MIZU_OBJECTS, kNoObjectNeeded, 0, "" },
+        { "Elevator, stone", ACTOR_BG_JYA_1FLIFT, OBJECT_JYA_OBJ, kNoObjectNeeded, 0, "" },
+        { "Ice block, pushable", ACTOR_BG_ICE_OBJECTS, OBJECT_ICE_OBJECTS, kNoObjectNeeded, 0, "" },
+        { "Wall, false stone", ACTOR_BG_MENKURI_NISEKABE, OBJECT_MENKURI_OBJECTS, kNoObjectNeeded, 0, "" },
+        { "Wall, false (castle)", ACTOR_BG_GND_NISEKABE, OBJECT_DEMO_KEKKAI, kNoObjectNeeded, 0, "" },
+        { "Ice block, square", ACTOR_BG_GND_ICEBLOCK, OBJECT_DEMO_KEKKAI, kNoObjectNeeded, 0, "" },
+        { "Well stone", ACTOR_BG_SPOT01_IDOSOKO, OBJECT_SPOT01_MATOYA, kNoObjectNeeded, 0, "" },
+        { "Epona, young", ACTOR_EN_HORSE_LINK_CHILD, OBJECT_HORSE_LINK_CHILD, kNoObjectNeeded, 0, "" },
+        { "Platform, collapsing", ACTOR_OBJ_LIFT, OBJECT_D_LIFT, kNoObjectNeeded, 0, "" },
+        { "Elevator, fire", ACTOR_BG_HIDAN_SYOKU, OBJECT_HIDAN_OBJECTS, kNoObjectNeeded, 0, "" },
+        { "Elevator, hookshot", ACTOR_BG_HIDAN_FSLIFT, OBJECT_HIDAN_OBJECTS, kNoObjectNeeded, 0, "" },
+        { "Bombable rock wall", ACTOR_BG_JYA_BOMBIWA, OBJECT_JYA_OBJ, kNoObjectNeeded, 0, "" },
+        { "Grate, sliding", ACTOR_BG_JYA_AMISHUTTER, OBJECT_JYA_OBJ, kNoObjectNeeded, 0, "" },
+        { "Fire trap, statue eye", ACTOR_EN_HONOTRAP, OBJECT_GAMEPLAY_DANGEON_KEEP, kNoObjectNeeded, 0, "" },
+        { "Ring platform, rotating", ACTOR_BG_MENKURI_KAITEN, OBJECT_MENKURI_OBJECTS, kNoObjectNeeded, 0, "" },
+        { "Lava platform, sinking", ACTOR_BG_GND_FIREMEIRO, OBJECT_DEMO_KEKKAI, kNoObjectNeeded, 0, "" },
     };
     return props;
 }
@@ -289,6 +355,104 @@ static const ActorParamsLayout* FindLayout(int16_t actorId) {
         }
     }
     return nullptr;
+}
+
+/**
+ * Which subheading a prop sits under. Grouped by what the thing *is* to someone dressing a
+ * scene, not by which object it ships in - the object grouping is already carried by the
+ * native / not-native split, and repeating it here would say nothing new.
+ *
+ * Order here is the order they appear in the dropdown, so it runs from what you reach for most
+ * (ground cover) to what you reach for least (machinery).
+ */
+static const char* const kGroupOrder[] = {
+    "Plants & ground", "Rocks & breakables", "Creatures", "Fire & light",
+    "Water & ice",     "Structures",         "Machinery",  "Sound & effects",
+    "Other",
+};
+
+static const struct {
+    int16_t actorId;
+    const char* group;
+} kGroups[] = {
+    { ACTOR_EN_WOOD02, "Plants & ground" },        { ACTOR_OBJ_HANA, "Plants & ground" },
+    { ACTOR_EN_KUSA, "Plants & ground" },          { ACTOR_OBJ_MURE2, "Plants & ground" },
+    { ACTOR_OBJ_COMB, "Plants & ground" },         { ACTOR_DOOR_ANA, "Plants & ground" },
+
+    { ACTOR_EN_ISHI, "Rocks & breakables" },       { ACTOR_OBJ_HAMISHI, "Rocks & breakables" },
+    { ACTOR_OBJ_BOMBIWA, "Rocks & breakables" },   { ACTOR_OBJ_TSUBO, "Rocks & breakables" },
+    { ACTOR_OBJ_KIBAKO, "Rocks & breakables" },    { ACTOR_OBJ_KIBAKO2, "Rocks & breakables" },
+    { ACTOR_EN_BOMBF, "Rocks & breakables" },      { ACTOR_BG_HAKA_TUBO, "Rocks & breakables" },
+    { ACTOR_BG_SPOT18_BASKET, "Rocks & breakables" }, { ACTOR_BG_SPOT15_RRBOX, "Rocks & breakables" },
+    { ACTOR_EN_TUBO_TRAP, "Rocks & breakables" },  { ACTOR_BG_BOMBWALL, "Rocks & breakables" },
+    { ACTOR_BG_MIZU_BWALL, "Rocks & breakables" }, { ACTOR_BG_JYA_BOMBIWA, "Rocks & breakables" },
+    { ACTOR_BG_SPOT08_BAKUDANKABE, "Rocks & breakables" },
+    { ACTOR_BG_SPOT11_BAKUDANKABE, "Rocks & breakables" },
+    { ACTOR_BG_SPOT17_BAKUDANKABE, "Rocks & breakables" }, { ACTOR_DEMO_GJ, "Rocks & breakables" },
+
+    { ACTOR_OBJ_MURE, "Creatures" },               { ACTOR_EN_FISH, "Creatures" },
+    { ACTOR_EN_INSECT, "Creatures" },              { ACTOR_EN_BUTTE, "Creatures" },
+    { ACTOR_EN_NIW, "Creatures" },                 { ACTOR_EN_HORSE_NORMAL, "Creatures" },
+    { ACTOR_EN_HORSE_LINK_CHILD, "Creatures" },
+
+    { ACTOR_EN_LIGHT, "Fire & light" },            { ACTOR_OBJ_SYOKUDAI, "Fire & light" },
+    { ACTOR_BG_PO_SYOKUDAI, "Fire & light" },      { ACTOR_EN_ICE_HONO, "Fire & light" },
+    { ACTOR_EFC_ERUPC, "Fire & light" },           { ACTOR_BG_TOKI_HIKARI, "Fire & light" },
+
+    { ACTOR_BG_ICE_TURARA, "Water & ice" },        { ACTOR_BG_ICE_SHELTER, "Water & ice" },
+    { ACTOR_EN_SIOFUKI, "Water & ice" },           { ACTOR_EN_STREAM, "Water & ice" },
+    { ACTOR_BG_MIZU_UZU, "Water & ice" },          { ACTOR_BG_SPOT07_TAKI, "Water & ice" },
+    { ACTOR_BG_SPOT01_IDOMIZU, "Water & ice" },    { ACTOR_BG_ICE_OBJECTS, "Water & ice" },
+    { ACTOR_BG_GND_ICEBLOCK, "Water & ice" },      { ACTOR_BG_SPOT08_ICEBLOCK, "Water & ice" },
+
+    { ACTOR_EN_KANBAN, "Structures" },             { ACTOR_EN_GS, "Structures" },
+    { ACTOR_BG_HAKA, "Structures" },               { ACTOR_EN_HATA, "Structures" },
+    { ACTOR_BG_UMAJUMP, "Structures" },            { ACTOR_BG_INGATE, "Structures" },
+    { ACTOR_EN_TANA, "Structures" },               { ACTOR_OBJ_HSBLOCK, "Structures" },
+    { ACTOR_BG_SPOT09_OBJ, "Structures" },         { ACTOR_BG_SPOT00_HANEBASI, "Structures" },
+    { ACTOR_BG_SPOT00_BREAK, "Structures" },       { ACTOR_BG_SPOT01_IDOSOKO, "Structures" },
+    { ACTOR_BG_MENKURI_EYE, "Structures" },        { ACTOR_BG_HIDAN_DALM, "Structures" },
+    { ACTOR_BG_MENKURI_NISEKABE, "Structures" },   { ACTOR_BG_GND_NISEKABE, "Structures" },
+    { ACTOR_BG_JYA_ZURERUKABE, "Structures" },     { ACTOR_BG_GND_SOULMEIRO, "Structures" },
+    { ACTOR_BG_HIDAN_ROCK, "Structures" },         { ACTOR_BG_JYA_BLOCK, "Structures" },
+    { ACTOR_BG_GND_DARKMEIRO, "Structures" },      { ACTOR_OBJ_OSHIHIKI, "Structures" },
+    { ACTOR_OBJ_MAKEOSHIHIKI, "Structures" },      { ACTOR_OBJ_BLOCKSTOP, "Structures" },
+    { ACTOR_EN_YABUSAME_MARK, "Structures" },
+
+    { ACTOR_BG_HIDAN_SIMA, "Machinery" },          { ACTOR_BG_HIDAN_HROCK, "Machinery" },
+    { ACTOR_BG_HIDAN_SYOKU, "Machinery" },         { ACTOR_BG_HIDAN_FSLIFT, "Machinery" },
+    { ACTOR_BG_JYA_1FLIFT, "Machinery" },          { ACTOR_BG_MENKURI_KAITEN, "Machinery" },
+    { ACTOR_BG_JYA_AMISHUTTER, "Machinery" },      { ACTOR_OBJ_LIFT, "Machinery" },
+    { ACTOR_BG_GANON_OTYUKA, "Machinery" },        { ACTOR_BG_GND_FIREMEIRO, "Machinery" },
+    { ACTOR_BG_HIDAN_FIREWALL, "Machinery" },      { ACTOR_BG_HIDAN_SEKIZOU, "Machinery" },
+    { ACTOR_BG_HIDAN_RSEKIZOU, "Machinery" },      { ACTOR_EN_HONOTRAP, "Machinery" },
+    { ACTOR_EN_TRAP, "Machinery" },                { ACTOR_BG_HAKA_TRAP, "Machinery" },
+    { ACTOR_BG_JYA_GOROIWA, "Machinery" },         { ACTOR_BG_RELAY_OBJECTS, "Machinery" },
+    { ACTOR_BG_SPOT01_FUSYA, "Machinery" },
+
+    { ACTOR_EN_RIVER_SOUND, "Sound & effects" },   { ACTOR_EN_WEATHER_TAG, "Sound & effects" },
+    { ACTOR_BG_SPOT16_DOUGHNUT, "Sound & effects" }, { ACTOR_OBJ_MURE3, "Sound & effects" },
+};
+
+const char* PropGroup(int16_t actorId) {
+    for (const auto& row : kGroups) {
+        if (row.actorId == actorId) {
+            return row.group;
+        }
+    }
+    return "Other";
+}
+
+// strcmp rather than pointer equality: kGroups and kGroupOrder spell the same names as separate
+// string literals, and whether the compiler pools those into one address is not guaranteed.
+int PropGroupRank(const char* group) {
+    const int count = static_cast<int>(sizeof(kGroupOrder) / sizeof(kGroupOrder[0]));
+    for (int i = 0; i < count; i++) {
+        if (std::strcmp(kGroupOrder[i], group) == 0) {
+            return i;
+        }
+    }
+    return count;
 }
 
 uint16_t VariantMask(int16_t actorId) {
