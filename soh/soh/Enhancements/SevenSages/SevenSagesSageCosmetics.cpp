@@ -704,7 +704,33 @@ constexpr int32_t kZeldaRightCornerX = 271;
 // below the button row instead of beside it. This is a softer version of the fallback the spec
 // anticipated ("if magic can't go in top centre... anchor beneath it") - it stays centred and
 // clearly top-of-screen, rather than being demoted to hanging off the hearts like everyone else's.
-constexpr int32_t kMagicTopCentreY = 50;
+//
+// Raised 50 -> 26 (2026-08-09, requested: the bar read as floating in the middle of the screen
+// rather than sitting with the hearts and buttons). This is ANCHOR_NONE, so the value is the bar's
+// absolute top edge in the 240-tall HUD space and the bar is 16 tall: 26 spans 26..42, against a
+// heart row whose drawn centre is PosY + 26 = 34 (see kStackedHeartsY for that +26) and so spans
+// ~28..40 at the default 0.7 scale. The two are now vertically centred on each other - that
+// alignment is the point, and it is why this is 26 and not some rounder number.
+//
+// Two overlaps were accepted, not overlooked, when this was chosen (both were put to the user with
+// the geometry before the change):
+//
+//  1. **The heart row grows into it.** The row starts at X ~32 and each heart adds 10
+//     (z_lifemeter.c:674), so the 7th heart reaches X ~92 and the 8th is under the bar's left edge
+//     at kMagicCentreX(96). Below Y 50 this never mattered; in line with the hearts it does.
+//  2. **Double magic reaches the B button.** The bar is `magicCapacity + 16` wide, so 64px on a
+//     single meter (96..160, stopping exactly at B's X) but 112px on a double (96..208, into B's
+//     160..190 box). Narrower-than-4:3 windows make it worse, since ANCHOR_RIGHT elements move
+//     *left* as the aspect narrows (see kZeldaRightCornerX for that formula) while an ANCHOR_NONE
+//     bar does not move at all.
+//
+// Both are fixable only by giving up something else - moving the hearts, moving B, or abandoning
+// the centred bar - so if either turns out to bother in play, that is the trade to reopen rather
+// than nudging this number.
+//
+// Shared with Nabooru, whose layout is a deliberate mirror of this one (see her row below); moving
+// both together was the explicit choice, since mirroring never moved a centred bar anyway.
+constexpr int32_t kMagicTopCentreY = 26;
 
 // D-pad above the bottom button cluster rather than below it: below would put its lower two icons
 // past the bottom edge, since the D-pad's own icon offsets spread -8..+24 from this value. Nudged
