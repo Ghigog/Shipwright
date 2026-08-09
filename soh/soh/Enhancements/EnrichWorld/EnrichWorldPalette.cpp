@@ -42,8 +42,20 @@ const std::vector<PropDef>& AllProps() {
         { "Fish", ACTOR_OBJ_MURE, OBJECT_GAMEPLAY_KEEP, kNoObjectNeeded, 2, "Pure ambience. Wants water." },
         { "Flame (decorative)", ACTOR_EN_LIGHT, OBJECT_GAMEPLAY_KEEP, kNoObjectNeeded, 0,
           "params & 0xF sets type/scale." },
-        { "River sound", ACTOR_EN_RIVER_SOUND, OBJECT_GAMEPLAY_KEEP, kNoObjectNeeded, 0,
-          "Invisible ambient emitter." },
+        // En_River_Sound types 0, 4 and 5 - the three the enum leaves unnamed - read
+        // play->setupPathList[params >> 8] every frame with no null check
+        // (z_en_river_sound.c:176), so they only work in a scene that has the path they name.
+        // Type 0 was this palette's default and crashed on placement. The named types below all
+        // emit from the actor's own position and never touch a path; the layout table locks the
+        // whole word so neither the type nor the path index can be edited into one that does.
+        { "Sound - small waterfall", ACTOR_EN_RIVER_SOUND, OBJECT_GAMEPLAY_KEEP, kNoObjectNeeded, 1, "" },
+        { "Sound - large waterfall", ACTOR_EN_RIVER_SOUND, OBJECT_GAMEPLAY_KEEP, kNoObjectNeeded, 3, "" },
+        { "Sound - lava bubbling", ACTOR_EN_RIVER_SOUND, OBJECT_GAMEPLAY_KEEP, kNoObjectNeeded, 2, "" },
+        { "Sound - dripping water", ACTOR_EN_RIVER_SOUND, OBJECT_GAMEPLAY_KEEP, kNoObjectNeeded, 8, "" },
+        { "Sound - fountain", ACTOR_EN_RIVER_SOUND, OBJECT_GAMEPLAY_KEEP, kNoObjectNeeded, 9, "" },
+        { "Sound - market crowd", ACTOR_EN_RIVER_SOUND, OBJECT_GAMEPLAY_KEEP, kNoObjectNeeded, 0x0A, "" },
+        { "Sound - torch crackling", ACTOR_EN_RIVER_SOUND, OBJECT_GAMEPLAY_KEEP, kNoObjectNeeded, 0x14, "" },
+        { "Sound - cow mooing", ACTOR_EN_RIVER_SOUND, OBJECT_GAMEPLAY_KEEP, kNoObjectNeeded, 0x15, "" },
         { "Fish (single)", ACTOR_EN_FISH, OBJECT_GAMEPLAY_KEEP, kNoObjectNeeded, 0,
           "One fish, rather than the shoal the Fish entry spawns. Wants water." },
         { "Bug (single)", ACTOR_EN_INSECT, OBJECT_GAMEPLAY_KEEP, kNoObjectNeeded, 0,
@@ -110,7 +122,11 @@ const std::vector<PropDef>& AllProps() {
         // layout, which is in kParamsLayouts below where it isn't a single fixed value.
         { "Flagpole, red cloth", ACTOR_EN_HATA, OBJECT_HATA, kNoObjectNeeded, 0,
           "Vanilla's commonest pure decoration - 56 placements, all overworld." },
-        { "Cucco", ACTOR_EN_NIW, OBJECT_NIW, kNoObjectNeeded, 0, "Pick it up, it flaps. Ranch and village." },
+        // params 0xE deliberately, not 0. A cucco sets this->path = 1 the first time it settles
+        // (z_en_niw.c:677) and then walks play->setupPathList[0] - fine in Kakariko, a null
+        // dereference in a scene with no paths. 0xE is the one variant that branch skips, so the
+        // path is never engaged and the cucco stays put wherever it is dropped.
+        { "Cucco", ACTOR_EN_NIW, OBJECT_NIW, kNoObjectNeeded, 0x0E, "Pick it up, it flaps. Stays where placed." },
         { "Horse", ACTOR_EN_HORSE_NORMAL, OBJECT_HORSE_NORMAL, kNoObjectNeeded, 0,
           "Grazes in place. Lon Lon and Hyrule Field." },
         { "Fence, jumpable", ACTOR_BG_UMAJUMP, OBJECT_UMAJUMP, kNoObjectNeeded, 0, "The Lon Lon obstacle fence." },
@@ -216,7 +232,9 @@ static const ActorParamsLayout kParamsLayouts[] = {
     { ACTOR_EN_GS, 0x0000, 0, 0x3FFF },
     { ACTOR_OBJ_BOMBIWA, 0x0000, 0, 0x803F },
     { ACTOR_EN_LIGHT, 0x000F, 0, 0x0FFF },
-    { ACTOR_EN_RIVER_SOUND, 0x0000, 0, 0xFFFF },
+    // Locked shut: the low byte is the sound type (three values of which dereference a scene
+    // path) and the high byte IS that path index. Neither is safe to hand to a free-form box.
+    { ACTOR_EN_RIVER_SOUND, 0xFFFF, 0, 0xFFFF },
     { ACTOR_EN_KANBAN, 0x0000, 0, 0x0000 },
     { ACTOR_OBJ_KIBAKO2, 0x0000, 0, 0x0000 },
     { ACTOR_EN_BOMBF, 0x0000, 0, 0x0000 },
@@ -243,8 +261,13 @@ static const ActorParamsLayout kParamsLayouts[] = {
     { ACTOR_OBJ_KIBAKO, 0x0000, 0, 0x3F1F },
     { ACTOR_EN_TUBO_TRAP, 0x0000, 0, 0xFFFF },
     { ACTOR_EN_HATA, 0x0000, 0, 0x0000 },
-    { ACTOR_EN_NIW, 0x0000, 0, 0x0000 },
-    { ACTOR_EN_HORSE_NORMAL, 0x0000, 0, 0x00FF },
+    // Both of these are locked shut rather than given options, because their editable bits are
+    // what turn on path following - and a path index is only meaningful in the scene that
+    // defines it. En_Niw's variant is the guard (see its palette note); En_Horse_Normal follows
+    // a path when (params & 0xF0) == 0x10, reading setupPathList[params & 0xF]
+    // (z_en_horse_normal.c:290). Neither is reachable with the word held to the palette default.
+    { ACTOR_EN_NIW, 0x00FF, 0, 0x00FF },
+    { ACTOR_EN_HORSE_NORMAL, 0x00FF, 0, 0x00FF },
     { ACTOR_BG_UMAJUMP, 0x0000, 0, 0x0000 },
     { ACTOR_BG_INGATE, 0x0000, 0, 0x0003 },
     { ACTOR_BG_SPOT15_RRBOX, 0x0000, 0, 0x003F },
