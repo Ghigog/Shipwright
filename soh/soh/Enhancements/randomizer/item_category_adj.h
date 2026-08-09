@@ -11,9 +11,9 @@ extern "C" {
 
 GetItemCategory Randomizer_AdjustItemCategory(GetItemEntry item);
 
-// True for the health items that deserve a big chest (heart container, double defense), false for
-// pieces of heart. See the definition for why this isn't folded into the category itself.
-bool Randomizer_IsBigChestHealthItem(GetItemEntry item);
+// True for the health items that count as major (heart container, double defense), false for pieces
+// of heart. See the definition for why this isn't folded into the category itself.
+bool Randomizer_IsMajorHealthItem(GetItemEntry item);
 
 #ifdef __cplusplus
 }

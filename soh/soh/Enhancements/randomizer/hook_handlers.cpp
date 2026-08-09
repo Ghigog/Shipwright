@@ -425,6 +425,12 @@ void RandomizerOnPlayerUpdateForRCQueueHandler() {
         randomizerQueuedItemEntry = getItemEntry;
         SPDLOG_INFO("Queuing Item mod {} item {} from RC {}", getItemEntry.modIndex, getItemEntry.itemId,
                     static_cast<uint32_t>(rc));
+        // Seven Sages: heart containers and double defense share ITEM_CATEGORY_HEALTH with pieces of
+        // heart, but they are major items - they keep their full item-get animation under the
+        // "skip junk" setting. See Randomizer_IsMajorHealthItem().
+        bool isJunkTier = getItemCategory == ITEM_CATEGORY_JUNK || getItemCategory == ITEM_CATEGORY_SKULLTULA_TOKEN ||
+                          getItemCategory == ITEM_CATEGORY_LESSER ||
+                          (getItemCategory == ITEM_CATEGORY_HEALTH && !Randomizer_IsMajorHealthItem(getItemEntry));
         if (
             // Skipping ItemGet animation incompatible with checks that require closing a text box to finish
             rc != RC_HF_OCARINA_OF_TIME_ITEM && rc != RC_SPIRIT_TEMPLE_SILVER_GAUNTLETS_CHEST &&
@@ -439,8 +445,7 @@ void RandomizerOnPlayerUpdateForRCQueueHandler() {
                   // crude fix to ensure map hints are readable. Ideally replace with better hint tracking.
                   !(getItemEntry.getItemId >= RG_DEKU_TREE_MAP && getItemEntry.getItemId <= RG_ICE_CAVERN_MAP &&
                     getItemEntry.modIndex == MOD_RANDOMIZER) &&
-                  (getItemCategory == ITEM_CATEGORY_JUNK || getItemCategory == ITEM_CATEGORY_SKULLTULA_TOKEN ||
-                   getItemCategory == ITEM_CATEGORY_HEALTH || getItemCategory == ITEM_CATEGORY_LESSER))))) {
+                  isJunkTier)))) {
             Item_DropCollectible(gPlayState, &spawnPos, static_cast<int16_t>(ITEM00_SOH_GIVE_ITEM_ENTRY | 0x8000));
         }
     }

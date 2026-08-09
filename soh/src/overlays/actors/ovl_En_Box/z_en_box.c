@@ -593,13 +593,12 @@ void EnBox_UpdateTexture(EnBox* this, PlayState* play) {
     // reacted to contents at all. ITEM_CATEGORY_MAJOR gets the big treatment (matching the
     // randomizer's tiered-placement design), and so do heart containers / double defense -
     // they keep the heart skin below but are big-chest items, unlike pieces of heart. See
-    // Randomizer_IsBigChestHealthItem(). this->type still governs every OTHER behavior here
+    // Randomizer_IsMajorHealthItem(). this->type still governs every OTHER behavior here
     // (falling chests, switch-flag appearance, room-clear tracking) untouched - only the
     // scale/focus below is contents-aware now.
     bool renderAsBigChest;
     if (!isVanilla) {
-        renderAsBigChest =
-            getItemCategory == ITEM_CATEGORY_MAJOR || Randomizer_IsBigChestHealthItem(this->getItemEntry);
+        renderAsBigChest = getItemCategory == ITEM_CATEGORY_MAJOR || Randomizer_IsMajorHealthItem(this->getItemEntry);
     } else {
         renderAsBigChest = this->type != ENBOX_TYPE_SMALL && this->type != ENBOX_TYPE_6 &&
                            this->type != ENBOX_TYPE_ROOM_CLEAR_SMALL && this->type != ENBOX_TYPE_SWITCH_FLAG_FALL_SMALL;

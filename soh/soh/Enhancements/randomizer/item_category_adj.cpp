@@ -32,13 +32,14 @@ GetItemCategory Randomizer_AdjustItemCategory(GetItemEntry item) {
     return category;
 }
 
-// Seven Sages: heart containers and double defense are big-chest items. They stay
-// ITEM_CATEGORY_HEALTH - the category picks the container *skin*, and the heart skin is still the
-// right thing to show - so this is a separate predicate rather than a recategorization to MAJOR.
-// Pieces of heart are deliberately excluded and keep the small chest.
+// Seven Sages: heart containers and double defense are major items - they get a big chest, and they
+// keep their full item-get animation under the "skip junk animations" time saver. They stay
+// ITEM_CATEGORY_HEALTH - the category picks the chest *skin*, and the heart skin is still the right
+// thing to show - so this is a separate predicate rather than a recategorization to MAJOR.
+// Pieces of heart are deliberately excluded and stay small/skippable.
 // Depends only on the item itself, never on live inventory state, so unlike
 // Randomizer_AdjustItemCategory it is safe to call at any time.
-bool Randomizer_IsBigChestHealthItem(GetItemEntry item) {
+bool Randomizer_IsMajorHealthItem(GetItemEntry item) {
     if (item.getItemCategory != ITEM_CATEGORY_HEALTH) {
         return false;
     }
