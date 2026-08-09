@@ -699,20 +699,6 @@ void FileChoose_UpdateQuestMenu(GameState* thisx) {
             // randomizer, so it needs the same seed generation and settings flow.
             Audio_PlaySoundGeneral(NA_SE_SY_FSEL_DECIDE_L, &gSfxDefaultPos, 4, &gSfxDefaultFreqAndVolScale,
                                    &gSfxDefaultFreqAndVolScale, &gSfxDefaultReverb);
-            // Seven Sages: record which of the two randomized quests asked for this seed, because
-            // generation cannot work it out for itself. It runs before any save file exists, so
-            // IS_SEVENSAGES still answers for whatever was last loaded - see
-            // Randomizer_IsSevenSagesGeneration(). Written in BOTH directions so backing out of
-            // Seven Sages and picking plain Randomizer clears it rather than leaving the previous
-            // choice standing.
-            //
-            // CVAR_GENERAL, not CVAR_RANDOMIZER_SETTING: applyPreset SetBlock()s the whole
-            // `gRandoSettings` block, so a flag stored there would be erased by the preset button
-            // two lines below. (That is also why the sage choice itself is re-asserted on the sage
-            // select screen rather than trusted to survive from here.)
-            CVarSetInteger(CVAR_GENERAL("SevenSages.QuestSelected"),
-                           this->questType[this->buttonIndex] == QUEST_SEVENSAGES ? 1 : 0);
-
             // Seven Sages: apply both presets here, while the seed still doesn't exist. The
             // vanilla preset modal fires on "Start Randomizer", too late for rando settings.
             // Picking the quest is the consent - there is no separate confirmation any more.
@@ -723,6 +709,28 @@ void FileChoose_UpdateQuestMenu(GameState* thisx) {
             if (this->questType[this->buttonIndex] == QUEST_SEVENSAGES) {
                 SohFileSelect_ApplySevenSagesPresets();
             }
+
+            // Seven Sages: record which of the two randomized quests asked for this seed, because
+            // generation cannot work it out for itself. It runs before any save file exists, so
+            // IS_SEVENSAGES still answers for whatever was last loaded - see
+            // Randomizer_IsSevenSagesGeneration().
+            //
+            // AFTER the presets, not before, and this ordering is load-bearing: applyPreset ends
+            // every section with ConsoleVariable::Load(), which does conf->Reload() (re-parsing
+            // the config file from disk) and then clears the whole in-memory CVar map. A CVar that
+            // has been Set but not yet Saved exists only in that map, so setting this first meant
+            // the preset apply silently destroyed it - the generator then read 0, decided this was
+            // a plain Randomizer seed, and skipped the sage's entire starting kit.
+            //
+            // CVAR_GENERAL, not CVAR_RANDOMIZER_SETTING: the seed preset SetBlock()s all of
+            // `gRandoSettings`, so a flag stored there would be erased outright. (That is also why
+            // the sage choice itself is re-asserted on the sage select screen rather than trusted
+            // to survive from here.)
+            //
+            // Written in BOTH directions so backing out of Seven Sages and picking plain
+            // Randomizer clears it rather than leaving the previous choice standing.
+            CVarSetInteger(CVAR_GENERAL("SevenSages.QuestSelected"),
+                           this->questType[this->buttonIndex] == QUEST_SEVENSAGES ? 1 : 0);
             CVarSave();
 
             this->prevConfigMode = this->configMode;
