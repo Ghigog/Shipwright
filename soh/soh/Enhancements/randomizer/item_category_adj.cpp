@@ -15,11 +15,22 @@ GetItemCategory Randomizer_AdjustItemCategory(GetItemEntry item) {
         category = ITEM_CATEGORY_LESSER;
     }
 
-    // Downgrade bottles to lesser if the player already has a bottle
+    // Downgrade bottles to lesser only once every bottle slot is full.
+    // Seven Sages: upstream downgraded on the *first* bottle, so bottles 2-4 showed up as small
+    // chests with the lesser skin. Bottles are progression here (LOGIC_BOTTLES, and Item::IsMajorItem
+    // agrees), and an extra bottle is a real upgrade until you have all four - blue fire, big poe and
+    // bug/fish storage all want their own slot. Only a fifth bottle is genuinely dead weight.
     if ((item.modIndex == MOD_RANDOMIZER && item.getItemId >= RG_BOTTLE_WITH_RED_POTION &&
          item.getItemId <= RG_BOTTLE_WITH_POE) ||
         (item.modIndex == MOD_NONE && (item.getItemId == GI_BOTTLE || item.getItemId == GI_MILK_BOTTLE))) {
-        if (gSaveContext.inventory.items[SLOT_BOTTLE_1] != ITEM_NONE) {
+        bool hasFreeBottleSlot = false;
+        for (int slot = SLOT_BOTTLE_1; slot <= SLOT_BOTTLE_4; slot++) {
+            if (gSaveContext.inventory.items[slot] == ITEM_NONE) {
+                hasFreeBottleSlot = true;
+                break;
+            }
+        }
+        if (!hasFreeBottleSlot) {
             category = ITEM_CATEGORY_LESSER;
         }
     }
