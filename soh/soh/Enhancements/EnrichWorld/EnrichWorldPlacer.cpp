@@ -158,24 +158,28 @@ void EnrichWorldPlacerWindow::DrawElement() {
         // the bits outside the variant mask and the palette entry keeps the rest. Editing the
         // whole word let "Butterflies" be turned into a Fish, or into an Obj_Mure type that kills
         // itself on init - the dropdown and the box were two views of one value, fighting.
-        const uint16_t variantMask = static_cast<uint16_t>(EnrichWorld::VariantMask(def->actorId));
-        const uint16_t optionMask = static_cast<uint16_t>(~variantMask);
+        const uint16_t variantMask = EnrichWorld::VariantMask(def->actorId);
+        const uint16_t optionMask = EnrichWorld::OptionMask(def->actorId);
         const uint16_t identity = static_cast<uint16_t>(def->params) & variantMask;
 
-        int options = static_cast<uint16_t>(paramsOverride) & optionMask;
-        ImGui::PushItemWidth(ImGui::GetFontSize() * 6);
-        if (ImGui::InputInt(variantMask != 0 ? "options" : "params", &options)) {
-            paramsOverride = identity | (static_cast<uint16_t>(options) & optionMask);
-            paramsEdited = true;
-        }
-        ImGui::PopItemWidth();
-        ImGui::SameLine();
-        ImGui::Text("-> params 0x%X", static_cast<uint16_t>(paramsOverride));
-
-        if (variantMask != 0) {
-            ImGui::TextWrapped("Bits 0x%X are the prop's identity and follow the dropdown. This box edits "
-                               "the rest - drop tables, flock sizes, flag slots.",
-                               variantMask);
+        if (optionMask == 0) {
+            // No dead control: this prop either ignores params or reads only the bits the
+            // dropdown already owns, so every value the box could offer is the same prop.
+            ImGui::Text("params 0x%X - no options, the dropdown is the whole choice",
+                        static_cast<uint16_t>(paramsOverride));
+        } else {
+            int options = static_cast<uint16_t>(paramsOverride) & optionMask;
+            ImGui::PushItemWidth(ImGui::GetFontSize() * 6);
+            if (ImGui::InputInt("options", &options)) {
+                paramsOverride = identity | (static_cast<uint16_t>(options) & optionMask);
+                paramsEdited = true;
+            }
+            ImGui::PopItemWidth();
+            ImGui::SameLine();
+            ImGui::Text("-> params 0x%X", static_cast<uint16_t>(paramsOverride));
+            ImGui::TextWrapped("Only bits 0x%X do anything on this prop - the rest are ignored by the "
+                               "actor or belong to the dropdown.",
+                               optionMask);
         }
 
         // Belt and braces: the mask above means a palette entry can no longer produce an

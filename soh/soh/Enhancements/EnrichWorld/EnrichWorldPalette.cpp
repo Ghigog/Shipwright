@@ -140,14 +140,46 @@ const std::vector<PropDef>& AllProps() {
  */
 struct ActorParamsLayout {
     int16_t actorId;
-    int16_t variantMask;
-    int16_t variantCount;
+    uint16_t variantMask;
+    uint16_t variantCount;
+    uint16_t usedMask; // every bit the actor reads at all; the rest change nothing
 };
 
+// usedMask is the union of every params bit each actor actually looks at, read off its source.
+// Bits outside it are inert - editing them produced values that looked and behaved identically,
+// which is what made the box appear full of duplicates. Where usedMask equals variantMask (or is
+// zero) the prop has no options at all and the placer says so instead of offering a dead control.
+//
+// Zeroes are real findings, not gaps: Obj_Kibako2, En_Bombf, Bg_Ice_Turara, Bg_Haka and En_Kanban
+// never reference params.
 static const ActorParamsLayout kParamsLayouts[] = {
-    { ACTOR_OBJ_MURE, 0x1F, 0 },   { ACTOR_OBJ_HANA, 0x03, 3 },     { ACTOR_EN_KUSA, 0x03, 3 },
-    { ACTOR_OBJ_MURE2, 0x03, 3 },  { ACTOR_EN_ISHI, 0x01, 2 },      { ACTOR_OBJ_TSUBO, 0x0100, 0 },
-    { ACTOR_EN_WOOD02, 0x00FF, 0 }, { ACTOR_EN_LIGHT, 0x000F, 0 },  { ACTOR_OBJ_SYOKUDAI, (int16_t)0xF000, 0 },
+    // type 0x1F | svNum 0x60 | ptn 0x700 | chNum 0xF000
+    { ACTOR_OBJ_MURE, 0x001F, 0, 0xF77F },
+    // params & 3 and nothing else - no options whatsoever
+    { ACTOR_OBJ_HANA, 0x0003, 3, 0x0003 },
+    // type 3 | bug bit 0x10 | drop table 0xF00
+    { ACTOR_EN_KUSA, 0x0003, 3, 0x0F13 },
+    // type 3 | drop table 0xF00
+    { ACTOR_OBJ_MURE2, 0x0003, 3, 0x0F03 },
+    // size 1 | bugs 0x10 | no-snap 0x20 | switch flag 0xC0+0xF000 | drop table 0xF00
+    { ACTOR_EN_ISHI, 0x0001, 2, 0xFFF1 },
+    { ACTOR_OBJ_HAMISHI, 0x0000, 0, 0x003F },
+    // dungeon/overworld bit 0x100 | switch flag 0x1F | drop table 0x7E00
+    { ACTOR_OBJ_TSUBO, 0x0100, 0, 0x7F1F },
+    { ACTOR_OBJ_OSHIHIKI, 0x000F, 0, 0x3FFF },
+    // low byte the tree/bush type, high byte the drop table
+    { ACTOR_EN_WOOD02, 0x00FF, 0, 0xFFFF },
+    // gold/timed/wooden in 0xF000 | switch flag 0x3F | timer 0x3C0 | 0x400
+    { ACTOR_OBJ_SYOKUDAI, 0xF000, 0, 0xF7FF },
+    { ACTOR_EN_GS, 0x0000, 0, 0x3FFF },
+    { ACTOR_OBJ_BOMBIWA, 0x0000, 0, 0x803F },
+    { ACTOR_EN_LIGHT, 0x000F, 0, 0x0FFF },
+    { ACTOR_EN_RIVER_SOUND, 0x0000, 0, 0xFFFF },
+    { ACTOR_EN_KANBAN, 0x0000, 0, 0x0000 },
+    { ACTOR_OBJ_KIBAKO2, 0x0000, 0, 0x0000 },
+    { ACTOR_EN_BOMBF, 0x0000, 0, 0x0000 },
+    { ACTOR_BG_ICE_TURARA, 0x0000, 0, 0x0000 },
+    { ACTOR_BG_HAKA, 0x0000, 0, 0x0000 },
 };
 
 static const ActorParamsLayout* FindLayout(int16_t actorId) {
@@ -159,9 +191,16 @@ static const ActorParamsLayout* FindLayout(int16_t actorId) {
     return nullptr;
 }
 
-int16_t VariantMask(int16_t actorId) {
+uint16_t VariantMask(int16_t actorId) {
     const ActorParamsLayout* layout = FindLayout(actorId);
     return layout == nullptr ? 0 : layout->variantMask;
+}
+
+// Fails closed: an actor with no entry above offers no options rather than a full 16-bit word of
+// mostly-inert bits. Adding a palette entry for a new actor means adding its layout here too.
+uint16_t OptionMask(int16_t actorId) {
+    const ActorParamsLayout* layout = FindLayout(actorId);
+    return layout == nullptr ? 0 : static_cast<uint16_t>(layout->usedMask & ~layout->variantMask);
 }
 
 bool AreParamsSafe(int16_t actorId, int16_t params) {

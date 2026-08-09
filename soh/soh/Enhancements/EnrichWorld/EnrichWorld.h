@@ -103,7 +103,16 @@ bool AreParamsSafe(int16_t actorId, int16_t params);
  * Bugs, Fish and Butterflies differ only in bits 0-4, so a free-form params box let you select
  * Butterflies and edit it into a Fish - or into one of the two types the actor kills itself on.
  */
-int16_t VariantMask(int16_t actorId);
+uint16_t VariantMask(int16_t actorId);
+
+/**
+ * The bits the placer lets you edit: every bit the actor actually reads, minus its identity bits.
+ *
+ * 0 means the prop has no options at all - either it ignores params entirely (crates, bomb
+ * flowers, icicles, gravestones, signposts all do) or the only bits it reads are the ones the
+ * dropdown owns. Offering a box in those cases produced values that were pure duplicates.
+ */
+uint16_t OptionMask(int16_t actorId);
 
 /** Human-readable name for an actor id, falling back to the raw number. */
 std::string ActorLabel(int16_t actorId, int16_t params);
