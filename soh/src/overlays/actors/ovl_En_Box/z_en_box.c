@@ -590,13 +590,16 @@ void EnBox_UpdateTexture(EnBox* this, PlayState* play) {
     // the location originally had, and vice versa. Despite the cvar's name
     // ("ChestSizeAndTextureMatchContents"), vanilla SoH only ever changed the skin/DL below -
     // Actor_SetScale was always keyed purely on the location's fixed this->type, which never
-    // reacted to contents at all. Only ITEM_CATEGORY_MAJOR gets the big treatment (matching
-    // the randomizer's tiered-placement design); this->type still governs every OTHER
-    // behavior here (falling chests, switch-flag appearance, room-clear tracking) untouched -
-    // only the scale/focus below is contents-aware now.
+    // reacted to contents at all. ITEM_CATEGORY_MAJOR gets the big treatment (matching the
+    // randomizer's tiered-placement design), and so do heart containers / double defense -
+    // they keep the heart skin below but are big-chest items, unlike pieces of heart. See
+    // Randomizer_IsBigChestHealthItem(). this->type still governs every OTHER behavior here
+    // (falling chests, switch-flag appearance, room-clear tracking) untouched - only the
+    // scale/focus below is contents-aware now.
     bool renderAsBigChest;
     if (!isVanilla) {
-        renderAsBigChest = getItemCategory == ITEM_CATEGORY_MAJOR;
+        renderAsBigChest =
+            getItemCategory == ITEM_CATEGORY_MAJOR || Randomizer_IsBigChestHealthItem(this->getItemEntry);
     } else {
         renderAsBigChest = this->type != ENBOX_TYPE_SMALL && this->type != ENBOX_TYPE_6 &&
                            this->type != ENBOX_TYPE_ROOM_CLEAR_SMALL && this->type != ENBOX_TYPE_SWITCH_FLAG_FALL_SMALL;
