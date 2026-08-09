@@ -44,6 +44,13 @@ const std::vector<PropDef>& AllProps() {
           "params & 0xF sets type/scale." },
         { "River sound", ACTOR_EN_RIVER_SOUND, OBJECT_GAMEPLAY_KEEP, kNoObjectNeeded, 0,
           "Invisible ambient emitter." },
+        { "Fish (single)", ACTOR_EN_FISH, OBJECT_GAMEPLAY_KEEP, kNoObjectNeeded, 0,
+          "One fish, rather than the shoal the Fish entry spawns. Wants water." },
+        { "Bug (single)", ACTOR_EN_INSECT, OBJECT_GAMEPLAY_KEEP, kNoObjectNeeded, 0,
+          "One bug, rather than the swarm the Bugs entry spawns." },
+        { "Blue fire flame", ACTOR_EN_ICE_HONO, OBJECT_GAMEPLAY_KEEP, kNoObjectNeeded, 0, "" },
+        { "Rupee pattern", ACTOR_OBJ_MURE3, OBJECT_GAMEPLAY_KEEP, kNoObjectNeeded, 0,
+          "A formation of rupees. Collectible, not pure decoration." },
 
         // ---- Overworld (gameplay_field_keep) ----
         // Butterflies are Obj_Mure children (En_Butte), whose object is the field keep, not the
@@ -70,6 +77,12 @@ const std::vector<PropDef>& AllProps() {
           "Large. Sets a switch flag." },
         { "Boulder, bronze", ACTOR_OBJ_HAMISHI, OBJECT_GAMEPLAY_FIELD_KEEP, kNoObjectNeeded, 0,
           "Hammer-breakable." },
+        { "Butterfly (single)", ACTOR_EN_BUTTE, OBJECT_GAMEPLAY_FIELD_KEEP, kNoObjectNeeded, 0,
+          "One butterfly, rather than the cloud the Butterflies entry spawns." },
+        { "Beehive", ACTOR_OBJ_COMB, OBJECT_GAMEPLAY_FIELD_KEEP, kNoObjectNeeded, 0,
+          "Breakable, drops from its collectible flag." },
+        { "Grotto entrance", ACTOR_DOOR_ANA, OBJECT_GAMEPLAY_FIELD_KEEP, kNoObjectNeeded, 0,
+          "A real, enterable grotto hole - scenery with gameplay attached." },
 
         // Obj_Mure2 rings its children on an 80-unit circle. The spawner is gameplay_keep, but
         // what lands on the ground is what the room has to support - En_Kusa type 0 for the
@@ -86,6 +99,35 @@ const std::vector<PropDef>& AllProps() {
           "Bit 8 clear = dungeon pot." },
         { "Pushable block", ACTOR_OBJ_OSHIHIKI, OBJECT_GAMEPLAY_DANGEON_KEEP, kNoObjectNeeded, 0,
           "Structural, not decor." },
+        { "Crate, small liftable", ACTOR_OBJ_KIBAKO, OBJECT_GAMEPLAY_DANGEON_KEEP, kNoObjectNeeded, 0,
+          "The one Link picks up and throws, unlike the large crate below." },
+        { "Pot, flying", ACTOR_EN_TUBO_TRAP, OBJECT_GAMEPLAY_DANGEON_KEEP, kNoObjectNeeded, 0,
+          "Launches itself at Link when he gets close." },
+
+        // ---- Scene-specific: added 2026-08-09 from the vanilla usage ranking in
+        // ../../../../enrich-world/data/scene-props.json. Each was read for whether it re-checks
+        // its own object (none of these do, so none need a required object) and for its params
+        // layout, which is in kParamsLayouts below where it isn't a single fixed value.
+        { "Flagpole, red cloth", ACTOR_EN_HATA, OBJECT_HATA, kNoObjectNeeded, 0,
+          "Vanilla's commonest pure decoration - 56 placements, all overworld." },
+        { "Cucco", ACTOR_EN_NIW, OBJECT_NIW, kNoObjectNeeded, 0, "Pick it up, it flaps. Ranch and village." },
+        { "Horse", ACTOR_EN_HORSE_NORMAL, OBJECT_HORSE_NORMAL, kNoObjectNeeded, 0,
+          "Grazes in place. Lon Lon and Hyrule Field." },
+        { "Fence, jumpable", ACTOR_BG_UMAJUMP, OBJECT_UMAJUMP, kNoObjectNeeded, 0, "The Lon Lon obstacle fence." },
+        { "Gate, ranch", ACTOR_BG_INGATE, OBJECT_INGATE, kNoObjectNeeded, 0, "Ingo's gates." },
+        { "Milk crate", ACTOR_BG_SPOT15_RRBOX, OBJECT_SPOT15_OBJ, kNoObjectNeeded, 0, "Liftable." },
+        { "Shop shelves", ACTOR_EN_TANA, OBJECT_SHOP_DUNGEN, kNoObjectNeeded, 0, "" },
+        { "Torch, golden", ACTOR_BG_PO_SYOKUDAI, OBJECT_SYOKUDAI, kNoObjectNeeded, 0,
+          "The Poe Sisters' variant. High byte is the flame colour." },
+        { "Hookshot target post", ACTOR_OBJ_HSBLOCK, OBJECT_D_HSBLOCK, kNoObjectNeeded, 0, "" },
+        { "Red ice", ACTOR_BG_ICE_SHELTER, OBJECT_ICE_OBJECTS, kNoObjectNeeded, 0, "Melts to blue fire." },
+        { "Cloud ring", ACTOR_BG_SPOT16_DOUGHNUT, OBJECT_EFC_DOUGHNUT, kNoObjectNeeded, 0,
+          "Death Mountain's smoke ring. Pure effect, no collision." },
+        { "Lava fountain", ACTOR_EFC_ERUPC, OBJECT_EFC_ERUPC, kNoObjectNeeded, 0, "Particle spout, no collision." },
+        { "Windmill sails", ACTOR_BG_SPOT01_FUSYA, OBJECT_SPOT01_OBJECTS, kNoObjectNeeded, 0, "Turns on its own." },
+        { "Skull jar, giant", ACTOR_BG_HAKA_TUBO, OBJECT_HAKA_OBJECTS, kNoObjectNeeded, 0, "" },
+        { "Goron pot, large", ACTOR_BG_SPOT18_BASKET, OBJECT_SPOT18_OBJ, kNoObjectNeeded, 0, "" },
+        { "Water spout", ACTOR_EN_SIOFUKI, OBJECT_SIOFUKI, kNoObjectNeeded, 0, "" },
 
         // ---- Scene-specific ----
         { "Tree - conical, large", ACTOR_EN_WOOD02, OBJECT_WOOD02, kNoObjectNeeded, 0, "" },
@@ -180,6 +222,41 @@ static const ActorParamsLayout kParamsLayouts[] = {
     { ACTOR_EN_BOMBF, 0x0000, 0, 0x0000 },
     { ACTOR_BG_ICE_TURARA, 0x0000, 0, 0x0000 },
     { ACTOR_BG_HAKA, 0x0000, 0, 0x0000 },
+
+    // ---- Added with the 2026-08-09 palette expansion ----
+    // Two of these carry the same out-of-bounds shape the crash fix was about, so they are the
+    // reason variantCount is not vestigial:
+    //   Obj_Mure3   spawnFuncs[3] indexed `(params >> 13) & 7` - indices 3-7 call a garbage
+    //               FUNCTION POINTER, which is worse than the bad Gfx* that crashed Obj_Hana.
+    //               sRupeeCounts[4] runs off the end the same way.
+    //   Obj_Hsblock D_80B940C0[3], sCollisionHeaders[3] and sDLists[3] all indexed `params & 3`.
+    { ACTOR_OBJ_MURE3, 0xE000, 3, 0xE03F },
+    { ACTOR_OBJ_HSBLOCK, 0x0003, 3, 0x0023 },
+    // params & 3 picks the bug's behaviour against a four-entry table, so no bounds issue; the
+    // high bits are the Gold Skulltula soil flag it reports to.
+    { ACTOR_EN_INSECT, 0x0003, 4, 0x1FFF },
+    { ACTOR_EN_FISH, 0x0000, 0, 0x0000 },
+    { ACTOR_EN_BUTTE, 0x0000, 0, 0x0001 },
+    { ACTOR_EN_ICE_HONO, 0x0000, 0, 0x0000 },
+    { ACTOR_OBJ_COMB, 0x0000, 0, 0x3F1F },
+    { ACTOR_DOOR_ANA, 0x0000, 0, 0x0000 },
+    { ACTOR_OBJ_KIBAKO, 0x0000, 0, 0x3F1F },
+    { ACTOR_EN_TUBO_TRAP, 0x0000, 0, 0xFFFF },
+    { ACTOR_EN_HATA, 0x0000, 0, 0x0000 },
+    { ACTOR_EN_NIW, 0x0000, 0, 0x0000 },
+    { ACTOR_EN_HORSE_NORMAL, 0x0000, 0, 0x00FF },
+    { ACTOR_BG_UMAJUMP, 0x0000, 0, 0x0000 },
+    { ACTOR_BG_INGATE, 0x0000, 0, 0x0003 },
+    { ACTOR_BG_SPOT15_RRBOX, 0x0000, 0, 0x003F },
+    { ACTOR_EN_TANA, 0x0000, 0, 0x0000 },
+    { ACTOR_BG_PO_SYOKUDAI, 0x0000, 0, 0xFF00 },
+    { ACTOR_BG_ICE_SHELTER, 0x0700, 0, 0x077F },
+    { ACTOR_BG_SPOT16_DOUGHNUT, 0x0000, 0, 0x0000 },
+    { ACTOR_EFC_ERUPC, 0x0000, 0, 0x0000 },
+    { ACTOR_BG_SPOT01_FUSYA, 0x0000, 0, 0x0000 },
+    { ACTOR_BG_HAKA_TUBO, 0x0000, 0, 0x003F },
+    { ACTOR_BG_SPOT18_BASKET, 0x0000, 0, 0x3F3F },
+    { ACTOR_EN_SIOFUKI, 0xF000, 0, 0xFFFF },
 };
 
 static const ActorParamsLayout* FindLayout(int16_t actorId) {
