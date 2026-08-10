@@ -86,11 +86,9 @@ bool SevenSagesCoop_ShouldUseRosterForGeneration(void);
 //     (SeedContext.cpp:421). A host and a joiner in the same world disagree on it.
 //
 // Hashing the placement sidesteps all three and measures the thing that actually has to match.
+// Recomputed on every call rather than cached - see the implementation for why memoising it here
+// is a correctness hazard rather than a free win.
 uint32_t SevenSagesCoop_GetWorldFingerprint(void);
-
-// Drop the cached fingerprint. Called from this module's own OnLoadGame hook; exposed only so that
-// hook can reach it.
-void SevenSagesCoop_InvalidateWorldFingerprint(void);
 
 // Should world state coming from this Anchor client be applied?
 //

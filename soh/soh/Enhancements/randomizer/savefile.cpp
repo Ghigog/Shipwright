@@ -926,6 +926,14 @@ extern "C" void Randomizer_ApplySageRuntimeKit() {
     // kit options rather than all RSK_STARTING_* so a starting item the preset legitimately grants
     // to everyone survives untouched.
     //
+    // Standing constraint this creates, checked 2026-08-10 and currently satisfied: the Seven Sages
+    // seed preset must not set a NON-ZERO value for any option that also appears in a sage kit,
+    // because the clear below would strip it from every sage who doesn't carry it themselves. Two
+    // options currently overlap - RSK_STARTING_OCARINA and RSK_STARTING_ZELDAS_LULLABY, both in
+    // Zelda's kit - and the preset sets both to 0, so clearing them is a no-op. StartingZeldasLetter
+    // and StartingMapsCompasses are non-zero in the preset but are in no kit, so they are untouched.
+    // If a future preset change breaks that, the symptom is a silently missing starting item.
+    //
     // World overrides are deliberately NOT narrowed: they describe the world this seed was built
     // with, which is the same world for everyone in the room, and undoing one here would put this
     // player's world out of step with the placement they just loaded.

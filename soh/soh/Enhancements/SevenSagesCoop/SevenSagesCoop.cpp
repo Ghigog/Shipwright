@@ -6,9 +6,7 @@
 #include <libultraship/bridge.h>
 #include "soh/cvar_prefixes.h"
 #include "soh/OTRGlobals.h"
-#include "soh/ShipInit.hpp"
 #include "soh/Enhancements/randomizer/randomizer.h"
-#include "soh/Enhancements/game-interactor/GameInteractor_Hooks.h"
 
 extern "C" {
 #include "z64.h"
@@ -51,20 +49,21 @@ extern "C" bool SevenSagesCoop_ShouldUseRosterForGeneration(void) {
     return CVarGetInteger(CVAR_COOP_USE_ROSTER, 0) != 0 && SevenSagesCoop_GetRoster() != 0;
 }
 
-// Cached, because the world-state packet handlers consult this on every incoming flag and check
-// update - which is frequently - and the walk below is RC_MAX iterations. The placement itself only
-// changes on generation, a spoiler load or a file load, and all three end with OnLoadGame before
-// any of those packets can be processed, so invalidating there is sufficient.
-static uint32_t sCachedFingerprint = 0;
-static bool sFingerprintValid = false;
-
+// Deliberately NOT cached.
+//
+// The obvious optimisation is to memoise this and invalidate on OnLoadGame, since the placement
+// only changes on generation, a spoiler load or a file load. That is a trap here: this module
+// registers through the "IS_RANDO" ShipInit bucket, and ShipInit::Init("IS_RANDO") is itself called
+// from OnLoadGame (randomizer/hook_handlers.cpp) - so an OnLoadGame hook registered from that
+// bucket cannot be relied on to fire for the very load that registered it. The cache would then
+// answer for the PREVIOUS file, which is the exact failure this fingerprint exists to prevent: two
+// clients silently agreeing they are in the same world when they are not.
+//
+// The cost of getting it right is 3321 checks times four bytes of FNV mixing - some tens of
+// microseconds, against packet handling and one ImGui list. Not worth a correctness hazard.
 extern "C" uint32_t SevenSagesCoop_GetWorldFingerprint(void) {
-    if (sFingerprintValid) {
-        return sCachedFingerprint;
-    }
-
     if (!IS_RANDO) {
-        return 0; // deliberately not cached - IS_RANDO can become true without a reload in between
+        return 0;
     }
 
     auto ctx = Rando::Context::GetInstance();
@@ -86,14 +85,7 @@ extern "C" uint32_t SevenSagesCoop_GetWorldFingerprint(void) {
     // Never return 0 for a real world: 0 is the "unknown / not comparable" sentinel that suppresses
     // the mismatch check entirely, and a world that happened to hash to it would silently stop
     // being checked at all.
-    sCachedFingerprint = hash == 0 ? 1u : hash;
-    sFingerprintValid = true;
-    return sCachedFingerprint;
-}
-
-extern "C" void SevenSagesCoop_InvalidateWorldFingerprint(void) {
-    sFingerprintValid = false;
-    sCachedFingerprint = 0;
+    return hash == 0 ? 1u : hash;
 }
 
 extern "C" bool SevenSagesCoop_ShouldAcceptWorldStateFrom(uint32_t remoteWorldFingerprint) {
@@ -114,11 +106,3 @@ extern "C" bool SevenSagesCoop_ShouldSeeAge(int32_t remoteLinkAge) {
     }
     return remoteLinkAge == gSaveContext.linkAge;
 }
-
-// Registered unconditionally rather than on IS_SEVENSAGES: the cache has to be dropped when moving
-// AWAY from a Seven Sages file too, and at that point the condition would already read false.
-static void RegisterSevenSagesCoop() {
-    COND_HOOK(OnLoadGame, true, [](int32_t fileNum) { SevenSagesCoop_InvalidateWorldFingerprint(); });
-}
-
-static RegisterShipInitFunc sevenSagesCoopInitFunc(RegisterSevenSagesCoop, { "IS_RANDO" });
