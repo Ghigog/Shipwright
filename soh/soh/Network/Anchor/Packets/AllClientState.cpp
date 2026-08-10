@@ -49,6 +49,8 @@ void Anchor::HandlePacket_AllClientState(nlohmann::json payload) {
         clients[client.clientId].teamId = client.teamId;
         clients[client.clientId].online = client.online;
         clients[client.clientId].seed = client.seed;
+        clients[client.clientId].seedHash = client.seedHash;
+        clients[client.clientId].sage = client.sage;
         clients[client.clientId].isSaveLoaded = client.isSaveLoaded;
         clients[client.clientId].isGameComplete = client.isGameComplete;
         clients[client.clientId].sceneNum = client.sceneNum;

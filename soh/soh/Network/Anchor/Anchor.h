@@ -28,6 +28,18 @@ typedef struct {
     bool online;
     bool self;
     uint32_t seed;
+    // Seven Sages: the seed's FINAL hash, and the only value that actually identifies the world.
+    //
+    // `seed` above is Hash(seedString) (3drando/menu.cpp:50-51) and is blind to settings, so two
+    // players who typed the same seed string but generated with different sages match on it while
+    // holding completely different item placements - RSK_SELECTED_SAGE is an OptionCategory::Setting
+    // and feeds settingsStr, which feeds finalHash, which seeds the RNG (playthrough.cpp:63).
+    // This is the value the room list compares and the world-state sync refuses to cross.
+    // 0 means "not known / no seed loaded" and is never treated as a mismatch.
+    uint32_t seedHash;
+    // Seven Sages: which sage this player chose (RO_SAGE_*), so teammates can be drawn in their own
+    // colours and named in the room list. 0xFF when they aren't on a Seven Sages save.
+    uint8_t sage;
     bool isSaveLoaded;
     bool isGameComplete;
     s16 sceneNum;
@@ -112,6 +124,14 @@ class Anchor : public Network {
     void HandlePacket_UpdateTeamState(nlohmann::json payload);
 
   public:
+    // Seven Sages co-op: is the client that sent this packet in the same world we are?
+    //
+    // World-state packets carry a `clientId` the server stamps on, so the sender's reported world
+    // fingerprint can be looked up in `clients`. Returns true for anything not comparable - a
+    // missing clientId, an unknown client, a vanilla run - so nothing about upstream Anchor's
+    // behaviour changes with co-op off. See SevenSagesCoop.h.
+    bool ShouldAcceptWorldStateFrom(const nlohmann::json& payload);
+
     uint32_t ownClientId;
     inline static const std::string clientVersion = (char*)gGitCommitHash;
 

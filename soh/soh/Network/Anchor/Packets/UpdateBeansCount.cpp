@@ -1,6 +1,7 @@
 #include "soh/Network/Anchor/Anchor.h"
 #include <nlohmann/json.hpp>
 #include "soh/Enhancements/game-interactor/GameInteractor.h"
+#include "soh/Enhancements/SevenSagesCoop/SevenSagesCoop.h"
 
 extern "C" {
 #include "macros.h"
@@ -17,6 +18,11 @@ void Anchor::SendPacket_UpdateBeansCount() {
         return;
     }
 
+    // Beans are ammo, and ammo is inventory. Follows the same rule as everything else you carry.
+    if (SevenSagesCoop_ShouldSuppressItemSync()) {
+        return;
+    }
+
     nlohmann::json payload;
     payload["type"] = UPDATE_BEANS_COUNT;
     payload["targetTeamId"] = CVarGetString(CVAR_REMOTE_ANCHOR("TeamId"), "default");
@@ -29,6 +35,10 @@ void Anchor::SendPacket_UpdateBeansCount() {
 
 void Anchor::HandlePacket_UpdateBeansCount(nlohmann::json payload) {
     if (!IsSaveLoaded() || !roomState.syncItemsAndFlags) {
+        return;
+    }
+
+    if (SevenSagesCoop_ShouldSuppressItemSync()) {
         return;
     }
 

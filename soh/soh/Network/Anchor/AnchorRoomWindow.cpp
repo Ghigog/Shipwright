@@ -3,12 +3,20 @@
 #include "soh/OTRGlobals.h"
 #include "soh/util.h"
 #include "soh/Enhancements/randomizer/SeedContext.h"
+#include "soh/Enhancements/SevenSagesCoop/SevenSagesCoop.h"
 
 extern "C" {
 #include "variables.h"
 #include "functions.h"
+#include "macros.h"
 extern PlayState* gPlayState;
 }
+
+// Indexed by RO_SAGE_*, matching the ring order in SevenSagesSelectMenu.cpp. Display strings only -
+// the authoritative table is sSageDefinitions in savefile.cpp.
+static const char* kSevenSagesNames[] = {
+    "Rauru", "Saria", "Darunia", "Ruto", "Impa", "Nabooru", "Zelda",
+};
 
 void AnchorRoomWindow::Draw() {
     if (!IsVisible() || !Anchor::Instance->isConnected) {
@@ -83,6 +91,13 @@ void AnchorRoomWindow::DrawElement() {
                 ImGui::Text("%s", client.name.c_str());
             }
 
+            // Seven Sages: who they are matters more than what they called themselves. Shown for
+            // any client that reported a sage, so a mixed room still reads correctly.
+            if (client.sage < ARRAY_COUNT(kSevenSagesNames)) {
+                ImGui::SameLine();
+                ImGui::TextColored(ImVec4(0.9f, 0.8f, 1.0f, 0.9f), "(%s)", kSevenSagesNames[client.sage]);
+            }
+
             if (Anchor::Instance->roomState.showLocationsMode == 2 ||
                 (Anchor::Instance->roomState.showLocationsMode == 1 && isOwnTeam)) {
                 if ((client.self ? Anchor::Instance->IsSaveLoaded() : client.isSaveLoaded)) {
@@ -113,16 +128,27 @@ void AnchorRoomWindow::DrawElement() {
                     ImGui::EndTooltip();
                 }
             }
-            uint32_t seed = IS_RANDO ? Rando::Context::GetInstance()->GetSeed() : 0;
-            if (client.isSaveLoaded && Anchor::Instance->IsSaveLoaded() && client.seed != seed && client.online &&
-                !client.self) {
+            // Seven Sages: compare the WORLD, not the seed string.
+            //
+            // `client.seed` is Hash(seedString) and is blind to settings, so two Seven Sages players
+            // who typed the same seed string but picked different sages match here while holding
+            // completely different item placements - the exact case this mod creates, and the one
+            // the warning most needed to catch. The fingerprint hashes the placements themselves;
+            // see SevenSagesCoop.h for why none of SoH's own seed values can be used. A 0 on either
+            // side means "not comparable" (vanilla save, or a teammate on a build without this) and
+            // is deliberately not a mismatch.
+            uint32_t worldHash = SevenSagesCoop_GetWorldFingerprint();
+            if (client.isSaveLoaded && Anchor::Instance->IsSaveLoaded() && client.online && !client.self &&
+                worldHash != 0 && client.seedHash != 0 && client.seedHash != worldHash) {
                 ImGui::SameLine();
                 ImGui::TextColored(ImVec4(1, 0, 0, 1), ICON_FA_EXCLAMATION_TRIANGLE);
                 if (ImGui::IsItemHovered()) {
                     ImGui::BeginTooltip();
-                    ImGui::Text("Seed mismatch! Continuing will break things!");
-                    ImGui::Text("Yours: %u", seed);
-                    ImGui::Text("Theirs: %u", client.seed);
+                    ImGui::Text("Different world - NOT syncing with this player.");
+                    ImGui::Text("Their item placement differs from yours: a different seed, or the");
+                    ImGui::Text("same seed generated against a different sage roster.");
+                    ImGui::Text("Yours: %u", worldHash);
+                    ImGui::Text("Theirs: %u", client.seedHash);
                     ImGui::EndTooltip();
                 }
             }

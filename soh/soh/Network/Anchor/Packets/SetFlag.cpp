@@ -1,4 +1,5 @@
 #include "soh/Network/Anchor/Anchor.h"
+#include "soh/Enhancements/SevenSagesCoop/SevenSagesCoop.h"
 #include <nlohmann/json.hpp>
 #include "soh/Enhancements/game-interactor/GameInteractor.h"
 
@@ -31,6 +32,12 @@ void Anchor::SendPacket_SetFlag(s16 sceneNum, s16 flagType, s16 flag) {
 }
 
 void Anchor::HandlePacket_SetFlag(nlohmann::json payload) {
+    // Seven Sages co-op: refuse world state from a client in a different item placement. Their
+    // flags describe a world this save does not have. See SevenSagesCoop.h.
+    if (!ShouldAcceptWorldStateFrom(payload)) {
+        return;
+    }
+
     if (!IsSaveLoaded() || !roomState.syncItemsAndFlags) {
         return;
     }

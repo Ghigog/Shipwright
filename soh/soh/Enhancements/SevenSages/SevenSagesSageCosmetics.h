@@ -1,6 +1,8 @@
 #ifndef SEVEN_SAGES_SAGE_COSMETICS_H
 #define SEVEN_SAGES_SAGE_COSMETICS_H
 
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -18,6 +20,18 @@ extern "C" {
  *   - the OnLoadGame hook in this file, which is the one that makes it *correct* across files
  */
 void SevenSages_ApplySageCosmetics(void);
+
+/**
+ * The tunic colour belonging to an arbitrary sage, as a value rather than a CVar write.
+ *
+ * ApplySageCosmetics styles the LOCAL player by writing the cosmetic CVars, which is a per-process
+ * global - so it cannot answer "what colour is my teammate". Anchor's remote-player renderer needs
+ * exactly that, per remote client, to draw each teammate as their own sage.
+ *
+ * `tunicIndex` is PLAYER_TUNIC_KOKIRI/GORON/ZORA (0/1/2). Returns 1 and writes r/g/b on success,
+ * 0 when `sage` has no palette (and then leaves the outputs alone).
+ */
+int SevenSages_GetSageTunicColor(uint8_t sage, uint8_t tunicIndex, uint8_t* r, uint8_t* g, uint8_t* b);
 
 #ifdef __cplusplus
 }

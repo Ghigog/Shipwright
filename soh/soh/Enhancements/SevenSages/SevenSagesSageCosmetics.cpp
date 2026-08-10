@@ -1177,6 +1177,41 @@ void RevertSageCosmetics() {
 // that presets overwrite wholesale.
 constexpr const char* CVAR_SAGE_COSMETICS_APPLIED = CVAR_GENERAL("SevenSages.CosmeticsApplied");
 
+// Seven Sages co-op: what colour is some OTHER sage's tunic?
+//
+// ApplyTunics above answers this for the local player by writing CVars, which is exactly what
+// cannot be done for a teammate - there is one set of cosmetic CVars per process and they belong to
+// whoever is sitting at the keyboard. Anchor's remote-player renderer needs the answer as a plain
+// value instead, computed for an arbitrary sage id, so it can colour each teammate as themselves.
+//
+// Derives the three tunics the same way ApplyTunics does rather than duplicating the shades, so a
+// retune there follows through to how teammates look without a second edit. tunicIndex is
+// PLAYER_TUNIC_KOKIRI/GORON/ZORA (0/1/2).
+extern "C" int SevenSages_GetSageTunicColor(uint8_t sage, uint8_t tunicIndex, uint8_t* r, uint8_t* g, uint8_t* b) {
+    const SagePalette* palette = FindSagePalette(sage);
+    if (palette == nullptr || r == nullptr || g == nullptr || b == nullptr) {
+        return 0;
+    }
+
+    Rgb color;
+    switch (tunicIndex) {
+        case 1:
+            color = TowardBlack(palette->base, kGoronTunicShade, kMinShadeSeparation);
+            break;
+        case 2:
+            color = TowardWhite(palette->base, kZoraTunicShade, kMinShadeSeparation);
+            break;
+        default:
+            color = palette->base;
+            break;
+    }
+
+    *r = color.r;
+    *g = color.g;
+    *b = color.b;
+    return 1;
+}
+
 extern "C" void SevenSages_ApplySageCosmetics() {
     // Runs on EVERY file load, not just Seven Sages ones - see the registration comment below for
     // why the hook can't be conditionally registered. So this decides which of the two directions

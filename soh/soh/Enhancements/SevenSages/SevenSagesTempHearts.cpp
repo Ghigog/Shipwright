@@ -179,6 +179,16 @@ extern "C" int SevenSagesTempHeartStartIndex(void) {
     return sPermanentHealth / FULL_HEART_HEALTH;
 }
 
+// See the header. Same value Suspend would leave in gSaveContext.healthCapacity, computed rather
+// than applied, so this is safe to call from Anchor's save thread.
+extern "C" int SevenSagesPeekTempHeartCapacity(short* capacityOut) {
+    if (sTempHealth <= 0 || capacityOut == nullptr) {
+        return 0;
+    }
+    *capacityOut = sPermanentCapacity;
+    return 1;
+}
+
 static void RegisterSevenSagesTempHearts() {
     COND_HOOK(OnGameFrameUpdate, IS_SEVENSAGES, SevenSagesTempHeartsFrameUpdate);
     COND_HOOK(OnLoadGame, IS_SEVENSAGES, SevenSagesTempHeartsOnLoadGame);

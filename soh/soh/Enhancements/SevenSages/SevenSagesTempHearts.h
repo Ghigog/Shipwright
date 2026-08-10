@@ -33,6 +33,21 @@ void SevenSagesRestoreTempHeartsAfterSave(void);
 // this to colour the topmost filled hearts differently from the player's real ones.
 int SevenSagesTempHeartStartIndex(void);
 
+// Read-only peek at the player's own heart capacity with the temporary pool excluded - what
+// Suspend would leave behind, without actually suspending. Returns false and touches nothing when
+// no temporary hearts are held.
+//
+// Exists for Anchor's UPDATE_TEAM_STATE, which snapshots gSaveContext from the save thread after
+// the main thread has already restored the buff, and would otherwise ship inflated capacity to
+// teammates as permanent hearts. That caller cannot use the Suspend/Restore pair above: those
+// share a file-scope static and must be paired within one frame, so calling them off-thread would
+// race the main thread's own pair and move the live player's health as a side effect. Reading the
+// pool is safe; moving it is not.
+// Returns 1 when temporary hearts are held (and writes capacityOut), 0 otherwise. int rather than
+// bool to match SevenSagesTempHeartStartIndex above and keep this header free of <stdbool.h> for
+// the C translation units that include it.
+int SevenSagesPeekTempHeartCapacity(short* capacityOut);
+
 #ifdef __cplusplus
 }
 #endif

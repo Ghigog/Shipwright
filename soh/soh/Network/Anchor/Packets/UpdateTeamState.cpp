@@ -4,6 +4,8 @@
 #include "soh/OTRGlobals.h"
 #include "soh/Notification/Notification.h"
 #include "soh/Enhancements/randomizer/randomizer.h"
+#include "soh/Enhancements/SevenSagesCoop/SevenSagesCoop.h"
+#include "soh/Enhancements/SevenSages/SevenSagesTempHearts.h"
 
 extern "C" {
 #include "variables.h"
@@ -36,6 +38,32 @@ void Anchor::SendPacket_UpdateTeamState() {
     payload["queue"] = json::array();
 
     payload["state"] = gSaveContext;
+
+    // Seven Sages: strip the Sun's Song temporary hearts out of the snapshot.
+    //
+    // SaveManager::SaveFile wraps its own snapshot in Suspend/Restore (SaveManager.cpp:1250-1260)
+    // so the buff never reaches the save file. This packet is not covered by that pair: it is sent
+    // from the OnSaveFile hook, which fires at the END of SaveFileThreaded (SaveManager.cpp:1226)
+    // on the save thread, by which point the main thread has already run Restore. So the
+    // gSaveContext just serialised still has the buff applied, and the inflated healthCapacity
+    // would reach the whole team as permanent hearts.
+    //
+    // Patched in the JSON rather than by calling Suspend/Restore here, and that distinction
+    // matters: those two share a file-scope static and their header requires them to be paired
+    // within one frame, so calling them from this thread would race the main thread's own pair and
+    // briefly move the live player's health as a side effect. Reading the pool is safe; moving it
+    // is not.
+    //
+    // Unconditional rather than co-op-gated - temp hearts inflating a teammate's real heart
+    // capacity is wrong in a vanilla Anchor run too.
+    //
+    // Only healthCapacity needs patching: `health` is not part of this packet's SaveContext
+    // serialization at all (JsonConversions.hpp:164-179), so current HP never crosses the wire.
+    int16_t ownCapacity = 0;
+    if (SevenSagesPeekTempHeartCapacity(&ownCapacity)) {
+        payload["state"]["healthCapacity"] = ownCapacity;
+    }
+
     // manually update current scene flags
     payload["state"]["sceneFlags"][gPlayState->sceneNum * 4] = gPlayState->actorCtx.flags.chest;
     payload["state"]["sceneFlags"][gPlayState->sceneNum * 4 + 1] = gPlayState->actorCtx.flags.swch;
@@ -118,6 +146,12 @@ void Anchor::SendPacket_ClearTeamState(std::string teamId) {
 }
 
 void Anchor::HandlePacket_UpdateTeamState(nlohmann::json payload) {
+    // Seven Sages co-op: refuse world state from a client in a different item placement. Their
+    // flags describe a world this save does not have. See SevenSagesCoop.h.
+    if (!ShouldAcceptWorldStateFrom(payload)) {
+        return;
+    }
+
     if (!roomState.syncItemsAndFlags) {
         return;
     }
@@ -133,15 +167,28 @@ void Anchor::HandlePacket_UpdateTeamState(nlohmann::json payload) {
     if (payload.contains("state")) {
         SaveContext loadedData = payload["state"].get<SaveContext>();
 
-        gSaveContext.healthCapacity = loadedData.healthCapacity;
-        gSaveContext.magicLevel = loadedData.magicLevel;
-        gSaveContext.magicCapacity = loadedData.magicCapacity;
-        gSaveContext.magic = static_cast<s8>(loadedData.magicCapacity);
-        gSaveContext.isMagicAcquired = loadedData.isMagicAcquired;
-        gSaveContext.isDoubleMagicAcquired = loadedData.isDoubleMagicAcquired;
-        gSaveContext.isDoubleDefenseAcquired = loadedData.isDoubleDefenseAcquired;
-        gSaveContext.bgsFlag = loadedData.bgsFlag;
-        gSaveContext.swordHealth = loadedData.swordHealth;
+        // Seven Sages co-op: every capacity stat below is personal, not team property.
+        //
+        // This block is easy to read as "just hearts and magic", but the magic meter is literally
+        // an item in Rauru's kit (RSK_STARTING_MAGIC_METER, savefile.cpp's sage table), so copying
+        // it from a teammate dissolves a kit distinction on its own - before the inventory
+        // overwrite further down ever runs. Heart containers, double magic, double defence and the
+        // Biggoron sword state are all the same kind of thing: something one player earned.
+        //
+        // gSaveContext.ship.quest is NOT skipped. It carries the quest id that IS_SEVENSAGES tests,
+        // and everyone in the room is on the same quest by construction - a mismatched client is
+        // refused before it gets here (see the seed hash check in HandlePacket_UpdateClientState).
+        if (!SevenSagesCoop_ShouldSuppressItemSync()) {
+            gSaveContext.healthCapacity = loadedData.healthCapacity;
+            gSaveContext.magicLevel = loadedData.magicLevel;
+            gSaveContext.magicCapacity = loadedData.magicCapacity;
+            gSaveContext.magic = static_cast<s8>(loadedData.magicCapacity);
+            gSaveContext.isMagicAcquired = loadedData.isMagicAcquired;
+            gSaveContext.isDoubleMagicAcquired = loadedData.isDoubleMagicAcquired;
+            gSaveContext.isDoubleDefenseAcquired = loadedData.isDoubleDefenseAcquired;
+            gSaveContext.bgsFlag = loadedData.bgsFlag;
+            gSaveContext.swordHealth = loadedData.swordHealth;
+        }
         gSaveContext.ship.quest = loadedData.ship.quest;
 
         for (int i = 0; i < 124; i++) {
@@ -228,7 +275,12 @@ void Anchor::HandlePacket_UpdateTeamState(nlohmann::json payload) {
             }
         }
 
-        gSaveContext.inventory = loadedData.inventory;
+        // Seven Sages co-op: the wholesale inventory overwrite is the single line that most defines
+        // Anchor's "everyone converges to one bag" model, and the one this mod exists to reject.
+        // Each sage's inventory stays their own; what the team shares is the world above.
+        if (!SevenSagesCoop_ShouldSuppressItemSync()) {
+            gSaveContext.inventory = loadedData.inventory;
+        }
 
         // The commented out code below is an attempt at sending the entire randomizer seed over, in hopes that a player
         // doesn't have to generate the seed themselves Currently it doesn't work :)

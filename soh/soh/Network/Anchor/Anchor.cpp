@@ -4,6 +4,7 @@
 #include "soh/Enhancements/nametag.h"
 #include "soh/ObjectExtension/ObjectExtension.h"
 #include "soh/Enhancements/randomizer/randomizer.h"
+#include "soh/Enhancements/SevenSagesCoop/SevenSagesCoop.h"
 
 extern "C" {
 #include "variables.h"
@@ -216,6 +217,22 @@ void Anchor::RefreshClientActors() {
             continue;
         }
 
+        // Seven Sages co-op: child and adult are separate dimensions. You only see players who are
+        // currently your own age, and time travel is what moves you between them.
+        //
+        // This is flavour with a real bug underneath it. Child and adult Hyrule are the SAME scene
+        // id with different setups, so an unfiltered Anchor already renders a cross-age teammate
+        // standing in geometry that does not exist in your version of the room - walking through
+        // walls, floating over terrain that is only there for them. Filtering fixes that and
+        // explains it in-world at the same time.
+        //
+        // Re-runs are already handled at both ends: HandlePacket_PlayerUpdate raises
+        // shouldRefreshActors when a REMOTE age changes, and the OnPlayerUpdate hook does the same
+        // when the LOCAL player's age changes (HookHandlers.cpp).
+        if (!SevenSagesCoop_ShouldSeeAge(client.linkAge)) {
+            continue;
+        }
+
         spawningDummyPlayerForClientId = clientId;
         // We are using a hook `ShouldActorInit` to override the init/update/draw/destroy functions of the Player we
         // spawn We quickly store a mapping of "index" to clientId, then within the init function we use this to get the
@@ -226,6 +243,20 @@ void Anchor::RefreshClientActors() {
         client.player = (Player*)dummy;
     }
     spawningDummyPlayerForClientId = 0;
+}
+
+bool Anchor::ShouldAcceptWorldStateFrom(const nlohmann::json& payload) {
+    if (!payload.contains("clientId")) {
+        return true;
+    }
+
+    const uint32_t clientId = payload.value("clientId", (uint32_t)0);
+    const auto it = clients.find(clientId);
+    if (it == clients.end()) {
+        return true;
+    }
+
+    return SevenSagesCoop_ShouldAcceptWorldStateFrom(it->second.seedHash);
 }
 
 bool Anchor::IsSaveLoaded() {

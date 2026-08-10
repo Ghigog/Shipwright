@@ -58,6 +58,12 @@ inline void from_json(const json& j, AnchorClient& client) {
     client.teamId = j.value("teamId", "default");
     client.online = j.value("online", false);
     client.seed = j.value("seed", (u32)0);
+    // Both default to "unknown" rather than to a real value, because a teammate on a build without
+    // Seven Sages co-op simply won't send them - and an absent field must never read as a mismatch
+    // or as sage 0 (Rauru). UPDATE_CLIENT_STATE is documented as cross-version compatible
+    // (UpdateClientState.cpp:18-20), so this is the contract, not defensiveness.
+    client.seedHash = j.value("seedHash", (u32)0);
+    client.sage = j.value("sage", (u8)0xFF);
     client.isSaveLoaded = j.value("isSaveLoaded", false);
     client.isGameComplete = j.value("isGameComplete", false);
     client.sceneNum = j.value("sceneNum", (s16)SCENE_ID_MAX);

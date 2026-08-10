@@ -5,6 +5,7 @@
 #include "soh/Enhancements/game-interactor/GameInteractor.h"
 #include "soh/Enhancements/randomizer/logic.h"
 #include "soh/Enhancements/randomizer/randomizer.h"
+#include "soh/Enhancements/SevenSagesCoop/SevenSagesCoop.h"
 
 #include <libultraship/bridge.h>
 #include <spdlog/spdlog.h>
@@ -808,6 +809,24 @@ extern "C" bool Randomizer_IsSevenSagesGeneration() {
 // Writes land in the Context's own option array (OptionValue::Set is a plain in-memory assignment,
 // no CVar write), so this is scoped to the seed being generated and never leaks back into the
 // user's saved settings UI.
+// Fold one sage's kit and world overrides into the Context's option array.
+//
+// World-state overrides go through the same Set() as the kit, and for the same reason: applied
+// before Fill() they are simply what this seed's world IS, so the solver, the item pool and the
+// spoiler log all reason about the real world rather than the preset's. Ruto's RO_ZF_OPEN is
+// the current example - it is what removes King Zora from her path home, and doing it here
+// rather than in the shared preset keeps the other six sages on the preset's own value.
+static void ApplySageOptionsToContext(const SageDefinition* def) {
+    auto ctx = Rando::Context::GetInstance();
+
+    for (uint8_t i = 0; i < def->kitCount; i++) {
+        ctx->GetOption(def->kit[i].key).Set(def->kit[i].value);
+    }
+    for (uint8_t i = 0; i < def->worldCount; i++) {
+        ctx->GetOption(def->world[i].key).Set(def->world[i].value);
+    }
+}
+
 extern "C" void Randomizer_ApplySageGenerationSettings() {
     // No-op for a plain Randomizer seed. Called unconditionally from Context::FinalizeSettings,
     // which runs for every generation regardless of which quest asked for it.
@@ -825,19 +844,39 @@ extern "C" void Randomizer_ApplySageGenerationSettings() {
     // starting position, whether the Temple of Time pedestal check auto-resolves, and the
     // "can you still reach ToT as the other age" seed validation. Leaving it derived from the
     // static preset value meant every child-starting sage was generated as if it started adult.
+    //
+    // Stays the LOCAL sage's age even for a co-op seed, and deliberately: one seed has exactly one
+    // starting age, and the host's is as good as any. A teammate who starts at the other age simply
+    // has access the solver did not assume, which only ever makes more of the world reachable, not
+    // less - the safe direction. See docs/multiplayer-anchor.md, "Mixed starting ages".
     ctx->GetOption(RSK_SELECTED_STARTING_AGE).Set(def->age);
 
-    for (uint8_t i = 0; i < def->kitCount; i++) {
-        ctx->GetOption(def->kit[i].key).Set(def->kit[i].value);
-    }
+    ApplySageOptionsToContext(def);
 
-    // World-state overrides go through the same Set() as the kit, and for the same reason: applied
-    // before Fill() they are simply what this seed's world IS, so the solver, the item pool and the
-    // spoiler log all reason about the real world rather than the preset's. Ruto's RO_ZF_OPEN is
-    // the current example - it is what removes King Zora from her path home, and doing it here
-    // rather than in the shared preset keeps the other six sages on the preset's own value.
-    for (uint8_t i = 0; i < def->worldCount; i++) {
-        ctx->GetOption(def->world[i].key).Set(def->world[i].value);
+    // ── Co-op: exclude every claimed sage's kit, not just the host's ────────────────────────
+    //
+    // A kit item set as RSK_STARTING_* is removed from the shuffled pool (item_pool.cpp) because
+    // the player is deemed to already hold it. In a co-op run the *team* holds the union of every
+    // claimed kit, so the union is what has to leave the pool - otherwise a teammate's kit item is
+    // also placed in the world, wasting that location on something its owner already has.
+    //
+    // This makes the solver reason about the team as a single agent holding the union. That is
+    // sound while the team plays together, because world state is shared: Darunia smashing a
+    // hammer wall clears it for everyone, so a requirement satisfied by ANY player is satisfied
+    // for all. It is not sound for a player exploring alone, who holds only their own kit - which
+    // is the deliberate "sometimes you need to ask your friend to come with you" property.
+    //
+    // Only the roster's kits are excluded, never all seven. Excluding a sage nobody is playing
+    // would delete their kit items from the world without giving them to anyone, which can strand
+    // progression and make a seed unbeatable.
+    if (SevenSagesCoop_ShouldUseRosterForGeneration()) {
+        const uint8_t roster = SevenSagesCoop_GetRoster();
+        for (const SageDefinition& other : sSageDefinitions) {
+            if (other.sage == def->sage || !(roster & (1 << other.sage))) {
+                continue;
+            }
+            ApplySageOptionsToContext(&other);
+        }
     }
 
     // Seven Sages: an adult-starting sage gets the Temple of Time pedestal check's contents for
@@ -851,6 +890,52 @@ extern "C" void Randomizer_ApplySageGenerationSettings() {
     // unaffected and still placed somewhere in the world.
     if (def->age == RO_AGE_ADULT) {
         ctx->GetItemLocation(RC_TOT_MASTER_SWORD)->SetExcludedOption(RO_LOCATION_EXCLUDE);
+    }
+}
+
+// Seven Sages: re-assert the LOCAL player's sage into the Context immediately before file
+// creation reads it. See savefile.h.
+extern "C" void Randomizer_ApplySageRuntimeKit() {
+    if (!IS_SEVENSAGES) {
+        return;
+    }
+
+    auto ctx = Rando::Context::GetInstance();
+
+    // The CVar, not the Context, is authoritative for "which sage is this player". The sage ring
+    // writes the CVar as the cursor moves (SevenSagesSelectMenu.cpp), whereas the Context's copy is
+    // whatever generation or a spoiler load last put there - and for a co-op joiner that is the
+    // HOST's sage, because Settings::ParseJson (settings.cpp:3113) writes every setting the spoiler
+    // carries straight into the Context, and WriteSettings (spoiler_log.cpp:151) wrote them out
+    // post-ApplySageGenerationSettings. Without this line, loading the host's spoiler silently
+    // turns every joiner into the host, kit and starting age included.
+    const uint8_t localSage = (uint8_t)CVarGetInteger(CVAR_RANDOMIZER_SETTING("SelectedSage"), RO_SAGE_RAURU);
+    const SageDefinition* def = FindSageDefinition(localSage);
+    if (def == nullptr) {
+        return;
+    }
+    ctx->GetOption(RSK_SELECTED_SAGE).Set(localSage);
+    ctx->GetOption(RSK_SELECTED_STARTING_AGE).Set(def->age);
+
+    // Now narrow the kit. A co-op seed was generated with the UNION of every claimed sage's kit set
+    // as RSK_STARTING_*, so that the whole union left the item pool - and SetStartingItems() grants
+    // whatever it finds set. Left alone, every player would be handed all seven kits at file
+    // creation, which is precisely the opposite of the mod.
+    //
+    // Clear every option that appears in ANY sage's kit, then re-apply only this sage's. Scoped to
+    // kit options rather than all RSK_STARTING_* so a starting item the preset legitimately grants
+    // to everyone survives untouched.
+    //
+    // World overrides are deliberately NOT narrowed: they describe the world this seed was built
+    // with, which is the same world for everyone in the room, and undoing one here would put this
+    // player's world out of step with the placement they just loaded.
+    for (const SageDefinition& other : sSageDefinitions) {
+        for (uint8_t i = 0; i < other.kitCount; i++) {
+            ctx->GetOption(other.kit[i].key).Set(0);
+        }
+    }
+    for (uint8_t i = 0; i < def->kitCount; i++) {
+        ctx->GetOption(def->kit[i].key).Set(def->kit[i].value);
     }
 }
 
@@ -909,6 +994,13 @@ extern "C" void Randomizer_InitSaveFile() {
 
     // Reset Bombchu Bag Upgrade
     gSaveContext.ship.quest.data.randomizer.bombchuUpgradeLevel = 0;
+
+    // Seven Sages: point the Context at THIS player's sage before anything reads it. Required
+    // whenever the options in the Context were not written by this player's own generation - a
+    // co-op joiner who loaded the host's spoiler, or a host whose co-op generation set the union of
+    // every claimed kit. Harmless and idempotent on a solo run, where it re-asserts what generation
+    // already put there. Must run before SetStartingItems().
+    Randomizer_ApplySageRuntimeKit();
 
     // Seven Sages: the selected sage's kit is granted right here by SetStartingItems(), from the
     // real RSK_STARTING_* options that Randomizer_ApplySageGenerationSettings() set at generation

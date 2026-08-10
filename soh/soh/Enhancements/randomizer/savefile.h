@@ -75,7 +75,26 @@ int32_t Randomizer_GetSageSpawnEntrance(void);
 // Generation-time: folds the selected sage's age and kit into the real settings the generator
 // reads, so the logic solver, the item pool, and the spoiler log all agree with what the player
 // will actually start with. Must run before Fill(); called from Context::FinalizeSettings.
+//
+// For a co-op seed (see SevenSagesCoop.h) this folds in the kit of every sage on the roster, not
+// just the local one, so the whole team's kit leaves the item pool instead of teammates' kit items
+// being placed in the world as duplicates.
 void Randomizer_ApplySageGenerationSettings(void);
+
+// File-creation-time counterpart, and the reason a co-op joiner keeps their own sage.
+//
+// The Context's options are not necessarily this player's. Two ways they diverge:
+//   - a co-op JOINER never generates. They load the host's spoiler, and Settings::ParseJson writes
+//     every setting it carries into the Context - including RSK_SELECTED_SAGE and the host's whole
+//     RSK_STARTING_* kit, because WriteSettings serialised them after the sage settings were
+//     applied. Left alone, the joiner is silently turned into the host.
+//   - a co-op HOST generates with the UNION of every claimed sage's kit set, so that the union
+//     leaves the item pool. Left alone, SetStartingItems() would hand them all seven kits.
+//
+// So this re-reads the sage from its CVar (which the sage select screen owns and neither path
+// overwrites), re-asserts it and its starting age into the Context, and narrows the kit options
+// back to that one sage. Idempotent on a solo run. Must run before SetStartingItems().
+void Randomizer_ApplySageRuntimeKit(void);
 
 // The selected sage's forced starting age (RO_AGE_*), defaulting to child when unavailable.
 uint8_t Randomizer_GetSageStartingAge(void);

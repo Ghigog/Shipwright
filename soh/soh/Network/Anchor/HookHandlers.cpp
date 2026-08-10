@@ -3,6 +3,8 @@
 #include "soh/Enhancements/game-interactor/GameInteractor.h"
 #include "soh/frame_interpolation.h"
 #include "soh/OTRGlobals.h"
+#include "soh/Enhancements/SevenSagesCoop/SevenSagesCoop.h"
+#include "soh/Enhancements/SevenSages/SevenSagesSageCosmetics.h"
 
 extern "C" {
 #include "variables.h"
@@ -91,6 +93,18 @@ void Anchor::RegisterHooks() {
         if (justLoadedSave) {
             justLoadedSave = false;
             SendPacket_RequestTeamState();
+        }
+
+        // Seven Sages co-op: the local player crossing between the child and adult dimensions
+        // changes who they can see, so it has to re-spawn the remote bodies exactly as a remote
+        // player changing age does (HandlePacket_PlayerUpdate raises the same flag for that case).
+        //
+        // Polled here rather than hooked on the time-travel cutscene because linkAge also moves on
+        // file load and savewarp, and every one of those needs the same refresh.
+        static s32 sLastLocalLinkAge = -1;
+        if (gSaveContext.linkAge != sLastLocalLinkAge) {
+            sLastLocalLinkAge = gSaveContext.linkAge;
+            shouldRefreshActors = true;
         }
 
         if (shouldRefreshActors) {
@@ -182,6 +196,45 @@ void Anchor::RegisterHooks() {
         Actor* myPlayer = (Actor*)GET_PLAYER(gPlayState);
         Actor* actor = va_arg(args, Actor*);
         Color_RGB8* color = va_arg(args, Color_RGB8*);
+
+        // Seven Sages co-op: the sage IS the player's identity colour, so Anchor's own per-player
+        // colour is redundant here and must not win.
+        //
+        // Anchor assigns each player an arbitrary colour (default green) for the same "tell
+        // teammates apart" reason, and overwrites tunic colour with it unconditionally while
+        // connected - which would render all seven sages identically and undo the entire cosmetics
+        // system. Since sages are unique per room, sourcing the colour from the sage gives the same
+        // property with the meaning attached.
+        //
+        // Returning early WITHOUT touching `color` is what lets the sage's own colour through: the
+        // local player's tunic CVars were already set by SevenSages_ApplySageCosmetics, so vanilla's
+        // computation is already correct for them. Only remote players need an explicit answer,
+        // because their sage's colours live in another process.
+        if (SevenSagesCoop_IsActive()) {
+            if (actor == myPlayer) {
+                return;
+            }
+
+            uint32_t sageClientId = Anchor::Instance->GetDummyPlayerClientId(actor);
+            if (!Anchor::Instance->clients.contains(sageClientId)) {
+                return;
+            }
+
+            AnchorClient& sageClient = Anchor::Instance->clients[sageClientId];
+            // Declared one per line on purpose: this whole block is a macro argument, and the
+            // preprocessor splits on any comma not inside parentheses - `uint8_t r, g, b;` reads as
+            // three extra macro arguments and fails to compile.
+            uint8_t r = 0;
+            uint8_t g = 0;
+            uint8_t b = 0;
+            if (sageClient.sage != 0xFF &&
+                SevenSages_GetSageTunicColor(sageClient.sage, (uint8_t)sageClient.currentTunic, &r, &g, &b)) {
+                color->r = r;
+                color->g = g;
+                color->b = b;
+            }
+            return;
+        }
 
         if (actor == myPlayer) {
             Color_RGBA8 ownColor = CVarGetColor(CVAR_REMOTE_ANCHOR("Color.Value"), { 100, 255, 100 });

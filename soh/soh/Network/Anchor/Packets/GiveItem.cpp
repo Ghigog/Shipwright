@@ -5,6 +5,7 @@
 #include "soh/Enhancements/randomizer/randomizer.h"
 #include "soh/SohGui/ImGuiUtils.h"
 #include "soh/Enhancements/item-tables/ItemTableManager.h"
+#include "soh/Enhancements/SevenSagesCoop/SevenSagesCoop.h"
 #include "soh/OTRGlobals.h"
 
 extern "C" {
@@ -20,6 +21,13 @@ uint8_t incomingIceTrapsFromAnchor = 0;
 
 void Anchor::SendPacket_GiveItem(u16 modId, s16 getItemId) {
     if (!IsSaveLoaded() || isProcessingIncomingPacket || !roomState.syncItemsAndFlags) {
+        return;
+    }
+
+    // Seven Sages co-op: this packet exists to hand a duplicate of every pickup to the whole team,
+    // which is exactly the inventory convergence the mod replaces. Each sage keeps their own kit;
+    // the shared part of the run is the world, not the bag. See SevenSagesCoop.h.
+    if (SevenSagesCoop_ShouldSuppressItemSync()) {
         return;
     }
 
@@ -45,6 +53,13 @@ void Anchor::SendPacket_GiveItem(u16 modId, s16 getItemId) {
 
 void Anchor::HandlePacket_GiveItem(nlohmann::json payload) {
     if (!IsSaveLoaded() || !roomState.syncItemsAndFlags) {
+        return;
+    }
+
+    // Guarded on both ends deliberately. A teammate on a build without the mod, or with co-op off,
+    // would still be broadcasting pickups; refusing to apply them here is what keeps this client's
+    // kit its own regardless of what the rest of the room is running.
+    if (SevenSagesCoop_ShouldSuppressItemSync()) {
         return;
     }
 

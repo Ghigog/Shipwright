@@ -1,4 +1,5 @@
 #include "soh/Network/Anchor/Anchor.h"
+#include "soh/Enhancements/SevenSagesCoop/SevenSagesCoop.h"
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 
@@ -18,6 +19,14 @@ void Anchor::SendPacket_UpdateDungeonItems() {
         return;
     }
 
+    // Seven Sages co-op: keys, maps and compasses are dungeon-local and individually earned, so
+    // this packet's key/map/compass duplication is off. It still works out as team progress,
+    // because opening a locked door sets a SHARED switch flag - one player with the keys unlocks
+    // the dungeon for everybody. See docs/multiplayer-anchor.md, decision 4.
+    if (SevenSagesCoop_ShouldSuppressItemSync()) {
+        return;
+    }
+
     nlohmann::json payload;
     payload["type"] = UPDATE_DUNGEON_ITEMS;
     payload["targetTeamId"] = CVarGetString(CVAR_REMOTE_ANCHOR("TeamId"), "default");
@@ -31,6 +40,10 @@ void Anchor::SendPacket_UpdateDungeonItems() {
 
 void Anchor::HandlePacket_UpdateDungeonItems(nlohmann::json payload) {
     if (!IsSaveLoaded() || !roomState.syncItemsAndFlags) {
+        return;
+    }
+
+    if (SevenSagesCoop_ShouldSuppressItemSync()) {
         return;
     }
 

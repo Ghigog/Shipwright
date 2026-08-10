@@ -3,10 +3,13 @@
 #include <nlohmann/json.hpp>
 #include "soh/OTRGlobals.h"
 #include "soh/Enhancements/randomizer/SeedContext.h"
+#include "soh/Enhancements/randomizer/randomizer.h"
+#include "soh/Enhancements/SevenSagesCoop/SevenSagesCoop.h"
 
 extern "C" {
 #include "variables.h"
 extern PlayState* gPlayState;
+uint8_t Randomizer_GetSettingValue(RandomizerSettingKey randoSettingKey);
 }
 
 /**
@@ -30,6 +33,10 @@ nlohmann::json Anchor::PrepClientState() {
 
     if (IsSaveLoaded()) {
         payload["seed"] = IS_RANDO ? Rando::Context::GetInstance()->GetSeed() : 0;
+        // Seven Sages: what actually identifies the world, and the sage wearing it. See
+        // SevenSagesCoop.h for why `seed` above cannot answer the first question.
+        payload["seedHash"] = SevenSagesCoop_GetWorldFingerprint();
+        payload["sage"] = IS_SEVENSAGES ? Randomizer_GetSettingValue(RSK_SELECTED_SAGE) : 0xFF;
         payload["isSaveLoaded"] = true;
         payload["isGameComplete"] = gSaveContext.ship.stats.gameComplete;
         payload["sceneNum"] = gPlayState->sceneNum;
@@ -37,6 +44,8 @@ nlohmann::json Anchor::PrepClientState() {
         payload["entranceIndex"] = gSaveContext.entranceIndex;
     } else {
         payload["seed"] = 0;
+        payload["seedHash"] = 0;
+        payload["sage"] = 0xFF;
         payload["isSaveLoaded"] = false;
         payload["isGameComplete"] = false;
         payload["sceneNum"] = SCENE_ID_MAX;
@@ -67,6 +76,8 @@ void Anchor::HandlePacket_UpdateClientState(nlohmann::json payload) {
         clients[clientId].teamId = client.teamId;
         clients[clientId].online = client.online;
         clients[clientId].seed = client.seed;
+        clients[clientId].seedHash = client.seedHash;
+        clients[clientId].sage = client.sage;
         clients[clientId].isSaveLoaded = client.isSaveLoaded;
         clients[clientId].isGameComplete = client.isGameComplete;
         clients[clientId].sceneNum = client.sceneNum;
