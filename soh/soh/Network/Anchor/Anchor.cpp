@@ -36,6 +36,15 @@ void Anchor::OnConnected() {
 
     if (IsSaveLoaded()) {
         SendPacket_RequestTeamState();
+
+        // Seven Sages trade box: announce our stash on connect, so a client joining an established
+        // run is not left with an empty box until somebody happens to make the next deposit.
+        //
+        // Every client doing this is what makes it work without a request/response round trip. The
+        // packet carries a revision and receivers keep the higher one, so whoever holds the newest
+        // stash wins regardless of who announced first. A joiner with a fresh save is at revision 0
+        // and loses to everyone, which is the desired direction.
+        SendPacket_SevenSagesStash();
     }
 }
 
