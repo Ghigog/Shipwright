@@ -99,6 +99,33 @@ void Randomizer_ApplySageRuntimeKit(void);
 // The selected sage's forced starting age (RO_AGE_*), defaulting to child when unavailable.
 uint8_t Randomizer_GetSageStartingAge(void);
 
+// Seven Sages: is this RandomizerGet part of the local sage's starting kit?
+//
+// The trade box binds kit items to their sage permanently - they are the one thing it will never
+// carry (see seven-sages/docs/trading-handoff.md, decision 1). The reason is that kit items are
+// excluded from the item pool for the whole roster, so each exists in EXACTLY ONE COPY in the
+// entire run. Ruto's whole kit is Golden Scale, Iron Boots and Zora Tunic; if she could deposit
+// that tunic, no Zora Tunic would exist anywhere in the world for anyone.
+//
+// ── Why the LOCAL sage's kit is the complete answer, even in co-op ──────────────────────────────
+//
+// The bound set is conceptually the union of every rostered sage's kit, and the roster is not
+// reliably known at runtime - SevenSagesCoop_GetRoster() is only meaningful on the host at
+// generation time (SevenSagesCoop.h). That looks like a problem and is not, because the union
+// collapses to the local kit for the only question ever asked of it, "may I deposit the item I am
+// holding?":
+//
+//   - Another sage's kit item is not in the item pool (union exclusion), so it cannot be found.
+//   - It cannot arrive through the box either, because its owner could not deposit it.
+//
+// So no player ever holds a kit item other than their own, and checking the local kit is exact
+// rather than approximate. It is also correct in the case that looks like a false negative: with
+// Darunia unrostered, Goron Tunic IS in the pool, and whoever finds it may trade it freely - it is
+// ordinary loot in that seed, bound to nobody.
+//
+// False for a non-Seven-Sages save, where there is no kit and nothing is bound.
+bool Randomizer_IsLocalSageKitItem(int16_t randomizerGet);
+
 // The selected sage's home RandomizerRegion, for the logic solver's starting position. Returns 0
 // when this isn't a Seven Sages save.
 //
