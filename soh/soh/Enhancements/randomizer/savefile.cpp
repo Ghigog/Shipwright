@@ -945,6 +945,15 @@ extern "C" void Randomizer_ApplySageRuntimeKit() {
     for (uint8_t i = 0; i < def->kitCount; i++) {
         ctx->GetOption(def->kit[i].key).Set(def->kit[i].value);
     }
+
+    // Records what this file is actually about to be granted, so "did I spawn with it or find it?"
+    // is answerable from the log rather than from memory. Open question as of 2026-08-11: two
+    // co-op players finished a session holding items belonging to neither kit.
+    SPDLOG_INFO("[SevenSages] runtime kit applied: sage {} ({} kit options), age {}", localSage, def->kitCount,
+                def->age);
+    for (uint8_t i = 0; i < def->kitCount; i++) {
+        SPDLOG_INFO("[SevenSages]   kit option {} = {}", (int)def->kit[i].key, (int)def->kit[i].value);
+    }
 }
 
 extern "C" uint8_t Randomizer_GetSageStartingAge() {

@@ -7,6 +7,7 @@
 #include "soh/Enhancements/item-tables/ItemTableManager.h"
 #include "soh/Enhancements/SevenSagesCoop/SevenSagesCoop.h"
 #include "soh/OTRGlobals.h"
+#include <spdlog/spdlog.h>
 
 extern "C" {
 #include "functions.h"
@@ -82,8 +83,20 @@ void Anchor::HandlePacket_GiveItem(nlohmann::json payload) {
     }
 
     // The filter, now that the item is resolved. Knowledge crosses; nothing else does.
+    //
+    // Logged both ways while the "items appearing that belong to neither kit" report is open
+    // (2026-08-11): two clients ended a session both holding a Lens of Truth, which is in neither
+    // player's kit, not a starting item in that seed, and not Link's Pocket. Every static
+    // explanation has been ruled out by inspection, so the remaining question is empirical - does
+    // anything actually cross this line, and what?
     if (coopFiltering && !SevenSagesCoop_IsKnowledgeItem((uint16_t)getItemEntry.itemId)) {
+        SPDLOG_INFO("[Anchor] GIVE_ITEM blocked from '{}': itemId 0x{:02X} getItemId 0x{:04X} mod {}", client.name,
+                    (uint16_t)getItemEntry.itemId, (uint16_t)getItemEntry.getItemId, getItemEntry.modIndex);
         return;
+    }
+    if (coopFiltering) {
+        SPDLOG_INFO("[Anchor] GIVE_ITEM ALLOWED from '{}' (knowledge): itemId 0x{:02X}", client.name,
+                    (uint16_t)getItemEntry.itemId);
     }
 
     if (getItemEntry.modIndex == MOD_NONE) {
