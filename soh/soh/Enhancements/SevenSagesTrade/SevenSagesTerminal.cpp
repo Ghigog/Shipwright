@@ -49,18 +49,34 @@ struct TerminalSpawn {
 // rather than on a guess. y is deliberately generous: the actor falls under gravity and snaps to
 // the floor in Update, so the height only has to start ABOVE the ground rather than on it. That
 // turns the one coordinate that is hardest to get right from source into a non-issue.
+//
+// ── CHECK EVERY ALTERNATE HEADER, NOT JUST `base` ───────────────────────────────────────────
+//
+// `base` is the CHILD layout. Scenes carry alternate headers for the other age and time of day,
+// and a terminal spawns in all of them, so a spot chosen from `base` alone has only been checked
+// against half the game. Lon Lon Ranch has twelve headers; the first pick here sat between a crate
+// and a tree that exist only for child, and landed squarely inside the ADULT cucco pen - five
+// EN_NIW at x 1106-1299, z -2200..-2338 in header _0002F0.
+//
+// That is not just cosmetic. A is also "pick up cucco", so the terminal would have been fighting
+// the birds for the interact press - the sort of conflict that reads as "the box is broken".
 constexpr TerminalSpawn kTerminals[] = {
-    // Lon Lon Ranch - the central terminal, near the crates and tree by the ranch buildings
-    // (ACTOR_OBJ_KIBAKO2 at 1160,0,-2376; ACTOR_EN_WOOD02 at 1309,0,-2241).
-    { SCENE_LON_LON_RANCH, 1230.0f, 60.0f, -2300.0f },
+    // Lon Lon Ranch - the central terminal. The open yard between the horse corral (horses roam
+    // z -1343..+429) and the cucco pen (z -2200 and back), clear of both, and clear of Ingo's
+    // gates at z -2420. Verified against the child `base` layout and the adult `_0002F0` one.
+    { SCENE_LON_LON_RANCH, 1000.0f, 60.0f, -2100.0f },
 
-    // Hyrule Market - by the crates off the main square (ACTOR_OBJ_KIBAKO2 at 490,0,132).
-    { SCENE_MARKET_DAY, 540.0f, 60.0f, 150.0f },
+    // Hyrule Market - off the main square, kept clear of the two crates at (490, 132) and
+    // (490, 338). Those are OBJ_KIBAKO2 and liftable, so a terminal beside them would be
+    // competing for the A press; ~130 units away is outside the grab but still the same corner.
+    { SCENE_MARKET_DAY, 620.0f, 60.0f, 235.0f },
 
-    // Death Mountain Trail - the ring-of-rocks clearing outside Goron City's entrance. The rock
-    // cluster is real and tightly grouped (ACTOR_EN_ISHI at -1816/-1831/-1857, y 681, z -513..-614),
-    // which is the landmark the design doc named.
-    { SCENE_DEATH_MOUNTAIN_TRAIL, -1780.0f, 740.0f, -560.0f },
+    // Death Mountain Trail - just north of the ring-of-rocks clearing the design doc named, not
+    // inside it. The EN_ISHI cluster runs x -1787..-1878, z -465..-614 with a signpost at
+    // (-1834, -571); the first pick sat 7 units from one of those rocks. Rocks lift with A, same
+    // conflict as the cuccos. This sits ~85 north of the nearest, so the clearing is still the
+    // landmark you navigate by. Also clear of the warp at (-1656, -519) in header _0009B0.
+    { SCENE_DEATH_MOUNTAIN_TRAIL, -1800.0f, 740.0f, -380.0f },
 
     // Fishing Pond. UNVERIFIED COORDINATE - turibori carries no props in scene-props.json, so
     // unlike the three above this x/z is not derived from anything. The floor snap will fix the
@@ -210,6 +226,13 @@ extern "C" void SevenSagesTerminal_SpawnAtPlayer(void) {
     const PosRot& world = player->actor.world;
     Actor_Spawn(&gPlayState->actorCtx, gPlayState, sTerminalActorId, world.pos.x, world.pos.y + 20.0f, world.pos.z, 0,
                 0, 0, 0);
+
+    // Log the coordinate in the exact shape of a kTerminals row. Picking these from scene data
+    // alone has now been wrong three times - the child/adult header split, and two spots that
+    // landed on top of liftable props - so the reliable way to choose one is to stand where it
+    // should go and read the number off.
+    SPDLOG_INFO("[SevenSages] terminal placed by hand - scene {}: {{ SCENE_?, {:.1f}f, {:.1f}f, {:.1f}f }}",
+                gPlayState->sceneNum, world.pos.x, world.pos.y + 20.0f, world.pos.z);
 }
 
 static RegisterShipInitFunc sevenSagesTerminalInitFunc(RegisterSevenSagesTerminal, { "IS_RANDO" });
