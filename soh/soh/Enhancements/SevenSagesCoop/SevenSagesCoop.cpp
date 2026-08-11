@@ -77,6 +77,10 @@ extern "C" bool SevenSagesCoop_ShouldAcceptWorldStateFrom(uint32_t remoteWorldFi
     return mine == remoteWorldFingerprint;
 }
 
+extern "C" bool SevenSagesCoop_IsKnowledgeItem(uint16_t itemId) {
+    return itemId >= ITEM_SONG_MINUET && itemId <= ITEM_ZORA_SAPPHIRE;
+}
+
 extern "C" bool SevenSagesCoop_ShouldSeeAge(int32_t remoteLinkAge) {
     if (!SevenSagesCoop_IsActive()) {
         return true;

@@ -110,6 +110,23 @@ uint32_t SevenSagesCoop_GetWorldFingerprint(void);
 // teammate on a build without this module both behave exactly as before.
 bool SevenSagesCoop_ShouldAcceptWorldStateFrom(uint32_t remoteWorldFingerprint);
 
+// ── Knowledge: the one category of "item" that IS shared ────────────────────────────────────
+// Medallions, spiritual stones and songs. docs/multiplayer-anchor.md decision 4 calls these
+// Knowledge and marks them always-shared, for a reason that survives contact with play: they are
+// non-rivalrous progress markers, not objects. Learning a song does not consume anyone else's copy
+// of it, and a medallion is a record that a dungeon was cleared - by the team.
+//
+// Everything else stays personal. The distinction is exactly the questItems bitfield's low bits:
+//   0x00-0x05 medallions | 0x06-0x11 songs | 0x12-0x14 spiritual stones
+// and NOT what follows them - Stone of Agony (0x15) is a real held item and a sage kit item
+// (Rauru's), Gerudo Card is an object, and skull tokens and heart pieces are counters.
+#define SEVEN_SAGES_COOP_KNOWLEDGE_QUEST_MASK 0x001FFFFFu
+
+// Is this a knowledge item, by ITEM_* id? The three groups are contiguous in z64item.h -
+// ITEM_SONG_MINUET (0x5A) through ITEM_ZORA_SAPPHIRE (0x6E) - and ITEM_STONE_OF_AGONY sits at 0x6F,
+// one past the end, so the range excludes it without a special case.
+bool SevenSagesCoop_IsKnowledgeItem(uint16_t itemId);
+
 // ── Age dimensions ──────────────────────────────────────────────────────────────────────────
 // Child and adult are separate dimensions: you only see players who are currently your own age,
 // and time travel is what moves you between them. See docs/multiplayer-anchor.md.

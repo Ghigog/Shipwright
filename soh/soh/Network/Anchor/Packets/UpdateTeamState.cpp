@@ -284,8 +284,16 @@ void Anchor::HandlePacket_UpdateTeamState(nlohmann::json payload) {
         // Seven Sages co-op: the wholesale inventory overwrite is the single line that most defines
         // Anchor's "everyone converges to one bag" model, and the one this mod exists to reject.
         // Each sage's inventory stays their own; what the team shares is the world above.
+        //
+        // The exception is Knowledge - medallions, spiritual stones and songs. Those are progress
+        // markers rather than objects (decision 4), and they are OR-merged rather than assigned so
+        // this can only ever ADD to what the player knows. GIVE_ITEM carries them live; this is the
+        // path that catches a player up on everything the team learned while they were away.
         if (!SevenSagesCoop_ShouldSuppressItemSync()) {
             gSaveContext.inventory = loadedData.inventory;
+        } else {
+            gSaveContext.inventory.questItems |=
+                (loadedData.inventory.questItems & SEVEN_SAGES_COOP_KNOWLEDGE_QUEST_MASK);
         }
 
         // The commented out code below is an attempt at sending the entire randomizer seed over, in hopes that a player

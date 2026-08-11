@@ -24,12 +24,13 @@ void Anchor::SendPacket_GiveItem(u16 modId, s16 getItemId) {
         return;
     }
 
-    // Seven Sages co-op: this packet exists to hand a duplicate of every pickup to the whole team,
-    // which is exactly the inventory convergence the mod replaces. Each sage keeps their own kit;
-    // the shared part of the run is the world, not the bag. See SevenSagesCoop.h.
-    if (SevenSagesCoop_ShouldSuppressItemSync()) {
-        return;
-    }
+    // Seven Sages co-op: deliberately NOT suppressed on the send side.
+    //
+    // This packet exists to hand a duplicate of every pickup to the whole team, which is the
+    // inventory convergence the mod replaces - but medallions, stones and songs are Knowledge and
+    // must still cross (SevenSagesCoop.h). Classifying here would mean decoding both a GI_* and an
+    // RG_* id, whereas the receiver already resolves a full GetItemEntry and can simply ask. So
+    // send everything and let HandlePacket_GiveItem decide what to apply.
 
     if (modId == MOD_RANDOMIZER && getItemId == RG_ICE_TRAP && incomingIceTrapsFromAnchor > 0) {
         incomingIceTrapsFromAnchor = MAX(incomingIceTrapsFromAnchor - 1, 0);
@@ -56,12 +57,17 @@ void Anchor::HandlePacket_GiveItem(nlohmann::json payload) {
         return;
     }
 
-    // Guarded on both ends deliberately. A teammate on a build without the mod, or with co-op off,
-    // would still be broadcasting pickups; refusing to apply them here is what keeps this client's
-    // kit its own regardless of what the rest of the room is running.
-    if (SevenSagesCoop_ShouldSuppressItemSync()) {
-        return;
-    }
+    // Seven Sages co-op: apply Knowledge, drop everything else.
+    //
+    // This is the one place the "your bag is your own" rule bends, and only for the category that
+    // is not really a bag item at all - medallions, spiritual stones and songs (decision 4). A
+    // teammate clearing a dungeon marks it cleared for the team; a teammate finding a Hookshot does
+    // not hand you one.
+    //
+    // Deciding here rather than on the send side is what keeps this client's inventory its own no
+    // matter what the rest of the room is running - a teammate with co-op off, or on a build
+    // without it, broadcasts every pickup as usual and this still only lets Knowledge through.
+    const bool coopFiltering = SevenSagesCoop_ShouldSuppressItemSync();
 
     uint32_t clientId = payload.at("clientId").get<uint32_t>();
     AnchorClient& client = clients[clientId];
@@ -73,6 +79,11 @@ void Anchor::HandlePacket_GiveItem(nlohmann::json payload) {
         getItemEntry = ItemTableManager::Instance->RetrieveItemEntry(MOD_NONE, getItemId);
     } else {
         getItemEntry = Rando::StaticData::RetrieveItem(static_cast<RandomizerGet>(getItemId)).GetGIEntry_Copy();
+    }
+
+    // The filter, now that the item is resolved. Knowledge crosses; nothing else does.
+    if (coopFiltering && !SevenSagesCoop_IsKnowledgeItem((uint16_t)getItemEntry.itemId)) {
+        return;
     }
 
     if (getItemEntry.modIndex == MOD_NONE) {
