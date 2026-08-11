@@ -11,6 +11,8 @@
  */
 #include "SevenSagesCoop.h"
 
+#include "soh/Network/Anchor/Anchor.h"
+#include "soh/Notification/Notification.h"
 #include "soh/SohGui/SohGui.hpp"
 #include "soh/SohGui/SohMenu.h"
 #include "soh/SohGui/UIWidgets.hpp"
@@ -124,6 +126,24 @@ void RegisterSevenSagesCoopMenu() {
     SohGui::mSohMenu->AddWidget(path, "SevenSagesCoopRoster", WIDGET_CUSTOM)
         .CustomFunction(DrawRoster)
         .HideInSearch(true);
+
+    SohGui::mSohMenu->AddWidget(path, "Send Seed to Room", WIDGET_BUTTON)
+        .Callback([](WidgetInfo& info) {
+            if (Anchor::Instance != nullptr && Anchor::Instance->isConnected) {
+                Anchor::Instance->SendPacket_SevenSagesSeed();
+            } else {
+                Notification::Emit({
+                    .message = "Not connected to a room.",
+                });
+            }
+        })
+        .Options(UIWidgets::ButtonOptions().Tooltip(
+            "Send your generated seed to everyone else in the room, so nobody has to move a spoiler "
+            "file by hand.\n"
+            "\n"
+            "This happens automatically when you generate while co-op is on. The button is for "
+            "re-sending: someone joined late, someone reconnected, or someone loaded the wrong "
+            "seed."));
 }
 
 } // namespace

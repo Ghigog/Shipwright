@@ -72,6 +72,22 @@ void Anchor::RegisterHooks() {
 
     COND_HOOK(OnPresentFileSelect, isConnected, [&]() { SendPacket_UpdateClientState(); });
 
+    // Seven Sages co-op: the moment a seed exists, everyone else in the team gets it.
+    //
+    // This is the step that used to be manual - find the JSON, send it over Discord, have the other
+    // player drag it in - and it was the single most error-prone part of setting up a run, because
+    // skipping it silently produces two different worlds rather than an error. Generating is
+    // already the natural "I am hosting" action, so it is the right thing to hang this on.
+    //
+    // The co-op test is inside the lambda, not in the COND_HOOK condition: RegisterHooks() only
+    // runs on connect and disconnect, so a condition evaluated there would freeze whatever the
+    // toggle happened to be at connect time and ignore the player turning co-op on afterwards.
+    COND_HOOK(OnGenerationCompletion, isConnected, [&]() {
+        if (SevenSagesCoop_IsEnabled()) {
+            SendPacket_SevenSagesSeed();
+        }
+    });
+
     COND_ID_HOOK(ShouldActorInit, ACTOR_PLAYER, isConnected, [&](void* actorRef, bool* should) {
         Actor* actor = (Actor*)actorRef;
 

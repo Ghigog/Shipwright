@@ -113,6 +113,7 @@ class Anchor : public Network {
     void HandlePacket_RequestTeamState(nlohmann::json payload);
     void HandlePacket_RequestTeleport(nlohmann::json payload);
     void HandlePacket_ServerMessage(nlohmann::json payload);
+    void HandlePacket_SevenSagesSeed(nlohmann::json payload);
     void HandlePacket_SetCheckStatus(nlohmann::json payload);
     void HandlePacket_SetFlag(nlohmann::json payload);
     void HandlePacket_TeleportTo(nlohmann::json payload);
@@ -156,6 +157,9 @@ class Anchor : public Network {
     inline static const std::string REQUEST_TEAM_STATE = "REQUEST_TEAM_STATE";
     inline static const std::string REQUEST_TELEPORT = "REQUEST_TELEPORT";
     inline static const std::string SERVER_MESSAGE = "SERVER_MESSAGE";
+    // Seven Sages co-op: ships the host's whole spoiler file to the team, so a co-op run needs no
+    // manual file hand-off. See Packets/SevenSagesSeed.cpp.
+    inline static const std::string SEVEN_SAGES_SEED = "SEVEN_SAGES_SEED";
     inline static const std::string SET_CHECK_STATUS = "SET_CHECK_STATUS";
     inline static const std::string SET_FLAG = "SET_FLAG";
     inline static const std::string TELEPORT_TO = "TELEPORT_TO";
@@ -194,6 +198,8 @@ class Anchor : public Network {
     void SendPacket_PlayerUpdate();
     void SendPacket_RequestTeamState();
     void SendPacket_RequestTeleport(u32 clientId);
+    // Seven Sages co-op: broadcast this client's generated spoiler to the team.
+    void SendPacket_SevenSagesSeed();
     void SendPacket_SetCheckStatus(RandomizerCheck rc);
     void SendPacket_SetFlag(s16 sceneNum, s16 flagType, s16 flag);
     void SendPacket_TeleportTo(u32 clientId);
