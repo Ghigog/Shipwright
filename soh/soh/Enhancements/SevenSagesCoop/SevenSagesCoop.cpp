@@ -49,18 +49,6 @@ extern "C" bool SevenSagesCoop_ShouldUseRosterForGeneration(void) {
     return CVarGetInteger(CVAR_COOP_USE_ROSTER, 0) != 0 && SevenSagesCoop_GetRoster() != 0;
 }
 
-// Deliberately NOT cached.
-//
-// The obvious optimisation is to memoise this and invalidate on OnLoadGame, since the placement
-// only changes on generation, a spoiler load or a file load. That is a trap here: this module
-// registers through the "IS_RANDO" ShipInit bucket, and ShipInit::Init("IS_RANDO") is itself called
-// from OnLoadGame (randomizer/hook_handlers.cpp) - so an OnLoadGame hook registered from that
-// bucket cannot be relied on to fire for the very load that registered it. The cache would then
-// answer for the PREVIOUS file, which is the exact failure this fingerprint exists to prevent: two
-// clients silently agreeing they are in the same world when they are not.
-//
-// The cost of getting it right is 3321 checks times four bytes of FNV mixing - some tens of
-// microseconds, against packet handling and one ImGui list. Not worth a correctness hazard.
 extern "C" uint32_t SevenSagesCoop_GetWorldFingerprint(void) {
     if (!IS_RANDO) {
         return 0;
@@ -71,21 +59,10 @@ extern "C" uint32_t SevenSagesCoop_GetWorldFingerprint(void) {
         return 0;
     }
 
-    // FNV-1a over every check's placed item. Cheap, order-stable, and with no dependency on any of
-    // SoH's seed bookkeeping - which is the entire point, see the header.
-    uint32_t hash = 2166136261u;
-    for (int rc = 0; rc < RC_MAX; rc++) {
-        const uint32_t placed = (uint32_t)ctx->GetItemLocation(rc)->GetPlacedRandomizerGet();
-        for (int byte = 0; byte < 4; byte++) {
-            hash ^= (placed >> (byte * 8)) & 0xFF;
-            hash *= 16777619u;
-        }
-    }
-
     // Never return 0 for a real world: 0 is the "unknown / not comparable" sentinel that suppresses
-    // the mismatch check entirely, and a world that happened to hash to it would silently stop
-    // being checked at all.
-    return hash == 0 ? 1u : hash;
+    // the check entirely, and a world that happened to land on it would stop being checked at all.
+    const uint32_t seed = ctx->GetSeed();
+    return seed == 0 ? 1u : seed;
 }
 
 extern "C" bool SevenSagesCoop_ShouldAcceptWorldStateFrom(uint32_t remoteWorldFingerprint) {

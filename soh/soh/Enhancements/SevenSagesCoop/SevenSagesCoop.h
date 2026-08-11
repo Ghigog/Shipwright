@@ -67,27 +67,36 @@ void SevenSagesCoop_SetRoster(uint8_t mask);
 bool SevenSagesCoop_ShouldUseRosterForGeneration(void);
 
 // ── World fingerprint ───────────────────────────────────────────────────────────────────────
-// A hash of the actual item placement, used to prove two clients are in the same world before
-// letting their world state sync. 0 means "not comparable" (no randomizer context) and never
-// counts as a mismatch.
+// Identifies which world this client is playing, so world state is only shared between clients
+// actually in it. 0 means "not comparable" (no randomizer context) and never counts as a mismatch.
 //
-// Computed from the placements themselves rather than from any of SoH's seed bookkeeping, because
-// none of that bookkeeping survives the trip:
+// This is `Context::GetSeed()`, and the reason is symmetry: it is the one value that provably
+// survives the host -> spoiler -> joiner trip. The host writes it out as `finalSeed`
+// (spoiler_log.cpp:347) and Settings::ParseJson restores it verbatim (settings.cpp:3116), so a
+// generating host and a spoiler-loading joiner in the same world always agree on it. It is also
+// sage-independent, which is required here: co-op players deliberately have DIFFERENT sages in the
+// SAME world, so anything sage-derived would read as a mismatch by design.
 //
-//   - `Context::GetSeed()` is Hash(seedString) only (3drando/menu.cpp:50-51). It is blind to
-//     settings, so two players who typed the same seed string but generated with different sages
-//     match on it while holding completely different worlds. This is what Anchor compares today,
-//     and why its mismatch warning never fires for the case that matters here.
-//   - `Context::GetHash()` IS the settings-sensitive finalHash - but it is only ever set by
-//     generation (playthrough.cpp:65). ParseSpoiler never calls SetHash, so it is empty on exactly
-//     the clients we need to check: the joiners.
+// The three alternatives were each tried and all fail that symmetry test:
+//
+//   - Hashing the item placements. This was the original implementation, and it produced FALSE
+//     mismatches that silently blocked ALL world sync - found in playtest 2026-08-11, where both
+//     clients pulled identical items from identical chests while being flagged as different
+//     worlds. The spoiler only carries `ctx->allLocations`, this seed's pool: 1167 checks out of
+//     RC_MAX's 3321 (spoiler_log.cpp's WriteAllLocations). The host's placements outside the pool
+//     never reach the joiner, so the two hashes diverge for the very same world.
+//   - `Context::GetHash()`, the settings-sensitive finalHash, is only ever set by generation
+//     (playthrough.cpp:65). ParseSpoiler never calls SetHash, so it is empty on exactly the
+//     clients that need checking: the joiners.
 //   - `hashIconIndexes` is populated by both paths but with DIFFERENT representations - raw 0-99
 //     values on generation (spoiler_log.cpp:49-52) versus texture ids on spoiler load
-//     (SeedContext.cpp:421). A host and a joiner in the same world disagree on it.
+//     (SeedContext.cpp:421) - so host and joiner disagree on it in the same world.
 //
-// Hashing the placement sidesteps all three and measures the thing that actually has to match.
-// Recomputed on every call rather than cached - see the implementation for why memoising it here
-// is a correctness hazard rather than a free win.
+// Known limitation, accepted: two clients that each GENERATE from the same seed string with
+// different settings land on the same value while holding different worlds, since GetSeed() is
+// Hash(seedString) and ignores settings (3drando/menu.cpp:50-51). The co-op flow no longer reaches
+// that state - joiners load the host's spoiler, and the sage screen no longer regenerates over a
+// loaded spoiler - and the file-select hash icons remain the manual backstop.
 uint32_t SevenSagesCoop_GetWorldFingerprint(void);
 
 // Should world state coming from this Anchor client be applied?

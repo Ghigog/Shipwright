@@ -288,15 +288,16 @@ bool Anchor::ShouldAcceptWorldStateFrom(const nlohmann::json& payload, bool requ
     //
     // Keyed on the remote's fingerprint as well as their id, so reconnecting onto the CORRECT world
     // clears the way for a fresh warning if they later diverge again.
+    // Log, not an on-screen notification. This fires whenever a room contains a client on another
+    // world, which includes the ordinary case of somebody still setting up at file select, and a
+    // toast for that is noise during exactly the minutes the player is busiest. The room list's red
+    // triangle is the visible signal; this is the one that survives into a bug report.
     static std::map<uint32_t, uint32_t> warnedClients;
     const auto warned = warnedClients.find(clientId);
     if (warned == warnedClients.end() || warned->second != it->second.seedHash) {
         warnedClients[clientId] = it->second.seedHash;
-        Notification::Emit({
-            .prefix = it->second.name,
-            .message = "is in a DIFFERENT world - not syncing.",
-            .suffix = "They must load the host's spoiler, not generate their own.",
-        });
+        SPDLOG_WARN("[Anchor] '{}' is on a different world (theirs {}, ours {}) - refusing world state",
+                    it->second.name, it->second.seedHash, SevenSagesCoop_GetWorldFingerprint());
     }
 
     return false;
