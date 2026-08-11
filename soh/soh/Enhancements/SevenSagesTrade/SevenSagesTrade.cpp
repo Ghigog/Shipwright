@@ -1,135 +1,201 @@
 /*
- * Seven Sages trade box - the classification layer.
+ * Seven Sages trade box - classification and transfer.
  *
  * See SevenSagesTrade.h for what the box is for and why it carries progression items. This file
- * decides three things and nothing else: what counts as a transferable object, what is bound to a
- * sage, and what the local player is allowed to let go of right now.
+ * owns the table of what can move and the four inverse operations that move it.
  *
- * ── Why an allowlist rather than "accept ITEMTYPE_EQUIP and ITEMTYPE_ITEM minus exceptions" ──
+ * ── The four storage shapes, and why each needs its own inverse ──────────────────────────────
  *
- * The type-driven version was tried on paper first and rejected. ITEMTYPE_ITEM holds 175 of the
- * table's 302 entries, and the great majority of them are not objects a player hands over: the
- * twenty-odd shop and house keys, ten bean souls, nine boss souls, the *_INF cheat upgrades, the
- * ability items (RG_CLIMB, RG_CRAWL, RG_OPEN_CHEST, the RG_SPEAK_* set), ocarina buttons, heart
- * pieces and the Triforce. Filtering those out means a long exception list whose failure mode is
- * silent and bad - a missed entry makes something impossible tradeable, and nothing errors.
+ * "Remove an item" does not exist anywhere in vanilla or in rando - the game only ever gives. So
+ * every take below is written against how Item_Give (z_parameter.c:1900+) and Inventory_ChangeUpgrade
+ * put the item there in the first place:
  *
- * An allowlist inverts that failure mode. A missing entry means an item simply is not tradeable
- * yet, which is visible, harmless and one line to fix. That is the right direction for this
- * codebase specifically - see CLAUDE.md's build traps, all three of which are silent failures.
+ *   EQUIP    inventory.equipment bitfield, one bit per owned sword/shield/tunic/boots.
+ *            Take = clear the bit. Guarded by the equip-lock so the worn one is never removed.
+ *   QUEST    questItems bitfield. Only two entries here are quest bits rather than Knowledge -
+ *            the Stone of Agony and the Gerudo Card, both real held objects (SevenSagesCoop.h
+ *            makes the same distinction for what crosses in co-op). Take = clear the bit.
+ *   SLOT     inventory.items[SLOT(item)], one item id. Take = set the slot to ITEM_NONE.
+ *   UPGRADE  a TIER in inventory.upgrades, not an object. Take = decrement by one.
  *
- * ── Known v1 exclusions, deliberate and pending a decision ───────────────────────────────────
+ * ── Progressive chains are tiers, and that is what makes them safe to trade ──────────────────
  *
- * Three groups of otherwise-plausible items are left out of v1 on purpose, because each needs a
- * design answer rather than a table row:
+ * An earlier version of this file excluded every progressive chain on the grounds that "deposit a
+ * Hookshot" is ambiguous for someone holding the Longshot. That was wrong, and the reason is worth
+ * keeping because it is the same reason the transfers are conservative at all.
  *
- *   - PROGRESSIVE CHAINS (Hookshot/Longshot, Bow, Slingshot, Scale, Strength, Ocarina, Wallet,
- *     Magic Meter, bomb and bombchu bags). The inventory stores a tier, not a count, so
- *     "deposit a Hookshot" is ambiguous for a player holding the Longshot: it could mean hand over
- *     the upgrade and drop to Hookshot, or hand over the whole chain. Both are defensible and they
- *     behave very differently in play.
- *   - BOTTLES AND CONTENTS. A bottle is a slot with mutable contents, so depositing one raises
- *     what happens to what is inside it.
- *   - THE ADULT TRADE QUEST (Pocket Egg through Claim Check). A timed NPC chain whose steps are
- *     driven by scene state, not just inventory.
- *   - THE GIANT'S KNIFE. It shares EQUIP_VALUE_SWORD_BIGGORON with the Biggoron Sword and has two
- *     inventory states of its own (EQUIP_INV_SWORD_BIGGORON while whole, _BROKENGIANTKNIFE once
- *     snapped), so a row for it would double-count the same equip bit and quietly defeat the
- *     last-in-category rule for swords. It is also a breakable version of an item already in the
- *     list, which is the same "not one stable object" problem as the three groups above.
+ * The two chains are stored differently and both have an obvious inverse:
+ *
+ *   - Hookshot/Longshot and Fairy Ocarina/Ocarina of Time are SLOT items. The slot holds exactly
+ *     one of the two ids. Hand over what is in the slot and clear it. Nothing is ambiguous: you
+ *     give away the one you have.
+ *   - Scale, Strength, Wallet, Quiver, Bullet Bag, Bomb Bag, sticks and nuts are UPGRADE tiers,
+ *     and a tier is really a COUNT of progressive items collected. Golden Scale means two were
+ *     picked up. So the inverse of "collect one" is "decrement one", and a transfer moves exactly
+ *     one tier: the giver drops from Golden to Silver, the receiver rises from nothing to Silver.
+ *     Total tiers across the team are unchanged, which is the invariant that matters.
+ *
+ * Decrementing rather than zeroing is what keeps that true. Zeroing the giver would destroy a tier
+ * whenever they held more than one, which is exactly the kind of silent non-conservation this
+ * module is built to avoid.
+ *
+ * ── Families that share one slot ────────────────────────────────────────────────────────────
+ *
+ * gItemSlots (z_inventory.c:205) maps all eight masks onto SLOT_TRADE_CHILD, all adult trade-quest
+ * items onto SLOT_TRADE_ADULT, and every bottle type onto SLOT_BOTTLE_1. So these are not
+ * independently owned items at all - they are the CONTENTS of one slot, and the player holds
+ * whichever one is in there. That makes them the easiest things in the file to move correctly:
+ * the slot value is the object.
+ *
+ * Bottles are the one case needing more than the SLOT macro, because there are four bottle slots
+ * and INV_CONTENT only ever addresses the first. FindBottleSlot scans all four.
  */
 
 #include "SevenSagesTrade.h"
 
 #include "soh/Enhancements/randomizer/savefile.h"
 #include "soh/Enhancements/randomizer/randomizerTypes.h"
+#include "soh/Enhancements/randomizer/static_data.h"
 #include "soh/OTRGlobals.h"
 
 extern "C" {
 #include "z64.h"
 #include "macros.h"
+#include "functions.h"
 #include "variables.h"
 }
 
+// Not declared in any header the C++ side sees - same one-line extern IvanCoop.cpp uses.
+extern PlayState* gPlayState;
+
 namespace {
 
-// One row per tradeable item. `equipType` is -1 for anything that is not worn, which is what
-// exempts it from the equip-lock and the last-in-category rule - those two only ever protect a
-// player from stranding themselves without a tunic, boots, shield or sword.
+enum StorageKind {
+    STORE_EQUIP,   // inventory.equipment bit
+    STORE_QUEST,   // questItems bit
+    STORE_SLOT,    // inventory.items[SLOT(itemId)] == itemId
+    STORE_BOTTLE,  // one of the four bottle slots holds itemId
+    STORE_UPGRADE, // a tier in inventory.upgrades
+};
+
+// One row per tradeable item.
 //
-// Both equip indices are carried because the two macros that need them use DIFFERENT enums, and
-// they are off by one from each other in a way that compiles silently either way:
+// `a` and `b` carry the two indices a row needs, and what they mean depends on `kind`. They are
+// kept as one pair rather than a union of named fields because every row needs exactly two and the
+// table stays readable in a single column layout.
+//
+//   STORE_EQUIP    a = EQUIP_TYPE_*, b = EQUIP_INV_*        (plus equipValue, see below)
+//   STORE_QUEST    a = QUEST_*,      b = unused
+//   STORE_SLOT     a = ITEM_*,       b = unused
+//   STORE_BOTTLE   a = ITEM_*,       b = unused
+//   STORE_UPGRADE  a = UPG_*,        b = the tier this row represents
+//
+// equipValue is separate and only meaningful for STORE_EQUIP, because the two equipment macros
+// take DIFFERENT enums and they are off by one in a way that compiles silently either way:
 //
 //   CHECK_OWNED_EQUIP (Inventory.equipment)  -> EQUIP_INV_*,   0-based, no "none" member
 //   CUR_EQUIP_VALUE   (ItemEquips.equipment) -> EQUIP_VALUE_*, 1-based, EQUIP_*_NONE is 0
 //
 // Passing an EQUIP_VALUE_ to CHECK_OWNED_EQUIP tests the next item up in the category - asking
-// about the Goron tunic and being told about the Zora one. Keep the pair together per row rather
-// than converting between them at the call site.
+// about the Goron tunic and being told about the Zora one.
 struct TradeableItem {
     int16_t randomizerGet;
-    int8_t equipType;  // EQUIP_TYPE_*, or -1
-    int8_t equipInv;   // EQUIP_INV_*, for CHECK_OWNED_EQUIP
-    int8_t equipValue; // EQUIP_VALUE_*, for CUR_EQUIP_VALUE
+    StorageKind kind;
+    int16_t a;
+    int16_t b;
+    int8_t equipValue; // EQUIP_VALUE_*, STORE_EQUIP only
 };
 
-// The v1 tradeable set: equipment, the discrete key items, the spells, the arrow types and the
-// masks. Every entry is a single physical object with no tier and no contents, which is exactly
-// the property the exclusions at the top of this file are missing.
 constexpr TradeableItem kTradeableItems[] = {
-    // Swords. The Master Sword is included and it is worth being explicit about why, because it
-    // is the one item here that changes what a player IS rather than what they can do: it drives
-    // age switching, and age is the co-op dimension you can see teammates across. Handing it over
-    // is a real decision with real consequences, and that is the same reading decision 7 took of
-    // Ganon's Tower - the team consciously deciding who holds what is the intended texture, not a
-    // hazard to design out. The last-in-category rule below still stops it being an accident.
-    { RG_KOKIRI_SWORD, EQUIP_TYPE_SWORD, EQUIP_INV_SWORD_KOKIRI, EQUIP_VALUE_SWORD_KOKIRI },
-    { RG_MASTER_SWORD, EQUIP_TYPE_SWORD, EQUIP_INV_SWORD_MASTER, EQUIP_VALUE_SWORD_MASTER },
-    { RG_BIGGORON_SWORD, EQUIP_TYPE_SWORD, EQUIP_INV_SWORD_BIGGORON, EQUIP_VALUE_SWORD_BIGGORON },
+    // ── Equipment ───────────────────────────────────────────────────────────────────────────
+    // The Master Sword is included, and it is the one item here that changes what a player IS
+    // rather than what they can do: it drives age switching, and age is the dimension you can see
+    // teammates across. Handing it over is a real decision with real consequences, which is the
+    // same reading decision 7 took of Ganon's Tower - the team consciously deciding who holds what
+    // is the intended texture, not a hazard to design out. The last-in-category rule still stops
+    // it being an accident.
+    //
+    // The Giant's Knife is absent on purpose: it shares EQUIP_VALUE_SWORD_BIGGORON with the
+    // Biggoron Sword and has a second inventory state of its own once snapped
+    // (EQUIP_INV_SWORD_BROKENGIANTKNIFE), so a row for it would double-count the same equip bit
+    // and quietly defeat the last-in-category rule for swords.
+    { RG_KOKIRI_SWORD,   STORE_EQUIP, EQUIP_TYPE_SWORD,  EQUIP_INV_SWORD_KOKIRI,   EQUIP_VALUE_SWORD_KOKIRI },
+    { RG_MASTER_SWORD,   STORE_EQUIP, EQUIP_TYPE_SWORD,  EQUIP_INV_SWORD_MASTER,   EQUIP_VALUE_SWORD_MASTER },
+    { RG_BIGGORON_SWORD, STORE_EQUIP, EQUIP_TYPE_SWORD,  EQUIP_INV_SWORD_BIGGORON, EQUIP_VALUE_SWORD_BIGGORON },
+    { RG_DEKU_SHIELD,    STORE_EQUIP, EQUIP_TYPE_SHIELD, EQUIP_INV_SHIELD_DEKU,    EQUIP_VALUE_SHIELD_DEKU },
+    { RG_HYLIAN_SHIELD,  STORE_EQUIP, EQUIP_TYPE_SHIELD, EQUIP_INV_SHIELD_HYLIAN,  EQUIP_VALUE_SHIELD_HYLIAN },
+    { RG_MIRROR_SHIELD,  STORE_EQUIP, EQUIP_TYPE_SHIELD, EQUIP_INV_SHIELD_MIRROR,  EQUIP_VALUE_SHIELD_MIRROR },
+    // Kokiri tunic and Kokiri boots are absent deliberately: they are the default state rather
+    // than acquirable items, and are never absent from an inventory.
+    { RG_GORON_TUNIC,    STORE_EQUIP, EQUIP_TYPE_TUNIC,  EQUIP_INV_TUNIC_GORON,    EQUIP_VALUE_TUNIC_GORON },
+    { RG_ZORA_TUNIC,     STORE_EQUIP, EQUIP_TYPE_TUNIC,  EQUIP_INV_TUNIC_ZORA,     EQUIP_VALUE_TUNIC_ZORA },
+    { RG_IRON_BOOTS,     STORE_EQUIP, EQUIP_TYPE_BOOTS,  EQUIP_INV_BOOTS_IRON,     EQUIP_VALUE_BOOTS_IRON },
+    { RG_HOVER_BOOTS,    STORE_EQUIP, EQUIP_TYPE_BOOTS,  EQUIP_INV_BOOTS_HOVER,    EQUIP_VALUE_BOOTS_HOVER },
 
-    // Shields.
-    { RG_DEKU_SHIELD, EQUIP_TYPE_SHIELD, EQUIP_INV_SHIELD_DEKU, EQUIP_VALUE_SHIELD_DEKU },
-    { RG_HYLIAN_SHIELD, EQUIP_TYPE_SHIELD, EQUIP_INV_SHIELD_HYLIAN, EQUIP_VALUE_SHIELD_HYLIAN },
-    { RG_MIRROR_SHIELD, EQUIP_TYPE_SHIELD, EQUIP_INV_SHIELD_MIRROR, EQUIP_VALUE_SHIELD_MIRROR },
+    // ── Quest-bit objects ───────────────────────────────────────────────────────────────────
+    // Real held objects that happen to live in the questItems bitfield, unlike the medallions,
+    // songs and stones around them which are Knowledge and never trade.
+    { RG_STONE_OF_AGONY,          STORE_QUEST, QUEST_STONE_OF_AGONY, 0, 0 },
+    { RG_GERUDO_MEMBERSHIP_CARD,  STORE_QUEST, QUEST_GERUDO_CARD,    0, 0 },
 
-    // Tunics and boots. The Kokiri tunic and Kokiri boots are absent deliberately: they are the
-    // default state rather than acquirable items, and are never absent from an inventory.
-    { RG_GORON_TUNIC, EQUIP_TYPE_TUNIC, EQUIP_INV_TUNIC_GORON, EQUIP_VALUE_TUNIC_GORON },
-    { RG_ZORA_TUNIC, EQUIP_TYPE_TUNIC, EQUIP_INV_TUNIC_ZORA, EQUIP_VALUE_TUNIC_ZORA },
-    { RG_IRON_BOOTS, EQUIP_TYPE_BOOTS, EQUIP_INV_BOOTS_IRON, EQUIP_VALUE_BOOTS_IRON },
-    { RG_HOVER_BOOTS, EQUIP_TYPE_BOOTS, EQUIP_INV_BOOTS_HOVER, EQUIP_VALUE_BOOTS_HOVER },
+    // ── Single-item slots ───────────────────────────────────────────────────────────────────
+    { RG_BOOMERANG,     STORE_SLOT, ITEM_BOOMERANG,   0, 0 },
+    { RG_LENS_OF_TRUTH, STORE_SLOT, ITEM_LENS,        0, 0 },
+    { RG_MEGATON_HAMMER,STORE_SLOT, ITEM_HAMMER,      0, 0 },
+    { RG_DINS_FIRE,     STORE_SLOT, ITEM_DINS_FIRE,   0, 0 },
+    { RG_FARORES_WIND,  STORE_SLOT, ITEM_FARORES_WIND,0, 0 },
+    { RG_NAYRUS_LOVE,   STORE_SLOT, ITEM_NAYRUS_LOVE, 0, 0 },
+    { RG_FIRE_ARROWS,   STORE_SLOT, ITEM_ARROW_FIRE,  0, 0 },
+    { RG_ICE_ARROWS,    STORE_SLOT, ITEM_ARROW_ICE,   0, 0 },
+    { RG_LIGHT_ARROWS,  STORE_SLOT, ITEM_ARROW_LIGHT, 0, 0 },
 
-    // Discrete key items.
-    { RG_BOOMERANG, -1, 0, 0 },
-    { RG_LENS_OF_TRUTH, -1, 0, 0 },
-    { RG_MEGATON_HAMMER, -1, 0, 0 },
-    { RG_STONE_OF_AGONY, -1, 0, 0 },
-    { RG_GERUDO_MEMBERSHIP_CARD, -1, 0, 0 },
+    // The two slot-based progressive chains. Each row is one concrete tier, and the slot holds
+    // exactly one of them, so "give away what you have" needs no interpretation.
+    { RG_HOOKSHOT,       STORE_SLOT, ITEM_HOOKSHOT,       0, 0 },
+    { RG_LONGSHOT,       STORE_SLOT, ITEM_LONGSHOT,       0, 0 },
+    { RG_FAIRY_OCARINA,  STORE_SLOT, ITEM_OCARINA_FAIRY,  0, 0 },
+    { RG_OCARINA_OF_TIME,STORE_SLOT, ITEM_OCARINA_TIME,   0, 0 },
 
-    // Spells. ITEMTYPE_ITEM and genuinely held objects, not Knowledge like the songs - decision 4
-    // checked this specifically.
-    { RG_DINS_FIRE, -1, 0, 0 },
-    { RG_FARORES_WIND, -1, 0, 0 },
-    { RG_NAYRUS_LOVE, -1, 0, 0 },
+    // Masks. All eight share SLOT_TRADE_CHILD, so the slot value is the object.
+    { RG_KEATON_MASK,  STORE_SLOT, ITEM_MASK_KEATON,  0, 0 },
+    { RG_SKULL_MASK,   STORE_SLOT, ITEM_MASK_SKULL,   0, 0 },
+    { RG_SPOOKY_MASK,  STORE_SLOT, ITEM_MASK_SPOOKY,  0, 0 },
+    { RG_BUNNY_HOOD,   STORE_SLOT, ITEM_MASK_BUNNY,   0, 0 },
+    { RG_GORON_MASK,   STORE_SLOT, ITEM_MASK_GORON,   0, 0 },
+    { RG_ZORA_MASK,    STORE_SLOT, ITEM_MASK_ZORA,    0, 0 },
+    { RG_GERUDO_MASK,  STORE_SLOT, ITEM_MASK_GERUDO,  0, 0 },
+    { RG_MASK_OF_TRUTH,STORE_SLOT, ITEM_MASK_TRUTH,   0, 0 },
 
-    // Arrow types. Each is a distinct item rather than a tier of one chain, so they are unaffected
-    // by the progressive-chain problem that keeps the Bow itself out of v1. Note the Bow being
-    // untradeable means these can be handed to someone who cannot fire them - which is a real
-    // in-fiction bargain, not a bug, and the same shape as Rauru's kit pairing them deliberately.
-    { RG_FIRE_ARROWS, -1, 0, 0 },
-    { RG_ICE_ARROWS, -1, 0, 0 },
-    { RG_LIGHT_ARROWS, -1, 0, 0 },
+    // ── Bottles ─────────────────────────────────────────────────────────────────────────────
+    // The bottle and its contents move together, because they are one slot value. Handing someone
+    // a bottle of blue fire is a single transfer, which is what makes it worth doing at all.
+    { RG_EMPTY_BOTTLE,           STORE_BOTTLE, ITEM_BOTTLE,            0, 0 },
+    { RG_BOTTLE_WITH_MILK,       STORE_BOTTLE, ITEM_MILK_BOTTLE,       0, 0 },
+    { RG_BOTTLE_WITH_RED_POTION, STORE_BOTTLE, ITEM_POTION_RED,        0, 0 },
+    { RG_BOTTLE_WITH_GREEN_POTION,STORE_BOTTLE,ITEM_POTION_GREEN,      0, 0 },
+    { RG_BOTTLE_WITH_BLUE_POTION,STORE_BOTTLE, ITEM_POTION_BLUE,       0, 0 },
+    { RG_BOTTLE_WITH_FAIRY,      STORE_BOTTLE, ITEM_FAIRY,             0, 0 },
+    { RG_BOTTLE_WITH_FISH,       STORE_BOTTLE, ITEM_FISH,              0, 0 },
+    { RG_BOTTLE_WITH_BLUE_FIRE,  STORE_BOTTLE, ITEM_BLUE_FIRE,         0, 0 },
+    { RG_BOTTLE_WITH_BUGS,       STORE_BOTTLE, ITEM_BUG,               0, 0 },
+    { RG_BOTTLE_WITH_POE,        STORE_BOTTLE, ITEM_POE,               0, 0 },
+    { RG_BOTTLE_WITH_BIG_POE,    STORE_BOTTLE, ITEM_BIG_POE,           0, 0 },
 
-    // Masks. Phase 6 gave every one of these a real standing effect, which is what makes them
-    // worth moving between players at all.
-    { RG_KEATON_MASK, -1, 0, 0 },
-    { RG_SKULL_MASK, -1, 0, 0 },
-    { RG_SPOOKY_MASK, -1, 0, 0 },
-    { RG_BUNNY_HOOD, -1, 0, 0 },
-    { RG_GORON_MASK, -1, 0, 0 },
-    { RG_ZORA_MASK, -1, 0, 0 },
-    { RG_GERUDO_MASK, -1, 0, 0 },
-    { RG_MASK_OF_TRUTH, -1, 0, 0 },
+    // ── Upgrade tiers ───────────────────────────────────────────────────────────────────────
+    // One row per tier. Depositing moves exactly one tier, so a Golden Scale holder drops to
+    // Silver rather than to nothing - see the header comment on conservation.
+    //
+    // The Bow, Slingshot and Bomb Bag rows are the quiver / bullet bag / bomb bag tiers, which is
+    // where rando actually stores those chains. Dropping to tier 0 also empties the matching item
+    // slot, which TakeUpgrade handles.
+    { RG_PROGRESSIVE_STRENGTH,  STORE_UPGRADE, UPG_STRENGTH,   1, 0 },
+    { RG_SILVER_GAUNTLETS,      STORE_UPGRADE, UPG_STRENGTH,   2, 0 },
+    { RG_GOLDEN_GAUNTLETS,      STORE_UPGRADE, UPG_STRENGTH,   3, 0 },
+    { RG_PROGRESSIVE_SCALE,     STORE_UPGRADE, UPG_SCALE,      1, 0 },
+    { RG_GOLDEN_SCALE,          STORE_UPGRADE, UPG_SCALE,      2, 0 },
+    { RG_PROGRESSIVE_BOW,       STORE_UPGRADE, UPG_QUIVER,     1, 0 },
+    { RG_PROGRESSIVE_SLINGSHOT, STORE_UPGRADE, UPG_BULLET_BAG, 1, 0 },
+    { RG_PROGRESSIVE_BOMB_BAG,  STORE_UPGRADE, UPG_BOMB_BAG,   1, 0 },
 };
 
 const TradeableItem* FindTradeable(int16_t randomizerGet) {
@@ -141,19 +207,45 @@ const TradeableItem* FindTradeable(int16_t randomizerGet) {
     return nullptr;
 }
 
+// Which of the four bottle slots holds this bottle type, or -1. INV_CONTENT cannot be used because
+// gItemSlots maps every bottle id to SLOT_BOTTLE_1, so it only ever addresses the first of four.
+int FindBottleSlot(int16_t itemId) {
+    for (int slot = SLOT_BOTTLE_1; slot <= SLOT_BOTTLE_1 + 3; slot++) {
+        if (gSaveContext.inventory.items[slot] == itemId) {
+            return slot;
+        }
+    }
+    return -1;
+}
+
+bool IsHeld(const TradeableItem& item) {
+    switch (item.kind) {
+        case STORE_EQUIP:
+            return CHECK_OWNED_EQUIP(item.a, item.b) != 0;
+        case STORE_QUEST:
+            return (gSaveContext.inventory.questItems & gBitFlags[item.a]) != 0;
+        case STORE_SLOT:
+            return INV_CONTENT(item.a) == item.a;
+        case STORE_BOTTLE:
+            return FindBottleSlot(item.a) >= 0;
+        case STORE_UPGRADE:
+            // Holding a tier means being AT LEAST that high. A Golden Scale holder can hand over
+            // "a scale" - what leaves is one tier, not this specific row's tier.
+            return CUR_UPG_VALUE(item.a) >= item.b;
+    }
+    return false;
+}
+
 // How many items the player owns in one equip category, counting only the ones the box can move.
 //
 // Counting tradeable items rather than every owned value is the point: the Kokiri tunic and boots
 // are always owned and never tradeable, so counting them would make the last-in-category rule
 // never fire for tunics or boots at all. The question this answers is "if I hand this one over,
-// have I anything left to hand over" - which is about the movable set.
-int CountOwnedInCategory(int8_t equipType) {
+// have I anything left" - which is about the movable set.
+int CountOwnedInCategory(int16_t equipType) {
     int owned = 0;
     for (const TradeableItem& item : kTradeableItems) {
-        if (item.equipType != equipType) {
-            continue;
-        }
-        if (CHECK_OWNED_EQUIP(equipType, item.equipInv)) {
+        if (item.kind == STORE_EQUIP && item.a == equipType && CHECK_OWNED_EQUIP(item.a, item.b)) {
             owned++;
         }
     }
@@ -179,16 +271,85 @@ extern "C" SevenSagesTradeVerdict SevenSagesTrade_CanDeposit(int16_t randomizerG
         return SEVEN_SAGES_TRADE_KIT_BOUND;
     }
 
-    if (item->equipType >= 0) {
-        if (CUR_EQUIP_VALUE(item->equipType) == item->equipValue) {
+    if (!IsHeld(*item)) {
+        return SEVEN_SAGES_TRADE_NOT_HELD;
+    }
+
+    if (item->kind == STORE_EQUIP) {
+        if (CUR_EQUIP_VALUE(item->a) == item->equipValue) {
             return SEVEN_SAGES_TRADE_EQUIPPED;
         }
-        if (CountOwnedInCategory(item->equipType) <= 1) {
+        if (CountOwnedInCategory(item->a) <= 1) {
             return SEVEN_SAGES_TRADE_LAST_IN_CATEGORY;
         }
     }
 
     return SEVEN_SAGES_TRADE_OK;
+}
+
+extern "C" bool SevenSagesTrade_TakeItem(int16_t randomizerGet) {
+    const TradeableItem* item = FindTradeable(randomizerGet);
+    if (item == nullptr || !IsHeld(*item)) {
+        return false;
+    }
+
+    switch (item->kind) {
+        case STORE_EQUIP:
+            gSaveContext.inventory.equipment &= ~OWNED_EQUIP_FLAG(item->a, item->b);
+            return true;
+
+        case STORE_QUEST:
+            gSaveContext.inventory.questItems &= ~gBitFlags[item->a];
+            return true;
+
+        case STORE_SLOT:
+            INV_CONTENT(item->a) = ITEM_NONE;
+            return true;
+
+        case STORE_BOTTLE: {
+            const int slot = FindBottleSlot(item->a);
+            if (slot < 0) {
+                return false;
+            }
+            gSaveContext.inventory.items[slot] = ITEM_NONE;
+            return true;
+        }
+
+        case STORE_UPGRADE: {
+            // One tier, never a reset to zero - see the conservation note at the top of the file.
+            const int16_t tier = (int16_t)CUR_UPG_VALUE(item->a);
+            Inventory_ChangeUpgrade(item->a, tier - 1);
+
+            // The three chains that also own an inventory slot lose it at tier 0: without a quiver
+            // there is no bow, and leaving the slot populated would show an item the player can no
+            // longer use.
+            if (tier - 1 <= 0) {
+                if (item->a == UPG_QUIVER) {
+                    INV_CONTENT(ITEM_BOW) = ITEM_NONE;
+                } else if (item->a == UPG_BULLET_BAG) {
+                    INV_CONTENT(ITEM_SLINGSHOT) = ITEM_NONE;
+                } else if (item->a == UPG_BOMB_BAG) {
+                    INV_CONTENT(ITEM_BOMB) = ITEM_NONE;
+                }
+            }
+            return true;
+        }
+    }
+
+    return false;
+}
+
+extern "C" bool SevenSagesTrade_GiveItem(int16_t randomizerGet) {
+    if (FindTradeable(randomizerGet) == nullptr || gPlayState == nullptr) {
+        return false;
+    }
+
+    // Deliberately the ordinary give path rather than a hand-written inverse of TakeItem. It is
+    // what a chest uses, so progressive tiers, ammo refills and every side effect behave exactly as
+    // they would on a normal pickup - and it stays correct on its own if any of that changes.
+    GetItemEntry entry = Rando::StaticData::RetrieveItem((RandomizerGet)randomizerGet).GetGIEntry_Copy();
+    GiveItemEntryWithoutActor(gPlayState, entry);
+    return true;
 }
 
 extern "C" const char* SevenSagesTrade_RefusalText(SevenSagesTradeVerdict verdict) {
@@ -198,6 +359,8 @@ extern "C" const char* SevenSagesTrade_RefusalText(SevenSagesTradeVerdict verdic
         case SEVEN_SAGES_TRADE_KIT_BOUND:
             return "This is yours alone. It was given to you with your name on it, and no other "
                    "exists in this age.";
+        case SEVEN_SAGES_TRADE_NOT_HELD:
+            return "You are not carrying that.";
         case SEVEN_SAGES_TRADE_EQUIPPED:
             return "You are wearing that. Take it off first.";
         case SEVEN_SAGES_TRADE_LAST_IN_CATEGORY:
