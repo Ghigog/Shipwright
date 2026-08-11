@@ -122,7 +122,7 @@ extern "C" bool SevenSagesCoop_ReapplyReceivedSeed(void) {
 }
 
 extern "C" bool SevenSagesCoop_IsKnowledgeItem(uint16_t itemId) {
-    return itemId >= ITEM_SONG_MINUET && itemId <= ITEM_ZORA_SAPPHIRE;
+    return (itemId >= ITEM_SONG_MINUET && itemId <= ITEM_ZORA_SAPPHIRE) || itemId == ITEM_SKULL_TOKEN;
 }
 
 extern "C" bool SevenSagesCoop_ShouldSeeAge(int32_t remoteLinkAge) {

@@ -294,6 +294,13 @@ void Anchor::HandlePacket_UpdateTeamState(nlohmann::json payload) {
         } else {
             gSaveContext.inventory.questItems |=
                 (loadedData.inventory.questItems & SEVEN_SAGES_COOP_KNOWLEDGE_QUEST_MASK);
+
+            // The skulltula tally is a count, so it takes the higher of the two rather than an OR.
+            // GIVE_ITEM carries tokens live; this is what catches up a player who was away, and
+            // taking the max means catching up can never cost anyone progress.
+            if (loadedData.inventory.gsTokens > gSaveContext.inventory.gsTokens) {
+                gSaveContext.inventory.gsTokens = loadedData.inventory.gsTokens;
+            }
         }
 
         // The commented out code below is an attempt at sending the entire randomizer seed over, in hopes that a player

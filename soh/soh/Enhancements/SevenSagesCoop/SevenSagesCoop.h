@@ -116,15 +116,24 @@ bool SevenSagesCoop_ShouldAcceptWorldStateFrom(uint32_t remoteWorldFingerprint);
 // non-rivalrous progress markers, not objects. Learning a song does not consume anyone else's copy
 // of it, and a medallion is a record that a dungeon was cleared - by the team.
 //
-// Everything else stays personal. The distinction is exactly the questItems bitfield's low bits:
+// Everything else stays personal. The distinction is the questItems bitfield's low bits:
 //   0x00-0x05 medallions | 0x06-0x11 songs | 0x12-0x14 spiritual stones
-// and NOT what follows them - Stone of Agony (0x15) is a real held item and a sage kit item
-// (Rauru's), Gerudo Card is an object, and skull tokens and heart pieces are counters.
-#define SEVEN_SAGES_COOP_KNOWLEDGE_QUEST_MASK 0x001FFFFFu
+// and NOT the two that follow - Stone of Agony (0x15) is a real held item and a sage kit item
+// (Rauru's), and the Gerudo Card (0x16) is an object and Nabooru's.
+//
+// Gold skulltula tokens (0x17) ARE included, and that is a consequence rather than a preference.
+// The kill flags are already shared world state - UpdateTeamState OR-merges gsFlags - so each
+// skulltula can only be collected once by the team. Leaving the COUNT personal means two players
+// split 100 tokens between them and neither ever reaches the 50 the Skulltula House wants, making
+// those checks unreachable by construction. Sharing the kills obliges sharing the tally.
+#define SEVEN_SAGES_COOP_KNOWLEDGE_QUEST_MASK 0x009FFFFFu
 
 // Is this a knowledge item, by ITEM_* id? The three groups are contiguous in z64item.h -
 // ITEM_SONG_MINUET (0x5A) through ITEM_ZORA_SAPPHIRE (0x6E) - and ITEM_STONE_OF_AGONY sits at 0x6F,
 // one past the end, so the range excludes it without a special case.
+//
+// ITEM_SKULL_TOKEN (0x71) is named separately because it is not adjacent, and because it is here
+// for a different reason than the rest - see the mask comment above.
 bool SevenSagesCoop_IsKnowledgeItem(uint16_t itemId);
 
 // ── "The seed I am holding came from a teammate" ────────────────────────────────────────────
