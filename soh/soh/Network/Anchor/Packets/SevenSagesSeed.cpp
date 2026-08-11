@@ -199,6 +199,23 @@ void Anchor::HandlePacket_SevenSagesSeed(nlohmann::json payload) {
         return;
     }
 
+    // Point SoH's own "which spoiler am I holding" CVar at the file we just wrote. Without this the
+    // seed loads and is then thrown away within a frame.
+    //
+    // FileChoose_UpdateRandomizer() runs every frame on file select and does:
+    //
+    //     if (!SpoilerFileExists(CVarGetString(CVAR_GENERAL("SpoilerLog"), "")) && ...) {
+    //         CVarSetString(CVAR_GENERAL("SpoilerLog"), "");
+    //         Randomizer_SetSpoilerLoaded(false);
+    //     }
+    //
+    // so a context with a spoiler loaded but no matching file on that CVar gets reset continuously.
+    // The drag-and-drop path never hit this because dropping a file sets the CVar as part of the
+    // drop. Diagnosed 2026-08-11 from a transfer that loaded byte-exact and still left the joiner
+    // staring at "No randomizer seed loaded".
+    CVarSetString(CVAR_GENERAL("SpoilerLog"), path.c_str());
+    CVarSave();
+
     // From here the sage select screen must not generate over this world. Cleared again the moment
     // this client generates a seed of its own.
     SevenSagesCoop_SetHasReceivedSeed(true);
