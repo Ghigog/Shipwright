@@ -230,6 +230,13 @@ void Anchor::RefreshClientActors() {
         // shouldRefreshActors when a REMOTE age changes, and the OnPlayerUpdate hook does the same
         // when the LOCAL player's age changes (HookHandlers.cpp).
         if (!SevenSagesCoop_ShouldSeeAge(client.linkAge)) {
+            // Clear the pointer, don't just skip the spawn. Every dummy actor was Actor_Kill'ed at
+            // the top of this function, so leaving client.player set would leave it aimed at a dead
+            // actor - and both readers (the compass icons in HookHandlers.cpp and OCARINA_SFX's
+            // positional audio) guard only on the pointer being non-null, which a stale pointer
+            // passes. A player in the other dimension keeps sending PLAYER_UPDATE and OCARINA_SFX,
+            // so those readers stay live for exactly the clients being skipped here.
+            client.player = nullptr;
             continue;
         }
 
