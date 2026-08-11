@@ -119,67 +119,67 @@ constexpr TradeableItem kTradeableItems[] = {
     // Biggoron Sword and has a second inventory state of its own once snapped
     // (EQUIP_INV_SWORD_BROKENGIANTKNIFE), so a row for it would double-count the same equip bit
     // and quietly defeat the last-in-category rule for swords.
-    { RG_KOKIRI_SWORD,   STORE_EQUIP, EQUIP_TYPE_SWORD,  EQUIP_INV_SWORD_KOKIRI,   EQUIP_VALUE_SWORD_KOKIRI },
-    { RG_MASTER_SWORD,   STORE_EQUIP, EQUIP_TYPE_SWORD,  EQUIP_INV_SWORD_MASTER,   EQUIP_VALUE_SWORD_MASTER },
-    { RG_BIGGORON_SWORD, STORE_EQUIP, EQUIP_TYPE_SWORD,  EQUIP_INV_SWORD_BIGGORON, EQUIP_VALUE_SWORD_BIGGORON },
-    { RG_DEKU_SHIELD,    STORE_EQUIP, EQUIP_TYPE_SHIELD, EQUIP_INV_SHIELD_DEKU,    EQUIP_VALUE_SHIELD_DEKU },
-    { RG_HYLIAN_SHIELD,  STORE_EQUIP, EQUIP_TYPE_SHIELD, EQUIP_INV_SHIELD_HYLIAN,  EQUIP_VALUE_SHIELD_HYLIAN },
-    { RG_MIRROR_SHIELD,  STORE_EQUIP, EQUIP_TYPE_SHIELD, EQUIP_INV_SHIELD_MIRROR,  EQUIP_VALUE_SHIELD_MIRROR },
+    { RG_KOKIRI_SWORD, STORE_EQUIP, EQUIP_TYPE_SWORD, EQUIP_INV_SWORD_KOKIRI, EQUIP_VALUE_SWORD_KOKIRI },
+    { RG_MASTER_SWORD, STORE_EQUIP, EQUIP_TYPE_SWORD, EQUIP_INV_SWORD_MASTER, EQUIP_VALUE_SWORD_MASTER },
+    { RG_BIGGORON_SWORD, STORE_EQUIP, EQUIP_TYPE_SWORD, EQUIP_INV_SWORD_BIGGORON, EQUIP_VALUE_SWORD_BIGGORON },
+    { RG_DEKU_SHIELD, STORE_EQUIP, EQUIP_TYPE_SHIELD, EQUIP_INV_SHIELD_DEKU, EQUIP_VALUE_SHIELD_DEKU },
+    { RG_HYLIAN_SHIELD, STORE_EQUIP, EQUIP_TYPE_SHIELD, EQUIP_INV_SHIELD_HYLIAN, EQUIP_VALUE_SHIELD_HYLIAN },
+    { RG_MIRROR_SHIELD, STORE_EQUIP, EQUIP_TYPE_SHIELD, EQUIP_INV_SHIELD_MIRROR, EQUIP_VALUE_SHIELD_MIRROR },
     // Kokiri tunic and Kokiri boots are absent deliberately: they are the default state rather
     // than acquirable items, and are never absent from an inventory.
-    { RG_GORON_TUNIC,    STORE_EQUIP, EQUIP_TYPE_TUNIC,  EQUIP_INV_TUNIC_GORON,    EQUIP_VALUE_TUNIC_GORON },
-    { RG_ZORA_TUNIC,     STORE_EQUIP, EQUIP_TYPE_TUNIC,  EQUIP_INV_TUNIC_ZORA,     EQUIP_VALUE_TUNIC_ZORA },
-    { RG_IRON_BOOTS,     STORE_EQUIP, EQUIP_TYPE_BOOTS,  EQUIP_INV_BOOTS_IRON,     EQUIP_VALUE_BOOTS_IRON },
-    { RG_HOVER_BOOTS,    STORE_EQUIP, EQUIP_TYPE_BOOTS,  EQUIP_INV_BOOTS_HOVER,    EQUIP_VALUE_BOOTS_HOVER },
+    { RG_GORON_TUNIC, STORE_EQUIP, EQUIP_TYPE_TUNIC, EQUIP_INV_TUNIC_GORON, EQUIP_VALUE_TUNIC_GORON },
+    { RG_ZORA_TUNIC, STORE_EQUIP, EQUIP_TYPE_TUNIC, EQUIP_INV_TUNIC_ZORA, EQUIP_VALUE_TUNIC_ZORA },
+    { RG_IRON_BOOTS, STORE_EQUIP, EQUIP_TYPE_BOOTS, EQUIP_INV_BOOTS_IRON, EQUIP_VALUE_BOOTS_IRON },
+    { RG_HOVER_BOOTS, STORE_EQUIP, EQUIP_TYPE_BOOTS, EQUIP_INV_BOOTS_HOVER, EQUIP_VALUE_BOOTS_HOVER },
 
     // ── Quest-bit objects ───────────────────────────────────────────────────────────────────
     // Real held objects that happen to live in the questItems bitfield, unlike the medallions,
     // songs and stones around them which are Knowledge and never trade.
-    { RG_STONE_OF_AGONY,          STORE_QUEST, QUEST_STONE_OF_AGONY, 0, 0 },
-    { RG_GERUDO_MEMBERSHIP_CARD,  STORE_QUEST, QUEST_GERUDO_CARD,    0, 0 },
+    { RG_STONE_OF_AGONY, STORE_QUEST, QUEST_STONE_OF_AGONY, 0, 0 },
+    { RG_GERUDO_MEMBERSHIP_CARD, STORE_QUEST, QUEST_GERUDO_CARD, 0, 0 },
 
     // ── Single-item slots ───────────────────────────────────────────────────────────────────
-    { RG_BOOMERANG,     STORE_SLOT, ITEM_BOOMERANG,   0, 0 },
-    { RG_LENS_OF_TRUTH, STORE_SLOT, ITEM_LENS,        0, 0 },
-    { RG_MEGATON_HAMMER,STORE_SLOT, ITEM_HAMMER,      0, 0 },
-    { RG_DINS_FIRE,     STORE_SLOT, ITEM_DINS_FIRE,   0, 0 },
-    { RG_FARORES_WIND,  STORE_SLOT, ITEM_FARORES_WIND,0, 0 },
-    { RG_NAYRUS_LOVE,   STORE_SLOT, ITEM_NAYRUS_LOVE, 0, 0 },
-    { RG_FIRE_ARROWS,   STORE_SLOT, ITEM_ARROW_FIRE,  0, 0 },
-    { RG_ICE_ARROWS,    STORE_SLOT, ITEM_ARROW_ICE,   0, 0 },
-    { RG_LIGHT_ARROWS,  STORE_SLOT, ITEM_ARROW_LIGHT, 0, 0 },
+    { RG_BOOMERANG, STORE_SLOT, ITEM_BOOMERANG, 0, 0 },
+    { RG_LENS_OF_TRUTH, STORE_SLOT, ITEM_LENS, 0, 0 },
+    { RG_MEGATON_HAMMER, STORE_SLOT, ITEM_HAMMER, 0, 0 },
+    { RG_DINS_FIRE, STORE_SLOT, ITEM_DINS_FIRE, 0, 0 },
+    { RG_FARORES_WIND, STORE_SLOT, ITEM_FARORES_WIND, 0, 0 },
+    { RG_NAYRUS_LOVE, STORE_SLOT, ITEM_NAYRUS_LOVE, 0, 0 },
+    { RG_FIRE_ARROWS, STORE_SLOT, ITEM_ARROW_FIRE, 0, 0 },
+    { RG_ICE_ARROWS, STORE_SLOT, ITEM_ARROW_ICE, 0, 0 },
+    { RG_LIGHT_ARROWS, STORE_SLOT, ITEM_ARROW_LIGHT, 0, 0 },
 
     // The two slot-based progressive chains. Each row is one concrete tier, and the slot holds
     // exactly one of them, so "give away what you have" needs no interpretation.
-    { RG_HOOKSHOT,       STORE_SLOT, ITEM_HOOKSHOT,       0, 0 },
-    { RG_LONGSHOT,       STORE_SLOT, ITEM_LONGSHOT,       0, 0 },
-    { RG_FAIRY_OCARINA,  STORE_SLOT, ITEM_OCARINA_FAIRY,  0, 0 },
-    { RG_OCARINA_OF_TIME,STORE_SLOT, ITEM_OCARINA_TIME,   0, 0 },
+    { RG_HOOKSHOT, STORE_SLOT, ITEM_HOOKSHOT, 0, 0 },
+    { RG_LONGSHOT, STORE_SLOT, ITEM_LONGSHOT, 0, 0 },
+    { RG_FAIRY_OCARINA, STORE_SLOT, ITEM_OCARINA_FAIRY, 0, 0 },
+    { RG_OCARINA_OF_TIME, STORE_SLOT, ITEM_OCARINA_TIME, 0, 0 },
 
     // Masks. All eight share SLOT_TRADE_CHILD, so the slot value is the object.
-    { RG_KEATON_MASK,  STORE_SLOT, ITEM_MASK_KEATON,  0, 0 },
-    { RG_SKULL_MASK,   STORE_SLOT, ITEM_MASK_SKULL,   0, 0 },
-    { RG_SPOOKY_MASK,  STORE_SLOT, ITEM_MASK_SPOOKY,  0, 0 },
-    { RG_BUNNY_HOOD,   STORE_SLOT, ITEM_MASK_BUNNY,   0, 0 },
-    { RG_GORON_MASK,   STORE_SLOT, ITEM_MASK_GORON,   0, 0 },
-    { RG_ZORA_MASK,    STORE_SLOT, ITEM_MASK_ZORA,    0, 0 },
-    { RG_GERUDO_MASK,  STORE_SLOT, ITEM_MASK_GERUDO,  0, 0 },
-    { RG_MASK_OF_TRUTH,STORE_SLOT, ITEM_MASK_TRUTH,   0, 0 },
+    { RG_KEATON_MASK, STORE_SLOT, ITEM_MASK_KEATON, 0, 0 },
+    { RG_SKULL_MASK, STORE_SLOT, ITEM_MASK_SKULL, 0, 0 },
+    { RG_SPOOKY_MASK, STORE_SLOT, ITEM_MASK_SPOOKY, 0, 0 },
+    { RG_BUNNY_HOOD, STORE_SLOT, ITEM_MASK_BUNNY, 0, 0 },
+    { RG_GORON_MASK, STORE_SLOT, ITEM_MASK_GORON, 0, 0 },
+    { RG_ZORA_MASK, STORE_SLOT, ITEM_MASK_ZORA, 0, 0 },
+    { RG_GERUDO_MASK, STORE_SLOT, ITEM_MASK_GERUDO, 0, 0 },
+    { RG_MASK_OF_TRUTH, STORE_SLOT, ITEM_MASK_TRUTH, 0, 0 },
 
     // ── Bottles ─────────────────────────────────────────────────────────────────────────────
     // The bottle and its contents move together, because they are one slot value. Handing someone
     // a bottle of blue fire is a single transfer, which is what makes it worth doing at all.
-    { RG_EMPTY_BOTTLE,           STORE_BOTTLE, ITEM_BOTTLE,            0, 0 },
-    { RG_BOTTLE_WITH_MILK,       STORE_BOTTLE, ITEM_MILK_BOTTLE,       0, 0 },
-    { RG_BOTTLE_WITH_RED_POTION, STORE_BOTTLE, ITEM_POTION_RED,        0, 0 },
-    { RG_BOTTLE_WITH_GREEN_POTION,STORE_BOTTLE,ITEM_POTION_GREEN,      0, 0 },
-    { RG_BOTTLE_WITH_BLUE_POTION,STORE_BOTTLE, ITEM_POTION_BLUE,       0, 0 },
-    { RG_BOTTLE_WITH_FAIRY,      STORE_BOTTLE, ITEM_FAIRY,             0, 0 },
-    { RG_BOTTLE_WITH_FISH,       STORE_BOTTLE, ITEM_FISH,              0, 0 },
-    { RG_BOTTLE_WITH_BLUE_FIRE,  STORE_BOTTLE, ITEM_BLUE_FIRE,         0, 0 },
-    { RG_BOTTLE_WITH_BUGS,       STORE_BOTTLE, ITEM_BUG,               0, 0 },
-    { RG_BOTTLE_WITH_POE,        STORE_BOTTLE, ITEM_POE,               0, 0 },
-    { RG_BOTTLE_WITH_BIG_POE,    STORE_BOTTLE, ITEM_BIG_POE,           0, 0 },
+    { RG_EMPTY_BOTTLE, STORE_BOTTLE, ITEM_BOTTLE, 0, 0 },
+    { RG_BOTTLE_WITH_MILK, STORE_BOTTLE, ITEM_MILK_BOTTLE, 0, 0 },
+    { RG_BOTTLE_WITH_RED_POTION, STORE_BOTTLE, ITEM_POTION_RED, 0, 0 },
+    { RG_BOTTLE_WITH_GREEN_POTION, STORE_BOTTLE, ITEM_POTION_GREEN, 0, 0 },
+    { RG_BOTTLE_WITH_BLUE_POTION, STORE_BOTTLE, ITEM_POTION_BLUE, 0, 0 },
+    { RG_BOTTLE_WITH_FAIRY, STORE_BOTTLE, ITEM_FAIRY, 0, 0 },
+    { RG_BOTTLE_WITH_FISH, STORE_BOTTLE, ITEM_FISH, 0, 0 },
+    { RG_BOTTLE_WITH_BLUE_FIRE, STORE_BOTTLE, ITEM_BLUE_FIRE, 0, 0 },
+    { RG_BOTTLE_WITH_BUGS, STORE_BOTTLE, ITEM_BUG, 0, 0 },
+    { RG_BOTTLE_WITH_POE, STORE_BOTTLE, ITEM_POE, 0, 0 },
+    { RG_BOTTLE_WITH_BIG_POE, STORE_BOTTLE, ITEM_BIG_POE, 0, 0 },
 
     // ── Upgrade tiers ───────────────────────────────────────────────────────────────────────
     // One row per tier. Depositing moves exactly one tier, so a Golden Scale holder drops to
@@ -188,14 +188,21 @@ constexpr TradeableItem kTradeableItems[] = {
     // The Bow, Slingshot and Bomb Bag rows are the quiver / bullet bag / bomb bag tiers, which is
     // where rando actually stores those chains. Dropping to tier 0 also empties the matching item
     // slot, which TakeUpgrade handles.
-    { RG_PROGRESSIVE_STRENGTH,  STORE_UPGRADE, UPG_STRENGTH,   1, 0 },
-    { RG_SILVER_GAUNTLETS,      STORE_UPGRADE, UPG_STRENGTH,   2, 0 },
-    { RG_GOLDEN_GAUNTLETS,      STORE_UPGRADE, UPG_STRENGTH,   3, 0 },
-    { RG_PROGRESSIVE_SCALE,     STORE_UPGRADE, UPG_SCALE,      1, 0 },
-    { RG_GOLDEN_SCALE,          STORE_UPGRADE, UPG_SCALE,      2, 0 },
-    { RG_PROGRESSIVE_BOW,       STORE_UPGRADE, UPG_QUIVER,     1, 0 },
+    // EXACTLY ONE ROW PER CHAIN, and it must be the PROGRESSIVE form rather than a concrete tier
+    // name. This is the whole conservation argument, and getting it wrong is silent:
+    //
+    // A row for RG_GOLDEN_GAUNTLETS would take one tier from the giver (3 -> 2, per TakeUpgrade)
+    // but hand the receiver Golden Gauntlets outright, i.e. tier 3. One tier out, three tiers in.
+    // Storing RG_PROGRESSIVE_STRENGTH instead means the give path increments by one, which is the
+    // exact inverse of the take - the giver drops to Silver and the receiver rises to Bracelet.
+    //
+    // `b` is 1 for every row because it is now only asking "is this chain owned at all"; which
+    // tier the player is on is read live in TakeUpgrade.
+    { RG_PROGRESSIVE_STRENGTH, STORE_UPGRADE, UPG_STRENGTH, 1, 0 },
+    { RG_PROGRESSIVE_SCALE, STORE_UPGRADE, UPG_SCALE, 1, 0 },
+    { RG_PROGRESSIVE_BOW, STORE_UPGRADE, UPG_QUIVER, 1, 0 },
     { RG_PROGRESSIVE_SLINGSHOT, STORE_UPGRADE, UPG_BULLET_BAG, 1, 0 },
-    { RG_PROGRESSIVE_BOMB_BAG,  STORE_UPGRADE, UPG_BOMB_BAG,   1, 0 },
+    { RG_PROGRESSIVE_BOMB_BAG, STORE_UPGRADE, UPG_BOMB_BAG, 1, 0 },
 };
 
 const TradeableItem* FindTradeable(int16_t randomizerGet) {
@@ -229,8 +236,8 @@ bool IsHeld(const TradeableItem& item) {
         case STORE_BOTTLE:
             return FindBottleSlot(item.a) >= 0;
         case STORE_UPGRADE:
-            // Holding a tier means being AT LEAST that high. A Golden Scale holder can hand over
-            // "a scale" - what leaves is one tier, not this specific row's tier.
+            // "Do you own this chain at all". What leaves on a deposit is one tier off whatever
+            // the player currently holds, never this row's tier - see the table comment.
             return CUR_UPG_VALUE(item.a) >= item.b;
     }
     return false;

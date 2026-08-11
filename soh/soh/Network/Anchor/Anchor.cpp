@@ -158,6 +158,8 @@ void Anchor::ProcessIncomingPacketQueue() {
                 HandlePacket_ServerMessage(payload);
             else if (packetType == SEVEN_SAGES_SEED)
                 HandlePacket_SevenSagesSeed(payload);
+            else if (packetType == SEVEN_SAGES_STASH)
+                HandlePacket_SevenSagesStash(payload);
             else if (packetType == SET_CHECK_STATUS)
                 HandlePacket_SetCheckStatus(payload);
             else if (packetType == SET_FLAG)

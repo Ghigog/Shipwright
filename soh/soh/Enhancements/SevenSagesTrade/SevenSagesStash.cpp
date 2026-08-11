@@ -22,25 +22,24 @@ struct StashEntry {
 
 StashEntry sEntries[SEVEN_SAGES_STASH_CAPACITY];
 uint8_t sCount = 0;
+uint32_t sRevision = 0;
 
 void SaveStash(SaveContext* saveContext, int sectionID, bool fullSave) {
     SaveManager::Instance->SaveData("count", sCount);
-    SaveManager::Instance->SaveArray("items", SEVEN_SAGES_STASH_CAPACITY, [](size_t i) {
-        SaveManager::Instance->SaveData("", sEntries[i].randomizerGet);
-    });
-    SaveManager::Instance->SaveArray("depositors", SEVEN_SAGES_STASH_CAPACITY, [](size_t i) {
-        SaveManager::Instance->SaveData("", sEntries[i].depositorSage);
-    });
+    SaveManager::Instance->SaveData("revision", sRevision);
+    SaveManager::Instance->SaveArray("items", SEVEN_SAGES_STASH_CAPACITY,
+                                     [](size_t i) { SaveManager::Instance->SaveData("", sEntries[i].randomizerGet); });
+    SaveManager::Instance->SaveArray("depositors", SEVEN_SAGES_STASH_CAPACITY,
+                                     [](size_t i) { SaveManager::Instance->SaveData("", sEntries[i].depositorSage); });
 }
 
 void LoadStash() {
     SaveManager::Instance->LoadData("count", sCount);
-    SaveManager::Instance->LoadArray("items", SEVEN_SAGES_STASH_CAPACITY, [](size_t i) {
-        SaveManager::Instance->LoadData("", sEntries[i].randomizerGet);
-    });
-    SaveManager::Instance->LoadArray("depositors", SEVEN_SAGES_STASH_CAPACITY, [](size_t i) {
-        SaveManager::Instance->LoadData("", sEntries[i].depositorSage);
-    });
+    SaveManager::Instance->LoadData("revision", sRevision);
+    SaveManager::Instance->LoadArray("items", SEVEN_SAGES_STASH_CAPACITY,
+                                     [](size_t i) { SaveManager::Instance->LoadData("", sEntries[i].randomizerGet); });
+    SaveManager::Instance->LoadArray("depositors", SEVEN_SAGES_STASH_CAPACITY,
+                                     [](size_t i) { SaveManager::Instance->LoadData("", sEntries[i].depositorSage); });
 
     // A count past capacity means a corrupt or hand-edited save. Clamping rather than trusting it
     // keeps every later loop in bounds; the alternative is reading past the array on the first
@@ -96,6 +95,7 @@ extern "C" bool SevenSagesStash_Add(int16_t randomizerGet, uint8_t depositorSage
     sEntries[sCount].randomizerGet = randomizerGet;
     sEntries[sCount].depositorSage = depositorSage;
     sCount++;
+    sRevision++;
     return true;
 }
 
@@ -109,6 +109,7 @@ extern "C" bool SevenSagesStash_RemoveAt(uint8_t index) {
     sCount--;
     sEntries[sCount].randomizerGet = RG_NONE;
     sEntries[sCount].depositorSage = 0;
+    sRevision++;
     return true;
 }
 
@@ -118,6 +119,14 @@ extern "C" void SevenSagesStash_Clear(void) {
         sEntries[i].depositorSage = 0;
     }
     sCount = 0;
+}
+
+extern "C" uint32_t SevenSagesStash_Revision(void) {
+    return sRevision;
+}
+
+extern "C" void SevenSagesStash_SetRevision(uint32_t revision) {
+    sRevision = revision;
 }
 
 // No IS_RANDO condition: the save section has to be registered on every launch regardless of quest,

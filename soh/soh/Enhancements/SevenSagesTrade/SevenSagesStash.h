@@ -68,6 +68,12 @@ bool SevenSagesStash_RemoveAt(uint8_t index);
 // inconsistent.
 void SevenSagesStash_Clear(void);
 
+// Bumped on every local change, and carried by the sync packet purely so a receiver can tell a
+// genuinely new state from an echo of its own. NOT a conflict resolver - see the race note in
+// Packets/SevenSagesStash.cpp for what this does and does not protect against.
+uint32_t SevenSagesStash_Revision(void);
+void SevenSagesStash_SetRevision(uint32_t revision);
+
 #ifdef __cplusplus
 }
 #endif
