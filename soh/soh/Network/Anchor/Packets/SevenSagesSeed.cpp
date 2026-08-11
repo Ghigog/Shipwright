@@ -71,15 +71,38 @@ void Anchor::SendPacket_SevenSagesSeed() {
     buffer << spoilerFile.rdbuf();
     spoilerFile.close();
 
-    nlohmann::json payload;
-    payload["type"] = SEVEN_SAGES_SEED;
-    payload["targetTeamId"] = CVarGetString(CVAR_REMOTE_ANCHOR("TeamId"), "default");
-    // Sent as a STRING, not as nested json. The relay treats payloads as opaque, but re-encoding a
-    // 110KB object through two json round trips on every hop is pure cost for no benefit - and the
-    // receiver hands the text straight to a file either way.
-    payload["spoiler"] = buffer.str();
+    const std::string spoiler = buffer.str();
 
-    SendJsonToRemote(payload);
+    // Chunked, because the relay does not deliver a packet this size.
+    //
+    // Measured 2026-08-11: both clients logged the send (Queuing + Sending) and NEITHER logged a
+    // receive, with the client send path doing a single unbounded SDLNet_TCP_Send
+    // (Network.cpp:49-52). So the ~110KB payload leaves the client intact and dies at the server.
+    // The server is a separate Go project and not inspectable from here, but a Go bufio.Scanner
+    // defaults to a 64KB token limit, which this comfortably exceeds.
+    //
+    // 2KB of spoiler text per packet, not 32KB: the limit is unknown, JSON escaping inflates the
+    // payload (every newline and quote in the file becomes two characters), and ~55 small packets
+    // cost nothing on a link that carries per-frame player updates. Sized to survive a much
+    // stricter cap than the one actually suspected.
+    constexpr size_t kChunkSize = 2048;
+    const size_t totalChunks = (spoiler.size() + kChunkSize - 1) / kChunkSize;
+
+    for (size_t i = 0; i < totalChunks; i++) {
+        nlohmann::json payload;
+        payload["type"] = SEVEN_SAGES_SEED;
+        payload["targetTeamId"] = CVarGetString(CVAR_REMOTE_ANCHOR("TeamId"), "default");
+        payload["chunk"] = i;
+        payload["chunks"] = totalChunks;
+        payload["spoiler"] = spoiler.substr(i * kChunkSize, kChunkSize);
+        // Suppressed from the debug log. Dumping every chunk wrote the whole spoiler to disk twice
+        // over and pushed a single session's log past a megabyte, which buries everything else.
+        payload["quiet"] = true;
+
+        SendJsonToRemote(payload);
+    }
+
+    SPDLOG_INFO("[Anchor] SEVEN_SAGES_SEED: sent {} bytes in {} chunks", spoiler.size(), totalChunks);
 
     Notification::Emit({
         .message = "Seed sent to the room.",
@@ -91,22 +114,45 @@ void Anchor::HandlePacket_SevenSagesSeed(nlohmann::json payload) {
         return;
     }
 
-    // Deliberately allowed while a save is loaded as well as at file select. A player who is
-    // already in-game keeps their current run - ParseSpoiler only repopulates the randomizer
-    // context, and nothing here touches gSaveContext - but they are then set up to make a file on
-    // the host's world without having to restart first.
-    const std::string spoiler = payload.at("spoiler").get<std::string>();
+    const uint32_t clientId = payload.value("clientId", (uint32_t)0);
+    const size_t chunkIndex = payload.value("chunk", (size_t)0);
+    const size_t chunkCount = payload.value("chunks", (size_t)1);
+    const std::string chunk = payload.at("spoiler").get<std::string>();
+
+    // Reassembly buffer per sender. Keyed by client so two people sending at once cannot interleave
+    // into one corrupt file - which is not hypothetical here, since both players generating is
+    // exactly the mistake this whole feature exists to make impossible.
+    static std::map<uint32_t, std::string> pending;
+
+    if (chunkIndex == 0) {
+        pending[clientId].clear();
+        pending[clientId].reserve(chunkCount * 2048);
+    } else if (!pending.contains(clientId)) {
+        // Joined mid-transfer, or chunk 0 was lost. Nothing useful can be built from the remainder,
+        // and silently keeping a partial file would be worse than waiting for a re-send.
+        SPDLOG_WARN("[Anchor] SEVEN_SAGES_SEED: chunk {} with no transfer in progress - ignoring", chunkIndex);
+        return;
+    }
+
+    pending[clientId] += chunk;
+
+    if (chunkIndex + 1 < chunkCount) {
+        return; // more to come
+    }
+
+    const std::string spoiler = pending[clientId];
+    pending.erase(clientId);
+
     if (spoiler.empty()) {
         return;
     }
 
-    uint32_t clientId = payload.value("clientId", (uint32_t)0);
     const std::string senderName = clients.contains(clientId) ? clients[clientId].name : "A teammate";
 
     // Land it in this profile's own Randomizer/ folder, under a fixed name. Fixed rather than
-    // hash-derived so repeated sends replace one file instead of accumulating a folder full of
-    // near-identical spoilers - the hash is inside the file, and the room list is what tells you
-    // whether the worlds match.
+    // hash-derived so repeated sends replace one file instead of accumulating near-identical
+    // spoilers - the hash is inside the file, and the room list is what tells you whether the
+    // worlds match.
     const std::string dir = Ship::Context::GetPathRelativeToAppDirectory("Randomizer");
     try {
         if (!std::filesystem::exists(dir)) {
@@ -132,7 +178,7 @@ void Anchor::HandlePacket_SevenSagesSeed(nlohmann::json payload) {
     Randomizer_ParseSpoiler(path.c_str());
 
     if (!Rando::Context::GetInstance()->IsSpoilerLoaded()) {
-        SPDLOG_ERROR("[Anchor] SEVEN_SAGES_SEED: ParseSpoiler rejected the received file");
+        SPDLOG_ERROR("[Anchor] SEVEN_SAGES_SEED: ParseSpoiler rejected the received file ({} bytes)", spoiler.size());
         Notification::Emit({
             .prefix = senderName,
             .message = "sent a seed, but it could not be loaded.",
@@ -140,11 +186,11 @@ void Anchor::HandlePacket_SevenSagesSeed(nlohmann::json payload) {
         return;
     }
 
-    // From here the sage select screen must not generate over this world. Cleared again the
-    // moment this client generates a seed of its own.
+    // From here the sage select screen must not generate over this world. Cleared again the moment
+    // this client generates a seed of its own.
     SevenSagesCoop_SetHasReceivedSeed(true);
 
-    SPDLOG_INFO("[Anchor] SEVEN_SAGES_SEED: loaded seed from '{}'", senderName);
+    SPDLOG_INFO("[Anchor] SEVEN_SAGES_SEED: loaded {} bytes from '{}'", spoiler.size(), senderName);
     Notification::Emit({
         .prefix = senderName,
         .message = "sent their seed - pick your sage and Start Randomizer.",
