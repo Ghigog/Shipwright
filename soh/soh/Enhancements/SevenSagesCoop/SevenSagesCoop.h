@@ -144,6 +144,22 @@ bool SevenSagesCoop_IsKnowledgeItem(uint16_t itemId);
 bool SevenSagesCoop_HasReceivedSeed(void);
 void SevenSagesCoop_SetHasReceivedSeed(bool received);
 
+// Re-apply the received seed file to the randomizer context, and report whether it took.
+//
+// Belt and braces for a real observed failure: on 2026-08-11 a seed transferred and loaded cleanly
+// (byte-exact, success notification shown), and by the time the player reached the file-select
+// settings screen the game reported "No randomizer seed loaded" with Start Randomizer greyed out -
+// i.e. Context::IsSpoilerLoaded() had gone back to false somewhere between picking the Seven Sages
+// quest and arriving there. Nothing on that path calls SetSpoilerLoaded(false), so the exact
+// culprit is unidentified; applyPreset re-running ShipInit::InitAll() at quest selection is the
+// suspect.
+//
+// Rather than keep hunting, the sage select screen re-applies the file immediately before handing
+// off to that screen. Re-parsing rather than just re-setting the flag is deliberate: if whatever
+// cleared the flag also cleared the placements, setting the flag alone would let the player start
+// on an empty world, which is a far worse failure than the one being fixed.
+bool SevenSagesCoop_ReapplyReceivedSeed(void);
+
 // ── Age dimensions ──────────────────────────────────────────────────────────────────────────
 // Child and adult are separate dimensions: you only see players who are currently your own age,
 // and time travel is what moves you between them. See docs/multiplayer-anchor.md.

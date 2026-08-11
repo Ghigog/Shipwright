@@ -7,10 +7,16 @@
 #include "soh/cvar_prefixes.h"
 #include "soh/OTRGlobals.h"
 #include "soh/Enhancements/randomizer/randomizer.h"
+#include "soh/Enhancements/randomizer/SeedContext.h"
+#include <ship/Context.h>
+#include <spdlog/spdlog.h>
+#include <filesystem>
 
 extern "C" {
 #include "z64.h"
 #include "variables.h"
+// Declared inside OTRGlobals.h's #ifndef __cplusplus block, so invisible to this file.
+void Randomizer_ParseSpoiler(const char* fileLoc);
 }
 
 // The roster is seven sages wide (RO_SAGE_RAURU .. RO_SAGE_ZELDA), so a u8 mask covers it with a
@@ -87,6 +93,32 @@ extern "C" bool SevenSagesCoop_HasReceivedSeed(void) {
 
 extern "C" void SevenSagesCoop_SetHasReceivedSeed(bool received) {
     sHasReceivedSeed = received;
+}
+
+extern "C" bool SevenSagesCoop_ReapplyReceivedSeed(void) {
+    if (!sHasReceivedSeed) {
+        return false;
+    }
+
+    // Same fixed name HandlePacket_SevenSagesSeed writes to, in this profile's own folder.
+    const std::string path = Ship::Context::GetPathRelativeToAppDirectory("Randomizer") + "/received-seed.json";
+    if (!std::filesystem::exists(path)) {
+        SPDLOG_WARN("[SevenSagesCoop] received seed file missing at {}", path);
+        return false;
+    }
+
+    auto ctx = Rando::Context::GetInstance();
+    if (ctx == nullptr) {
+        return false;
+    }
+
+    // Cheap enough to do unconditionally: one ~110KB parse, once, on a menu confirm.
+    if (!ctx->IsSpoilerLoaded()) {
+        SPDLOG_INFO("[SevenSagesCoop] received seed was no longer loaded - re-applying {}", path);
+        Randomizer_ParseSpoiler(path.c_str());
+    }
+
+    return ctx->IsSpoilerLoaded();
 }
 
 extern "C" bool SevenSagesCoop_IsKnowledgeItem(uint16_t itemId) {

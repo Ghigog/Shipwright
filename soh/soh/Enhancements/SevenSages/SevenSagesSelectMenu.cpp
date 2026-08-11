@@ -239,7 +239,12 @@ extern "C" void FileChoose_UpdateSevenSagesMenu(GameState* gameState) {
         // The sage/roster mismatch this leaves behind - the host generated against a roster that
         // need not match this player's pick - is handled at file creation by
         // Randomizer_ApplySageRuntimeKit() (savefile.cpp), and is the intended co-op shape.
-        if (!SevenSagesCoop_HasReceivedSeed()) {
+        if (SevenSagesCoop_HasReceivedSeed()) {
+            // Make sure the received world is actually still in the context. It has been observed
+            // going missing between arriving and reaching the settings screen this hands off to -
+            // see SevenSagesCoop_ReapplyReceivedSeed for the detail.
+            SevenSagesCoop_ReapplyReceivedSeed();
+        } else {
             GenerateRandomizer();
         }
         fileChooseContext->prevConfigMode = fileChooseContext->configMode;
