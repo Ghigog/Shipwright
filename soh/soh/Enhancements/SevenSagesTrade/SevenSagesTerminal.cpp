@@ -74,7 +74,14 @@ typedef struct {
 } SevenSagesTerminalActor;
 
 void TerminalInit(Actor* thisx, PlayState* play) {
-    Actor_SetScale(thisx, 0.05f);
+    // Calibrated against En_Ishi, which draws rocks from this same object at 0.1 for the small
+    // liftable one and 0.4 for the large one (sRockScales, z_en_ishi.c:57). A terminal has to read
+    // as a landmark you spot from across the field, so it sits just above the large rock.
+    //
+    // This started at 0.05 - half the SMALLEST vanilla rock - and the result was a pebble that was
+    // effectively invisible in Lon Lon Ranch even though it had spawned correctly. Anchor any new
+    // scale to those two numbers rather than guessing.
+    Actor_SetScale(thisx, 0.5f);
     thisx->gravity = -2.0f;
 }
 
