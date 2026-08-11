@@ -84,18 +84,18 @@ void Anchor::HandlePacket_GiveItem(nlohmann::json payload) {
 
     // The filter, now that the item is resolved. Knowledge crosses; nothing else does.
     //
-    // Logged both ways while the "items appearing that belong to neither kit" report is open
-    // (2026-08-11): two clients ended a session both holding a Lens of Truth, which is in neither
-    // player's kit, not a starting item in that seed, and not Link's Pocket. Every static
-    // explanation has been ruled out by inspection, so the remaining question is empirical - does
-    // anything actually cross this line, and what?
     if (coopFiltering && !SevenSagesCoop_IsKnowledgeItem((uint16_t)getItemEntry.itemId)) {
-        SPDLOG_INFO("[Anchor] GIVE_ITEM blocked from '{}': itemId 0x{:02X} getItemId 0x{:04X} mod {}", client.name,
-                    (uint16_t)getItemEntry.itemId, (uint16_t)getItemEntry.getItemId, getItemEntry.modIndex);
+        // Blocked is the overwhelmingly common case and is not logged - it fires on every pickup
+        // anyone makes, and drowned everything else when it was.
         return;
     }
+
+    // Anything that CROSSES is worth a line. It should only ever be a medallion, stone, song or
+    // skulltula token, so this stays quiet in normal play - and it is the trace that would catch a
+    // repeat of the open 2026-08-11 report, where two clients ended a session both holding a Lens
+    // of Truth that belonged to neither kit and was not a starting item in that seed.
     if (coopFiltering) {
-        SPDLOG_INFO("[Anchor] GIVE_ITEM ALLOWED from '{}' (knowledge): itemId 0x{:02X}", client.name,
+        SPDLOG_INFO("[Anchor] co-op: accepted shared item from '{}': itemId 0x{:02X}", client.name,
                     (uint16_t)getItemEntry.itemId);
     }
 

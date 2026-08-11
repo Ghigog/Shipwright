@@ -17,6 +17,7 @@
 #include "soh_assets.h"
 #include "soh/Enhancements/boss-rush/BossRush.h"
 #include "soh/Enhancements/SevenSages/SevenSagesSelectMenu.h"
+#include "soh/Enhancements/SevenSagesCoop/SevenSagesCoop.h"
 #include "soh/Enhancements/FileSelectEnhancements.h"
 #include "soh/Enhancements/game-interactor/GameInteractor_Hooks.h"
 #include <assert.h>
@@ -875,7 +876,21 @@ void FileChoose_UpdateRandomizerMenu(GameState* thisx) {
                 Sfx_PlaySfxCentered(NA_SE_SY_OCARINA_ERROR);
             }
         } else if (this->randomizerIndex == RSM_GENERATE_RANDOMIZER) {
-            Randomizer_GenerateRandomizer();
+            // Seven Sages co-op: refuse to generate over a world a teammate sent.
+            //
+            // This is the last remaining way to end up in two different worlds without any error
+            // being raised - the joiner presses it, quietly replaces the host's placement with a
+            // fresh one, and the two of them then explore worlds that merely look alike. That cost
+            // two playtest sessions on 2026-08-11 before it was understood.
+            //
+            // Refused rather than hidden: someone who genuinely wants their own seed can disconnect
+            // or generate from the Randomizer menu, and a greyed option with a reason next to it
+            // teaches what happened. Silently doing nothing would be its own small mystery.
+            if (SevenSagesCoop_HasReceivedSeed()) {
+                Sfx_PlaySfxCentered(NA_SE_SY_OCARINA_ERROR);
+            } else {
+                Randomizer_GenerateRandomizer();
+            }
         } else if (this->randomizerIndex == RSM_OPEN_RANDOMIZER_SETTINGS) {
             Audio_PlaySoundGeneral(NA_SE_SY_FSEL_DECIDE_L, &gSfxDefaultPos, 4, &gSfxDefaultFreqAndVolScale,
                                    &gSfxDefaultFreqAndVolScale, &gSfxDefaultReverb);
@@ -1980,7 +1995,7 @@ void FileChoose_DrawWindowContents(GameState* thisx) {
             // If no randomizer is loaded and text is "start randomizer" or when a seed is generating, make all options
             // gray.
             if ((index == RSM_START_RANDOMIZER && !Randomizer_IsSeedGenerated() && !Randomizer_IsSpoilerLoaded()) ||
-                generating) {
+                (index == RSM_GENERATE_RANDOMIZER && SevenSagesCoop_HasReceivedSeed()) || generating) {
                 textColorR = textColorG = textColorB = 100;
             }
 
@@ -1996,6 +2011,15 @@ void FileChoose_DrawWindowContents(GameState* thisx) {
 
         // If no randomizer is generated and "start randomizer" is selected, show text to explain why user can't start
         // the randomizer.
+        // Seven Sages co-op: say why Generate is greyed, rather than leaving the player to guess.
+        // English only, like the rest of the co-op UI - this path only exists in co-op.
+        if (SevenSagesCoop_HasReceivedSeed() && this->randomizerIndex == RSM_GENERATE_RANDOMIZER) {
+            Interface_DrawTextLine(this->state.gfxCtx, "A teammate sent you this seed.", 70, (80 + 64), 240, 200, 80,
+                                   textAlpha, 0.8f, true);
+            Interface_DrawTextLine(this->state.gfxCtx, "Generating would put you in a different world.", 70, (80 + 80),
+                                   240, 200, 80, textAlpha, 0.8f, true);
+        }
+
         if (!Randomizer_IsSeedGenerated() && !Randomizer_IsSpoilerLoaded() &&
             this->randomizerIndex == RSM_START_RANDOMIZER) {
             Interface_DrawTextLine(this->state.gfxCtx,
