@@ -119,28 +119,41 @@ void Anchor::HandlePacket_SevenSagesSeed(nlohmann::json payload) {
     const size_t chunkCount = payload.value("chunks", (size_t)1);
     const std::string chunk = payload.at("spoiler").get<std::string>();
 
-    // Reassembly buffer per sender. Keyed by client so two people sending at once cannot interleave
-    // into one corrupt file - which is not hypothetical here, since both players generating is
-    // exactly the mistake this whole feature exists to make impossible.
-    static std::map<uint32_t, std::string> pending;
+    // Reassembly buffer per sender, indexed by chunk rather than appended in arrival order.
+    //
+    // Arrival order is NOT guaranteed, which cost a transfer on 2026-08-11: 54 chunks were sent,
+    // chunk 53 arrived before 52, the old append-and-count-the-last logic declared the transfer
+    // complete one chunk short, and ParseSpoiler was handed a file with a 2KB hole in the middle
+    // (107381 bytes received against 109429 sent). The orphaned chunk 52 then turned up with
+    // nothing to attach to. TCP preserves order on a single stream, but the relay fans out to team
+    // members and gives no such guarantee across them.
+    //
+    // Keying by index also makes duplicates harmless and makes "complete" mean every chunk is
+    // present, rather than "the highest-numbered one showed up".
+    struct SeedTransfer {
+        size_t count = 0;
+        std::map<size_t, std::string> parts;
+    };
+    static std::map<uint32_t, SeedTransfer> pending;
 
-    if (chunkIndex == 0) {
-        pending[clientId].clear();
-        pending[clientId].reserve(chunkCount * 2048);
-    } else if (!pending.contains(clientId)) {
-        // Joined mid-transfer, or chunk 0 was lost. Nothing useful can be built from the remainder,
-        // and silently keeping a partial file would be worse than waiting for a re-send.
-        SPDLOG_WARN("[Anchor] SEVEN_SAGES_SEED: chunk {} with no transfer in progress - ignoring", chunkIndex);
-        return;
+    SeedTransfer& transfer = pending[clientId];
+    // A repeated index means this is a new send rather than more of the current one - the natural
+    // case being the host pressing "Send Seed to Room" again while a previous attempt is stalled.
+    if (transfer.count != chunkCount || transfer.parts.contains(chunkIndex)) {
+        transfer.count = chunkCount;
+        transfer.parts.clear();
+    }
+    transfer.parts[chunkIndex] = chunk;
+
+    if (transfer.parts.size() < transfer.count) {
+        return; // still missing chunks
     }
 
-    pending[clientId] += chunk;
-
-    if (chunkIndex + 1 < chunkCount) {
-        return; // more to come
+    // std::map iterates in key order, so this reassembles correctly however the chunks arrived.
+    std::string spoiler;
+    for (const auto& [index, part] : transfer.parts) {
+        spoiler += part;
     }
-
-    const std::string spoiler = pending[clientId];
     pending.erase(clientId);
 
     if (spoiler.empty()) {
