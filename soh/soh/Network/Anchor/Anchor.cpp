@@ -5,6 +5,8 @@
 #include "soh/ObjectExtension/ObjectExtension.h"
 #include "soh/Enhancements/randomizer/randomizer.h"
 #include "soh/Enhancements/SevenSagesCoop/SevenSagesCoop.h"
+#include "soh/Notification/Notification.h"
+#include <map>
 
 extern "C" {
 #include "variables.h"
@@ -263,7 +265,32 @@ bool Anchor::ShouldAcceptWorldStateFrom(const nlohmann::json& payload) {
         return true;
     }
 
-    return SevenSagesCoop_ShouldAcceptWorldStateFrom(it->second.seedHash);
+    if (SevenSagesCoop_ShouldAcceptWorldStateFrom(it->second.seedHash)) {
+        return true;
+    }
+
+    // Say so, once per client per mismatched world.
+    //
+    // Dropping the packets silently is correct but indistinguishable from "co-op is broken": the
+    // only other signal is a red triangle in the room list that has to be hovered. Playtesting on
+    // 2026-08-11 hit exactly this - a joiner generated their own seed instead of loading the host's
+    // spoiler, the two of them played entirely different worlds for twenty minutes, and the visible
+    // symptom was "the chests aren't syncing".
+    //
+    // Keyed on the remote's fingerprint as well as their id, so reconnecting onto the CORRECT world
+    // clears the way for a fresh warning if they later diverge again.
+    static std::map<uint32_t, uint32_t> warnedClients;
+    const auto warned = warnedClients.find(clientId);
+    if (warned == warnedClients.end() || warned->second != it->second.seedHash) {
+        warnedClients[clientId] = it->second.seedHash;
+        Notification::Emit({
+            .prefix = it->second.name,
+            .message = "is in a DIFFERENT world - not syncing.",
+            .suffix = "They must load the host's spoiler, not generate their own.",
+        });
+    }
+
+    return false;
 }
 
 bool Anchor::IsSaveLoaded() {
