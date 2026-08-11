@@ -162,38 +162,52 @@ class SevenSagesTradeWindow final : public Ship::GuiWindow {
 
     void InitElement() override {
     }
+
+    // Ship::GuiWindow::Draw already wraps DrawElement in its own ImGui::Begin/End using the name
+    // passed to the constructor (GuiWindow.cpp:65-80). So visibility is the ONLY lever here - an
+    // early return from DrawElement still leaves the frame drawn, which is what produced an empty
+    // black "Seven Sages Trade Box" window sitting on screen permanently.
     void UpdateElement() override {
+        const bool terminalOpen = SevenSagesTerminal_IsOpen();
+
+        if (terminalOpen && !IsVisible()) {
+            // Two ways to arrive here, and they need opposite responses. If the window was up last
+            // frame, the player just clicked its X and the terminal has to be told. If it was not,
+            // the terminal has just been opened and the window should follow.
+            if (mWasVisible) {
+                SevenSagesTerminal_Close();
+            } else {
+                SetVisibility(true);
+            }
+        } else if (!terminalOpen && IsVisible()) {
+            SetVisibility(false);
+        }
+
+        mWasVisible = IsVisible();
     }
 
     void DrawElement() override {
-        // The terminal owns the open state, so walking away closes this even though the window
-        // itself is what is visible.
-        if (!SevenSagesTerminal_IsOpen()) {
-            return;
+        ImGui::TextWrapped("One box, shared by every sage. What you leave here waits for whoever "
+                           "comes next - they need not be here now, or even in your age.");
+        ImGui::Separator();
+
+        if (ImGui::BeginTable("##tradePanes", 2,
+                              ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_SizingStretchSame)) {
+            ImGui::TableNextColumn();
+            DrawDepositPane();
+            ImGui::TableNextColumn();
+            DrawWithdrawPane();
+            ImGui::EndTable();
         }
 
-        ImGui::SetNextWindowSize(ImVec2(720, 420), ImGuiCond_FirstUseEver);
-        if (ImGui::Begin("Seven Sages - Trade Box", nullptr, ImGuiWindowFlags_NoFocusOnAppearing)) {
-            ImGui::TextWrapped("One box, shared by every sage. What you leave here waits for whoever "
-                               "comes next - they need not be here now, or even in your age.");
-            ImGui::Separator();
-
-            if (ImGui::BeginTable("##tradePanes", 2,
-                                  ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_SizingStretchSame)) {
-                ImGui::TableNextColumn();
-                DrawDepositPane();
-                ImGui::TableNextColumn();
-                DrawWithdrawPane();
-                ImGui::EndTable();
-            }
-
-            ImGui::Separator();
-            if (ImGui::Button("Close")) {
-                SevenSagesTerminal_Close();
-            }
+        ImGui::Separator();
+        if (ImGui::Button("Close")) {
+            SevenSagesTerminal_Close();
         }
-        ImGui::End();
     }
+
+  private:
+    bool mWasVisible = false;
 };
 
 std::shared_ptr<SevenSagesTradeWindow> sWindow;
@@ -210,9 +224,12 @@ void RegisterSevenSagesTradeWindow() {
         return;
     }
 
-    sWindow = std::make_shared<SevenSagesTradeWindow>(CVAR_WINDOW("SevenSagesTradeBox"), "Seven Sages Trade Box");
+    sWindow = std::make_shared<SevenSagesTradeWindow>(CVAR_WINDOW("SevenSagesTradeBox"), "Seven Sages Trade Box",
+                                                     ImVec2(720, 420));
     context->GetWindow()->GetGui()->AddGuiWindow(sWindow);
-    sWindow->Show();
+    // Deliberately NOT Show() here. The window is opened by walking up to a terminal, and showing
+    // it at registration is what left an empty frame on screen from launch.
+    sWindow->Hide();
 }
 
 void RegisterSevenSagesTradeMenu() {
