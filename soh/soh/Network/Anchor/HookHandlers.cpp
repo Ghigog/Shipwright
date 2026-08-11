@@ -83,6 +83,10 @@ void Anchor::RegisterHooks() {
     // runs on connect and disconnect, so a condition evaluated there would freeze whatever the
     // toggle happened to be at connect time and ignore the player turning co-op on afterwards.
     COND_HOOK(OnGenerationCompletion, isConnected, [&]() {
+        // Whatever a teammate sent earlier is no longer the seed in memory - this client just made
+        // its own. Clearing unconditionally keeps the flag honest even with co-op off.
+        SevenSagesCoop_SetHasReceivedSeed(false);
+
         if (SevenSagesCoop_IsEnabled()) {
             SendPacket_SevenSagesSeed();
         }

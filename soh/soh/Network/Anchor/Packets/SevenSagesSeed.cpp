@@ -140,6 +140,10 @@ void Anchor::HandlePacket_SevenSagesSeed(nlohmann::json payload) {
         return;
     }
 
+    // From here the sage select screen must not generate over this world. Cleared again the
+    // moment this client generates a seed of its own.
+    SevenSagesCoop_SetHasReceivedSeed(true);
+
     SPDLOG_INFO("[Anchor] SEVEN_SAGES_SEED: loaded seed from '{}'", senderName);
     Notification::Emit({
         .prefix = senderName,

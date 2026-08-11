@@ -127,6 +127,23 @@ bool SevenSagesCoop_ShouldAcceptWorldStateFrom(uint32_t remoteWorldFingerprint);
 // one past the end, so the range excludes it without a special case.
 bool SevenSagesCoop_IsKnowledgeItem(uint16_t itemId);
 
+// ── "The seed I am holding came from a teammate" ────────────────────────────────────────────
+// Set when SEVEN_SAGES_SEED loads successfully; cleared whenever this client generates its own.
+// So it means precisely "the newest seed here is somebody else's", and nothing more.
+//
+// The sage select screen uses it to decide whether confirming a sage should generate. That has to
+// be an answer about intent, and this is the only signal that carries intent: a joiner who just
+// received the host's world must not have it thrown away, while everyone else - including a host
+// who happens to have loaded a spoiler at some point - still gets the ordinary generate-on-confirm
+// behaviour.
+//
+// The first attempt used Context::IsSpoilerLoaded() instead, and that was wrong in a way worth
+// recording: it is sticky for the life of the process, so a window that had EVER loaded a spoiler
+// stopped generating forever while a fresh window always generated. Two clients then behaved
+// differently and permanently for reasons invisible to the player.
+bool SevenSagesCoop_HasReceivedSeed(void);
+void SevenSagesCoop_SetHasReceivedSeed(bool received);
+
 // ── Age dimensions ──────────────────────────────────────────────────────────────────────────
 // Child and adult are separate dimensions: you only see players who are currently your own age,
 // and time travel is what moves you between them. See docs/multiplayer-anchor.md.

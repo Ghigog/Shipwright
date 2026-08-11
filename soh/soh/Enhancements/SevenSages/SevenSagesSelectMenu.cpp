@@ -26,6 +26,7 @@
 #include "soh/Enhancements/randomizer/randomizerTypes.h"
 #include "soh/Enhancements/randomizer/savefile.h"
 #include "soh/Enhancements/randomizer/randomizer.h"
+#include "soh/Enhancements/SevenSagesCoop/SevenSagesCoop.h"
 #include "soh_assets.h"
 
 #include <libultraship/bridge.h>
@@ -216,25 +217,29 @@ extern "C" void FileChoose_UpdateSevenSagesMenu(GameState* gameState) {
         // point, and the same one debugconsole.cpp uses. An empty seed means "use whatever the
         // randomizer options say", so a custom seed set there is still honoured.
         //
-        // ── Never regenerate over a spoiler the player deliberately loaded ──────────────────
-        // A loaded spoiler IS a chosen world, and generating would silently replace it. That is
-        // fatal for co-op: the joiner's whole job is to load the host's spoiler and then pick
-        // their own sage, and picking the sage was throwing the host's world away. Playtest
-        // 2026-08-11 - two players in one room holding placements that differed at 1024 of 1167
-        // locations, with no action from either of them that looked like "generate".
+        // ── Never regenerate over a seed a teammate just sent ───────────────────────────────
+        // A received seed IS the world this player is joining, and generating would silently
+        // replace it - which is fatal for co-op, because the result is two people in one room
+        // holding different item placements with no error raised anywhere. Playtest 2026-08-11
+        // produced exactly that twice, with placements differing at 1024 of 1167 locations, from
+        // nothing either player did that looked like "generate".
         //
-        // Nothing is lost by skipping it. "Generate New Randomizer Seed" on the settings screen
-        // this hands off to still regenerates on demand, and the reasoning above still holds for
-        // the ordinary path where no spoiler is loaded.
+        // Everyone else still generates on confirm, which is the long-standing behaviour and the
+        // right one: the sage is baked into the seed at generation time, so confirming a sage and
+        // then playing a stale seed hands you the wrong kit.
         //
-        // The sage/seed mismatch this leaves behind - the spoiler was generated against whatever
-        // roster the host ticked, which may not include this player's sage - is handled at file
-        // creation by Randomizer_ApplySageRuntimeKit() (savefile.cpp), and is the intended co-op
-        // shape rather than a compromise.
-        // Rando::Context, not Randomizer_IsSpoilerLoaded(): that accessor sits in the same
-        // #ifndef __cplusplus block (OTRGlobals.h:81-138) as Randomizer_GenerateRandomizer above,
-        // so it is invisible here for exactly the reason already noted.
-        if (!Rando::Context::GetInstance()->IsSpoilerLoaded()) {
+        // Deliberately NOT Context::IsSpoilerLoaded(), which was the first attempt at this and was
+        // wrong in a way worth recording: that flag is sticky for the life of the process, so a
+        // window that had EVER loaded a spoiler stopped generating forever while a fresh window
+        // always generated. Two clients then behaved differently and permanently, for reasons
+        // invisible to the player. HasReceivedSeed() answers the question actually being asked -
+        // is the seed currently in memory somebody else's? - and is cleared the moment this client
+        // generates its own.
+        //
+        // The sage/roster mismatch this leaves behind - the host generated against a roster that
+        // need not match this player's pick - is handled at file creation by
+        // Randomizer_ApplySageRuntimeKit() (savefile.cpp), and is the intended co-op shape.
+        if (!SevenSagesCoop_HasReceivedSeed()) {
             GenerateRandomizer();
         }
         fileChooseContext->prevConfigMode = fileChooseContext->configMode;

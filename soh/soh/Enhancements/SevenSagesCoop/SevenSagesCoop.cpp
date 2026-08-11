@@ -77,6 +77,18 @@ extern "C" bool SevenSagesCoop_ShouldAcceptWorldStateFrom(uint32_t remoteWorldFi
     return mine == remoteWorldFingerprint;
 }
 
+// Process lifetime only, deliberately not a CVar: it describes the seed currently in memory, and a
+// restart legitimately means "I no longer have a teammate's seed loaded".
+static bool sHasReceivedSeed = false;
+
+extern "C" bool SevenSagesCoop_HasReceivedSeed(void) {
+    return sHasReceivedSeed;
+}
+
+extern "C" void SevenSagesCoop_SetHasReceivedSeed(bool received) {
+    sHasReceivedSeed = received;
+}
+
 extern "C" bool SevenSagesCoop_IsKnowledgeItem(uint16_t itemId) {
     return itemId >= ITEM_SONG_MINUET && itemId <= ITEM_ZORA_SAPPHIRE;
 }
