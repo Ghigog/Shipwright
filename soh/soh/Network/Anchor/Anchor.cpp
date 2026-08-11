@@ -254,15 +254,24 @@ void Anchor::RefreshClientActors() {
     spawningDummyPlayerForClientId = 0;
 }
 
-bool Anchor::ShouldAcceptWorldStateFrom(const nlohmann::json& payload) {
+bool Anchor::ShouldAcceptWorldStateFrom(const nlohmann::json& payload, bool requireVerified) {
+    // Unverifiable sender. Permissive by default so vanilla Anchor behaviour is unchanged, but
+    // refused outright for a wholesale snapshot while co-op is on - see the header.
+    const bool coopStrict = requireVerified && SevenSagesCoop_IsActive();
+
     if (!payload.contains("clientId")) {
-        return true;
+        return !coopStrict;
     }
 
     const uint32_t clientId = payload.value("clientId", (uint32_t)0);
     const auto it = clients.find(clientId);
     if (it == clients.end()) {
-        return true;
+        return !coopStrict;
+    }
+
+    // A sender who reports no fingerprint at all cannot be shown to share our world. Same argument.
+    if (coopStrict && it->second.seedHash == 0) {
+        return false;
     }
 
     if (SevenSagesCoop_ShouldAcceptWorldStateFrom(it->second.seedHash)) {

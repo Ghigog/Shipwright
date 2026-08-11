@@ -130,7 +130,14 @@ class Anchor : public Network {
     // fingerprint can be looked up in `clients`. Returns true for anything not comparable - a
     // missing clientId, an unknown client, a vanilla run - so nothing about upstream Anchor's
     // behaviour changes with co-op off. See SevenSagesCoop.h.
-    bool ShouldAcceptWorldStateFrom(const nlohmann::json& payload);
+    //
+    // `requireVerified` closes the stale-snapshot hole. The unverifiable cases - no clientId, a
+    // sender who has since left - normally pass, so vanilla Anchor is untouched. But
+    // UPDATE_TEAM_STATE is a WHOLESALE world snapshot the server stores and replays to anyone who
+    // asks, so an unverifiable one is exactly the dangerous case: a fresh save can be handed scene
+    // flags left behind by a previous session in the same room, and chests open that nobody opened.
+    // Pass true there, false for the incremental flag packets.
+    bool ShouldAcceptWorldStateFrom(const nlohmann::json& payload, bool requireVerified = false);
 
     uint32_t ownClientId;
     inline static const std::string clientVersion = (char*)gGitCommitHash;

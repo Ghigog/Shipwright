@@ -148,7 +148,13 @@ void Anchor::SendPacket_ClearTeamState(std::string teamId) {
 void Anchor::HandlePacket_UpdateTeamState(nlohmann::json payload) {
     // Seven Sages co-op: refuse world state from a client in a different item placement. Their
     // flags describe a world this save does not have. See SevenSagesCoop.h.
-    if (!ShouldAcceptWorldStateFrom(payload)) {
+    //
+    // requireVerified, unlike the incremental flag packets: this is a whole-world snapshot the
+    // server stores per team and replays to whoever asks, so an unverifiable one is precisely the
+    // dangerous case rather than a harmless edge. Playtest 2026-08-11 - a player created a brand
+    // new file, joined a room that still held a snapshot from an earlier session, and found Mido's
+    // chests already opened by nobody.
+    if (!ShouldAcceptWorldStateFrom(payload, /* requireVerified */ true)) {
         return;
     }
 
