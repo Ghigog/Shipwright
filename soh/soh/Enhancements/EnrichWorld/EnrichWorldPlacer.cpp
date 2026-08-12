@@ -150,8 +150,8 @@ void EnrichWorldPlacerWindow::DrawElement() {
         std::vector<const char*> groups;
         for (const auto& choice : choices) {
             const char* group = EnrichWorld::PropGroup(choice.def->actorId);
-            const bool seen = std::any_of(groups.begin(), groups.end(),
-                                          [&](const char* g) { return std::strcmp(g, group) == 0; });
+            const bool seen =
+                std::any_of(groups.begin(), groups.end(), [&](const char* g) { return std::strcmp(g, group) == 0; });
             if (!seen) {
                 groups.push_back(group);
             }
@@ -457,9 +457,9 @@ void EnrichWorldPlacerWindow::DrawElement() {
             // dangling now. Skipping the rest of the block is what makes that safe rather than
             // relying on ImGui not reporting two buttons pressed in one frame.
             if (!duplicated &&
-                UIWidgets::Button("Delete", UIWidgets::ButtonOptions()
-                                                .Size(UIWidgets::Sizes::Inline)
-                                                .Color(UIWidgets::Colors::DarkRed))) {
+                UIWidgets::Button(
+                    "Delete",
+                    UIWidgets::ButtonOptions().Size(UIWidgets::Sizes::Inline).Color(UIWidgets::Colors::DarkRed))) {
                 // The spawned instance goes too, otherwise it lingers until the room reloads and
                 // looks like the delete silently failed.
                 if (p.live != nullptr) {
