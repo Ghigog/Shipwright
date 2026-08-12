@@ -89,9 +89,19 @@ void DrawRoster(WidgetInfo& info) {
     }
 }
 
+// Defined in Enhancements/SevenSages/SevenSagesRanchTunnel.cpp. Declared rather than included
+// because it is one function and the header would carry nothing else.
+extern "C" void SevenSagesRanchTunnel_AddMenuWidgets(void);
+
 void RegisterSevenSagesCoopMenu() {
     WidgetPath path = { "Network", "Seven Sages Co-op", SECTION_COLUMN_1 };
     SohGui::mSohMenu->AddSidebarEntry("Network", path.sidebarName, 1);
+
+    // Anything adding to this sidebar has to run after the line above, and AddWidget asserts if it
+    // does not. Static-init order across translation units is unspecified, so a module that
+    // registers its own RegisterMenuInitFunc for this page is relying on link order - which changes
+    // whenever a source file is added. Sequencing dependents from here makes it deterministic.
+    SevenSagesRanchTunnel_AddMenuWidgets();
 
     SohGui::mSohMenu->AddWidget(path, "Seven Sages Co-op", WIDGET_SEPARATOR_TEXT);
     SohGui::mSohMenu->AddWidget(path,

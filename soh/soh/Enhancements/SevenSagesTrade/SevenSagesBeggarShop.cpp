@@ -48,13 +48,9 @@
 #include "SevenSagesTrade.h"
 
 #include "soh/ActorDB.h"
-#include "soh/SohGui/SohGui.hpp"
-#include "soh/SohGui/SohMenu.h"
-#include "soh/SohGui/UIWidgets.hpp"
 #include "soh/ShipInit.hpp"
 #include "soh/OTRGlobals.h"
 #include "soh/Network/Anchor/Anchor.h"
-#include "soh/Notification/Notification.h"
 #include "soh/Enhancements/custom-message/CustomMessageManager.h"
 #include "soh/Enhancements/game-interactor/GameInteractor.h"
 #include "soh/Enhancements/game-interactor/GameInteractor_Hooks.h"
@@ -94,10 +90,6 @@ s32 Object_Spawn(ObjectContext* objectCtx, s16 objectId);
 // Deliberately at file scope rather than on the actors: there is exactly one beggar in the world
 // (see ClearShop) and the browse mode is a single global mode, so threading it through actor
 // instances would be ceremony around a singleton.
-
-namespace SohGui {
-extern std::shared_ptr<SohMenu> mSohMenu;
-} // namespace SohGui
 
 namespace {
 
@@ -687,24 +679,6 @@ constexpr BeggarSpot kBeggarSpots[] = {
     { SCENE_LON_LON_RANCH, 669.3f, 0.0f, -3265.6f, 0x4000 },
 };
 
-// ── Hand placement, persisted ───────────────────────────────────────────────────────────────
-//
-// "Place the Beggar Here" used to spawn one and print a coordinate, which meant the placement
-// evaporated on the next scene load and the bad table entry took over again. You cannot judge a
-// spot you have to re-create every time you walk back to it.
-//
-// These CVars are written on placement and read on every scene load, so she stays put across
-// reloads and restarts. An override for a scene REPLACES that scene's table row rather than adding
-// to it, so there is never more than one of her (which ClearShop also enforces, but silently).
-#define CVAR_BEGGAR_SCENE CVAR_ENHANCEMENT("SevenSagesBeggar.Scene")
-#define CVAR_BEGGAR_X CVAR_ENHANCEMENT("SevenSagesBeggar.X")
-#define CVAR_BEGGAR_Y CVAR_ENHANCEMENT("SevenSagesBeggar.Y")
-#define CVAR_BEGGAR_Z CVAR_ENHANCEMENT("SevenSagesBeggar.Z")
-#define CVAR_BEGGAR_YAW CVAR_ENHANCEMENT("SevenSagesBeggar.Yaw")
-
-// -1 rather than 0: scene 0 is a real scene (the Deku Tree), so it cannot double as "unset".
-constexpr int32_t kNoOverrideScene = -1;
-
 /**
  * Remove any beggar already standing.
  *
@@ -804,17 +778,8 @@ void SpawnForScene() {
     sGreeting = false;
 
     const int16_t sceneNum = (int16_t)gPlayState->sceneNum;
-
-    const int32_t overrideScene = CVarGetInteger(CVAR_BEGGAR_SCENE, kNoOverrideScene);
-    if (overrideScene == sceneNum) {
-        SpawnShop(CVarGetFloat(CVAR_BEGGAR_X, 0.0f), CVarGetFloat(CVAR_BEGGAR_Y, 0.0f),
-                  CVarGetFloat(CVAR_BEGGAR_Z, 0.0f), (int16_t)CVarGetInteger(CVAR_BEGGAR_YAW, 0));
-        return;
-    }
-
     for (const BeggarSpot& spot : kBeggarSpots) {
-        // A scene with an override never also gets its table row - see the note above the CVars.
-        if (spot.sceneNum == sceneNum && spot.sceneNum != overrideScene) {
+        if (spot.sceneNum == sceneNum) {
             SpawnShop(spot.x, spot.y, spot.z, spot.yaw);
         }
     }
@@ -917,84 +882,4 @@ void RegisterBeggarShop() {
 
 } // namespace
 
-// Drop the beggar at the player, for choosing the fixed spot by standing on it.
-extern "C" void SevenSagesBeggarShop_SpawnAtPlayer(void) {
-    if (gPlayState == nullptr) {
-        return;
-    }
-    Player* player = GET_PLAYER(gPlayState);
-    if (player == nullptr) {
-        return;
-    }
-
-    const PosRot& world = player->actor.world;
-
-    // She faces the way YOU are facing, so stand where she should stand and look the way she should
-    // look. The customer side, the shelf, the camera and the eight slots all follow from that one
-    // angle - see sYaw.
-    const int16_t yaw = player->actor.shape.rot.y;
-
-    if (!SpawnShop(world.pos.x, world.pos.y, world.pos.z, yaw)) {
-        return;
-    }
-
-    CVarSetInteger(CVAR_BEGGAR_SCENE, gPlayState->sceneNum);
-    CVarSetFloat(CVAR_BEGGAR_X, world.pos.x);
-    CVarSetFloat(CVAR_BEGGAR_Y, world.pos.y);
-    CVarSetFloat(CVAR_BEGGAR_Z, world.pos.z);
-    CVarSetInteger(CVAR_BEGGAR_YAW, yaw);
-    CVarSave();
-
-    // On screen as well as in the log. The log is the wrong place for this on its own: spdlog
-    // buffers to disk so the file stays empty until the game exits, and the in-game console is a
-    // wall of ResourceManager [trace] lines that a single INFO disappears into. The whole point of
-    // this button is to read four numbers off it.
-    const std::string row =
-        fmt::format("{{ SCENE_?, {:.1f}f, {:.1f}f, {:.1f}f, {} }}", world.pos.x, world.pos.y, world.pos.z, yaw);
-    Notification::Emit({ .message = row, .remainingTime = 15 });
-
-    // Logged in table-row shape too, because the end of this is a row in kBeggarSpots rather than a
-    // CVar every player carries.
-    SPDLOG_INFO("[SevenSages] beggar placed - scene {}: {}", gPlayState->sceneNum, row);
-}
-
-// Forget a hand placement and go back to the table.
-extern "C" void SevenSagesBeggarShop_ClearPlacement(void) {
-    CVarSetInteger(CVAR_BEGGAR_SCENE, kNoOverrideScene);
-    CVarSave();
-    SPDLOG_INFO("[SevenSages] beggar placement cleared");
-}
-
-namespace {
-// ── Menu ────────────────────────────────────────────────────────────────────────────────────
-//
-// Two buttons, both for placing her. Nothing here is player-facing: the beggar spawns on her own
-// and is used entirely in-world. These exist because picking a coordinate by reading prop tables
-// was wrong four times running, and standing on the spot is the only method that worked.
-
-void RegisterBeggarMenu() {
-    // Same sidebar page the co-op setup registers, second column.
-    WidgetPath path = { "Network", "Seven Sages Co-op", SECTION_COLUMN_2 };
-
-    SohGui::mSohMenu->AddWidget(path, "Trade Box", WIDGET_SEPARATOR_TEXT);
-
-    SohGui::mSohMenu->AddWidget(path, "Place the Beggar Here", WIDGET_BUTTON)
-        .Callback([](WidgetInfo& info) { SevenSagesBeggarShop_SpawnAtPlayer(); })
-        .Options(UIWidgets::ButtonOptions().Tooltip(
-            "Move the beggar to where you stand, facing the way you face.\n"
-            "\n"
-            "The shelf goes behind her and the browse camera frames from in front, so stand where "
-            "SHE should stand. The coordinate persists across reloads and is shown on screen."));
-
-    SohGui::mSohMenu->AddWidget(path, "Forget Beggar Placement", WIDGET_BUTTON)
-        .Callback([](WidgetInfo& info) { SevenSagesBeggarShop_ClearPlacement(); })
-        .Options(
-            UIWidgets::ButtonOptions().Tooltip("Discard a hand-placed beggar and go back to the built-in position.\n"
-                                               "\n"
-                                               "Takes effect on the next scene load."));
-}
-
-} // namespace
-
 static RegisterShipInitFunc sevenSagesBeggarShopInitFunc(RegisterBeggarShop, { "IS_RANDO" });
-static RegisterMenuInitFunc sevenSagesBeggarMenuInitFunc(RegisterBeggarMenu);
