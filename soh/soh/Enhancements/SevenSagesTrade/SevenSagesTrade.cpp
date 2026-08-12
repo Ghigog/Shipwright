@@ -474,7 +474,7 @@ extern "C" bool SevenSagesTrade_GiveItem(int16_t randomizerGet) {
             return true;
 
         case STORE_SLOT:
-            INV_CONTENT(item->a) = item->a;
+            INV_CONTENT(item->a) = (u8)item->a;
             return true;
 
         case STORE_BOTTLE: {
