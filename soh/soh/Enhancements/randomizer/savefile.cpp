@@ -968,33 +968,60 @@ extern "C" uint8_t Randomizer_GetSageStartingAge() {
 // separate ground that there is no discrete item to hand over - see SevenSagesTrade.h.
 static RandomizerGet SageKitOptionToItem(RandomizerSettingKey key) {
     switch (key) {
-        case RSK_STARTING_MEGATON_HAMMER:  return RG_MEGATON_HAMMER;
-        case RSK_STARTING_BOW:             return RG_PROGRESSIVE_BOW;
-        case RSK_STARTING_LIGHT_ARROWS:    return RG_LIGHT_ARROWS;
-        case RSK_STARTING_STONE_OF_AGONY:  return RG_STONE_OF_AGONY;
-        case RSK_STARTING_OCARINA:         return RG_PROGRESSIVE_OCARINA;
-        case RSK_STARTING_SARIAS_SONG:     return RG_SARIAS_SONG;
-        case RSK_STARTING_ZELDAS_LULLABY:  return RG_ZELDAS_LULLABY;
-        case RSK_STARTING_GORON_TUNIC:     return RG_GORON_TUNIC;
-        case RSK_STARTING_ZORA_TUNIC:      return RG_ZORA_TUNIC;
-        case RSK_STARTING_IRON_BOOTS:      return RG_IRON_BOOTS;
-        case RSK_STARTING_HOVER_BOOTS:     return RG_HOVER_BOOTS;
-        case RSK_STARTING_MIRROR_SHIELD:   return RG_MIRROR_SHIELD;
-        case RSK_STARTING_LENS_OF_TRUTH:   return RG_LENS_OF_TRUTH;
-        case RSK_STARTING_HOOKSHOT:        return RG_PROGRESSIVE_HOOKSHOT;
-        case RSK_STARTING_BUNNY_HOOD:      return RG_BUNNY_HOOD;
-        case RSK_STARTING_GERUDO_CARD:     return RG_GERUDO_MEMBERSHIP_CARD;
-        case RSK_STARTING_DINS_FIRE:       return RG_DINS_FIRE;
-        case RSK_STARTING_FARORES_WIND:    return RG_FARORES_WIND;
-        case RSK_STARTING_NAYRUS_LOVE:     return RG_NAYRUS_LOVE;
-        case RSK_STARTING_SCALE:           return RG_PROGRESSIVE_SCALE;
-        case RSK_STARTING_STRENGTH:        return RG_PROGRESSIVE_STRENGTH;
-        case RSK_STARTING_MAGIC_METER:     return RG_PROGRESSIVE_MAGIC_METER;
-        case RSK_STARTING_BOMB_BAG:        return RG_PROGRESSIVE_BOMB_BAG;
-        case RSK_STARTING_BOMBCHU_BAG:     return RG_PROGRESSIVE_BOMBCHU_BAG;
-        case RSK_STARTING_STICKS:          return RG_PROGRESSIVE_STICK_UPGRADE;
-        case RSK_STARTING_NUTS:            return RG_PROGRESSIVE_NUT_UPGRADE;
-        default:                           return RG_NONE;
+        case RSK_STARTING_MEGATON_HAMMER:
+            return RG_MEGATON_HAMMER;
+        case RSK_STARTING_BOW:
+            return RG_PROGRESSIVE_BOW;
+        case RSK_STARTING_LIGHT_ARROWS:
+            return RG_LIGHT_ARROWS;
+        case RSK_STARTING_STONE_OF_AGONY:
+            return RG_STONE_OF_AGONY;
+        case RSK_STARTING_OCARINA:
+            return RG_PROGRESSIVE_OCARINA;
+        case RSK_STARTING_SARIAS_SONG:
+            return RG_SARIAS_SONG;
+        case RSK_STARTING_ZELDAS_LULLABY:
+            return RG_ZELDAS_LULLABY;
+        case RSK_STARTING_GORON_TUNIC:
+            return RG_GORON_TUNIC;
+        case RSK_STARTING_ZORA_TUNIC:
+            return RG_ZORA_TUNIC;
+        case RSK_STARTING_IRON_BOOTS:
+            return RG_IRON_BOOTS;
+        case RSK_STARTING_HOVER_BOOTS:
+            return RG_HOVER_BOOTS;
+        case RSK_STARTING_MIRROR_SHIELD:
+            return RG_MIRROR_SHIELD;
+        case RSK_STARTING_LENS_OF_TRUTH:
+            return RG_LENS_OF_TRUTH;
+        case RSK_STARTING_HOOKSHOT:
+            return RG_PROGRESSIVE_HOOKSHOT;
+        case RSK_STARTING_BUNNY_HOOD:
+            return RG_BUNNY_HOOD;
+        case RSK_STARTING_GERUDO_CARD:
+            return RG_GERUDO_MEMBERSHIP_CARD;
+        case RSK_STARTING_DINS_FIRE:
+            return RG_DINS_FIRE;
+        case RSK_STARTING_FARORES_WIND:
+            return RG_FARORES_WIND;
+        case RSK_STARTING_NAYRUS_LOVE:
+            return RG_NAYRUS_LOVE;
+        case RSK_STARTING_SCALE:
+            return RG_PROGRESSIVE_SCALE;
+        case RSK_STARTING_STRENGTH:
+            return RG_PROGRESSIVE_STRENGTH;
+        case RSK_STARTING_MAGIC_METER:
+            return RG_PROGRESSIVE_MAGIC_METER;
+        case RSK_STARTING_BOMB_BAG:
+            return RG_PROGRESSIVE_BOMB_BAG;
+        case RSK_STARTING_BOMBCHU_BAG:
+            return RG_PROGRESSIVE_BOMBCHU_BAG;
+        case RSK_STARTING_STICKS:
+            return RG_PROGRESSIVE_STICK_UPGRADE;
+        case RSK_STARTING_NUTS:
+            return RG_PROGRESSIVE_NUT_UPGRADE;
+        default:
+            return RG_NONE;
     }
 }
 
