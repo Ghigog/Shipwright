@@ -205,6 +205,63 @@ constexpr TradeableItem kTradeableItems[] = {
     { RG_PROGRESSIVE_BOMB_BAG, STORE_UPGRADE, UPG_BOMB_BAG, 1, 0 },
 };
 
+// ITEM_* ids for the equipment rows. A STORE_EQUIP row's `a` is an EQUIP_TYPE_* and carries no
+// ITEM_ id at all, so the bridge between the two has to be spelled out. Kokiri tunic and Kokiri
+// boots are absent for the same reason they are absent from kTradeableItems: they are the default
+// state rather than acquirable items.
+struct ItemIdToRandomizerGet {
+    int16_t itemId;
+    int16_t randomizerGet;
+};
+
+constexpr ItemIdToRandomizerGet kEquipmentItemIds[] = {
+    { ITEM_SWORD_KOKIRI, RG_KOKIRI_SWORD },   { ITEM_SWORD_MASTER, RG_MASTER_SWORD },
+    { ITEM_SWORD_BGS, RG_BIGGORON_SWORD },    { ITEM_SHIELD_DEKU, RG_DEKU_SHIELD },
+    { ITEM_SHIELD_HYLIAN, RG_HYLIAN_SHIELD }, { ITEM_SHIELD_MIRROR, RG_MIRROR_SHIELD },
+    { ITEM_TUNIC_GORON, RG_GORON_TUNIC },     { ITEM_TUNIC_ZORA, RG_ZORA_TUNIC },
+    { ITEM_BOOTS_IRON, RG_IRON_BOOTS },       { ITEM_BOOTS_HOVER, RG_HOVER_BOOTS },
+};
+
+int16_t ItemIdForRandomizerGet(int16_t randomizerGet) {
+    for (const ItemIdToRandomizerGet& row : kEquipmentItemIds) {
+        if (row.randomizerGet == randomizerGet) {
+            return row.itemId;
+        }
+    }
+    return ITEM_NONE;
+}
+
+/**
+ * Clear `itemId` off every button it is assigned to.
+ *
+ * ── Removing an item from the inventory is not enough on its own ────────────────────────────
+ *
+ * gSaveContext.equips.buttonItems holds an ITEM_ id per button, INDEPENDENTLY of whether the
+ * inventory still contains it. Emptying the inventory slot alone leaves the button naming an item
+ * the player no longer owns - and it stays usable, because using a C item reads the button, not
+ * the slot. Deposit the Lens of Truth off a C button and you get one copy on the beggar's shelf
+ * and one still on the button, which is exactly what happened in testing.
+ *
+ * Vanilla never hits this because Inventory_DeleteItem does both halves together
+ * (z_parameter.c:2612) - it clears the slot and then sweeps buttonItems for the same id. This is
+ * that sweep, split out so it can also cover bottles and equipment, neither of which goes through
+ * Inventory_DeleteItem.
+ *
+ * Note the loop starts at 1, as vanilla's does: index 0 is the B button, whose item is not a
+ * C-assignable inventory item and must not be cleared this way.
+ */
+void UnassignFromButtons(int16_t itemId) {
+    if (itemId == ITEM_NONE) {
+        return;
+    }
+    for (size_t i = 1; i < ARRAY_COUNT(gSaveContext.equips.buttonItems); i++) {
+        if (gSaveContext.equips.buttonItems[i] == itemId) {
+            gSaveContext.equips.buttonItems[i] = ITEM_NONE;
+            gSaveContext.equips.cButtonSlots[i - 1] = SLOT_NONE;
+        }
+    }
+}
+
 const TradeableItem* FindTradeable(int16_t randomizerGet) {
     for (const TradeableItem& item : kTradeableItems) {
         if (item.randomizerGet == randomizerGet) {
@@ -265,6 +322,35 @@ extern "C" bool SevenSagesTrade_IsTransferableObject(int16_t randomizerGet) {
     return FindTradeable(randomizerGet) != nullptr;
 }
 
+// ITEM_* is what a C button holds; the stash speaks RandomizerGet. The C-button deposit needs the
+// bridge between them (SevenSagesBeggarShop.cpp).
+//
+// Equipment is spelled out rather than derived, because a STORE_EQUIP row's `a` is an EQUIP_TYPE_*
+// and carries no ITEM_ id at all - there is nothing in kTradeableItems to match against. Kokiri
+// tunic and Kokiri boots are absent for the same reason they are absent from the table above: they
+// are the default state rather than acquirable items.
+extern "C" int16_t SevenSagesTrade_RandomizerGetForItemId(int16_t itemId) {
+    if (itemId == ITEM_NONE) {
+        return RG_NONE;
+    }
+
+    for (const ItemIdToRandomizerGet& row : kEquipmentItemIds) {
+        if (row.itemId == itemId) {
+            return row.randomizerGet;
+        }
+    }
+
+    // Everything else - single slots, masks, bottles - already stores its ITEM_ id in the table's
+    // `a` field, so no second list is needed and the two cannot drift apart.
+    for (const TradeableItem& item : kTradeableItems) {
+        if ((item.kind == STORE_SLOT || item.kind == STORE_BOTTLE) && item.a == itemId) {
+            return item.randomizerGet;
+        }
+    }
+
+    return RG_NONE;
+}
+
 extern "C" SevenSagesTradeVerdict SevenSagesTrade_CanDeposit(int16_t randomizerGet) {
     const TradeableItem* item = FindTradeable(randomizerGet);
     if (item == nullptr) {
@@ -303,6 +389,9 @@ extern "C" bool SevenSagesTrade_TakeItem(int16_t randomizerGet) {
     switch (item->kind) {
         case STORE_EQUIP:
             gSaveContext.inventory.equipment &= ~OWNED_EQUIP_FLAG(item->a, item->b);
+            // Equipment reaches a C button through the Assignable Tunics and Boots enhancement, so
+            // it ghosts the same way an inventory item does if the button is left naming it.
+            UnassignFromButtons(ItemIdForRandomizerGet(item->randomizerGet));
             return true;
 
         case STORE_QUEST:
@@ -311,6 +400,7 @@ extern "C" bool SevenSagesTrade_TakeItem(int16_t randomizerGet) {
 
         case STORE_SLOT:
             INV_CONTENT(item->a) = ITEM_NONE;
+            UnassignFromButtons(item->a);
             return true;
 
         case STORE_BOTTLE: {
@@ -319,6 +409,7 @@ extern "C" bool SevenSagesTrade_TakeItem(int16_t randomizerGet) {
                 return false;
             }
             gSaveContext.inventory.items[slot] = ITEM_NONE;
+            UnassignFromButtons(item->a);
             return true;
         }
 
@@ -347,16 +438,79 @@ extern "C" bool SevenSagesTrade_TakeItem(int16_t randomizerGet) {
 }
 
 extern "C" bool SevenSagesTrade_GiveItem(int16_t randomizerGet) {
-    if (FindTradeable(randomizerGet) == nullptr || gPlayState == nullptr) {
+    const TradeableItem* item = FindTradeable(randomizerGet);
+    if (item == nullptr || gPlayState == nullptr) {
         return false;
     }
 
-    // Deliberately the ordinary give path rather than a hand-written inverse of TakeItem. It is
-    // what a chest uses, so progressive tiers, ammo refills and every side effect behave exactly as
-    // they would on a normal pickup - and it stays correct on its own if any of that changes.
-    GetItemEntry entry = Rando::StaticData::RetrieveItem((RandomizerGet)randomizerGet).GetGIEntry_Copy();
-    GiveItemEntryWithoutActor(gPlayState, entry);
-    return true;
+    // ── Written as the exact inverse of TakeItem, against the same table row ────────────────
+    //
+    // Two earlier versions of this went through the engine's give paths instead, and both were
+    // wrong in ways that only showed up in play:
+    //
+    //   GiveItemEntryWithoutActor does not give anything. It sets player->getItemEntry and leaves
+    //   Player to run the hold-it-overhead animation on a later frame - so it refuses outright in
+    //   a range of player states (z_actor.c:2028), and cannot run at all while the player is
+    //   halted, which he always is at the beggar. The result was a withdrawal that deleted the
+    //   stash entry and handed over nothing.
+    //
+    //   Randomizer_Item_Give applies immediately, which fixed that, but it is randomizer
+    //   machinery: it dereferences OTRGlobals::Instance->gRandomizer directly (randomizer.cpp:1142
+    //   and again at RG_CHILD_WALLET) and reads rando settings and RandomizerInf flags throughout.
+    //   Seven Sages is its own quest id, not QUEST_RANDOMIZER, so that context is not guaranteed to
+    //   exist - and calling it crashed on the first withdrawal.
+    //
+    // The box only ever moves items that already have a row here, and TakeItem already knows how to
+    // remove each of the five storage shapes. Undoing exactly that is self-contained: no cutscene
+    // to sit through, no player-state gate to be refused by, and no dependency on a randomizer
+    // context that a Seven Sages file has no business assuming.
+    switch (item->kind) {
+        case STORE_EQUIP:
+            gSaveContext.inventory.equipment |= OWNED_EQUIP_FLAG(item->a, item->b);
+            return true;
+
+        case STORE_QUEST:
+            gSaveContext.inventory.questItems |= gBitFlags[item->a];
+            return true;
+
+        case STORE_SLOT:
+            INV_CONTENT(item->a) = item->a;
+            return true;
+
+        case STORE_BOTTLE: {
+            // Into the first empty bottle slot. Refusing when all four are full is what keeps the
+            // caller able to leave the item on the shelf rather than dropping it on the floor.
+            for (int slot = SLOT_BOTTLE_1; slot < SLOT_BOTTLE_1 + 4; slot++) {
+                if (gSaveContext.inventory.items[slot] == ITEM_NONE) {
+                    gSaveContext.inventory.items[slot] = (u8)item->a;
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        case STORE_UPGRADE: {
+            // One tier, mirroring the single-tier decrement TakeItem applies.
+            const int16_t tier = (int16_t)CUR_UPG_VALUE(item->a);
+            Inventory_ChangeUpgrade(item->a, tier + 1);
+
+            // The three chains that also own an inventory slot get it back on the way up, for the
+            // same reason they lose it on the way down: a quiver with no bow in the slot is not
+            // usable.
+            if (tier == 0) {
+                if (item->a == UPG_QUIVER) {
+                    INV_CONTENT(ITEM_BOW) = ITEM_BOW;
+                } else if (item->a == UPG_BULLET_BAG) {
+                    INV_CONTENT(ITEM_SLINGSHOT) = ITEM_SLINGSHOT;
+                } else if (item->a == UPG_BOMB_BAG) {
+                    INV_CONTENT(ITEM_BOMB) = ITEM_BOMB;
+                }
+            }
+            return true;
+        }
+    }
+
+    return false;
 }
 
 extern "C" const char* SevenSagesTrade_RefusalText(SevenSagesTradeVerdict verdict) {

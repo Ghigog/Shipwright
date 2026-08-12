@@ -71,6 +71,11 @@ typedef enum {
 // progression items are in scope.
 bool SevenSagesTrade_IsTransferableObject(int16_t randomizerGet);
 
+// The RandomizerGet an ITEM_* id corresponds to, or RG_NONE when that item is not something the
+// box can hold. Exists for the C-button deposit, which only ever learns which ITEM_ is on the
+// pressed button (Player_GetItemOnButton) and has to get back to the stash's own vocabulary.
+int16_t SevenSagesTrade_RandomizerGetForItemId(int16_t itemId);
+
 // The full deposit test for the local player right now. Applies, in order: the category test
 // above, kit binding, "do you actually hold this", the equip-lock, and the last-in-category rule.
 //
