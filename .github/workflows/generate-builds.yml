@@ -1,10 +1,24 @@
 name: generate-builds
 on:
+  # Fork change: branches-only, so a tag push does not build.
+  #
+  # This was a bare `push:`, which has no branch or tag filter, so every release tag
+  # triggered a full build of a commit the branch run had already built. Measured on
+  # 2026-08-12: the seven-sages-v0.2.0 tag ran 80 minutes and produced artifacts nobody
+  # downloads - releases attach the branch run's artifacts - and saved its caches under
+  # refs/tags/... keys that no later build restores from.
   push:
+    branches:
+      - '**'
   pull_request:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Fork change: queue instead of killing. hendrikmuhs/ccache-action saves its cache in a
+  # POST-JOB step, which a cancelled run never reaches - so cancelling seeded nothing and
+  # made every later build colder. Measured 2026-08-12: three pushes inside ten minutes,
+  # the first two cancelled at ~3 min each having saved nothing, the third paying full
+  # cold cost. Queuing costs CI minutes on a burst and buys back the cache every time.
+  cancel-in-progress: false
 jobs:
 
   generate-soh-otr:
@@ -24,10 +38,8 @@ jobs:
         # misses, ~7.8s each, 34.5 min of the 42 min Windows job. Save unconditionally so a
         # branch build seeds the cache that the next branch build restores.
         save: true
-        key: ${{ runner.os }}-otr-ccache-${{ github.ref }}-${{ github.sha }}
-        restore-keys: |
-          ${{ runner.os }}-otr-ccache-${{ github.ref }}
-          ${{ runner.os }}-otr-ccache
+        # Fork change: stable key - see the build-linux ccache note.
+        key: ${{ runner.os }}-otr-ccache
     - name: Install dependencies
       run: |
         sudo apt-get update
@@ -35,9 +47,11 @@ jobs:
     - name: Restore Cached deps folder
       uses: actions/cache/restore@v5
       with:
-        key: ${{ runner.os }}-deps-${{ github.ref }}-${{ github.sha }}
+        # Fork change: content-addressed, not per-commit. This folder holds the SDL and
+        # libzip source trees whose versions are pinned in this workflow file, so the
+        # workflow's own hash is what decides its contents.
+        key: ${{ runner.os }}-deps-${{ hashFiles('.github/workflows/generate-builds.yml') }}
         restore-keys: |
-          ${{ runner.os }}-deps-${{ github.ref }}-
           ${{ runner.os }}-deps-
         path: deps
     - name: Create deps folder
@@ -132,17 +146,19 @@ jobs:
       with:
         # Fork change: save on any branch - see the note in generate-soh-otr above.
         save: true
-        key: ${{ runner.os }}-ccache-${{ github.ref }}-${{ github.sha }}
-        restore-keys: |
-          ${{ runner.os }}-ccache-${{ github.ref }}
-          ${{ runner.os }}-ccache
+        # Fork change: stable key, matching what build-macos already does. The action
+        # appends its own timestamp, so a new entry is minted per run either way - but a
+        # per-ref/per-sha key namespaces them so a tag or a new branch starts cold.
+        key: ${{ runner.os }}-ccache
     - name: Restore Cached deps folder
       id: restore-cache-deps
       uses: actions/cache/restore@v5
       with:
-        key: ${{ runner.os }}-deps-${{ github.ref }}-${{ github.sha }}
+        # Fork change: content-addressed, not per-commit. This folder holds the SDL and
+        # libzip source trees whose versions are pinned in this workflow file, so the
+        # workflow's own hash is what decides its contents.
+        key: ${{ runner.os }}-deps-${{ hashFiles('.github/workflows/generate-builds.yml') }}
         restore-keys: |
-          ${{ runner.os }}-deps-${{ github.ref }}-
           ${{ runner.os }}-deps-
         path: deps
     - name: Create deps folder
@@ -208,7 +224,11 @@ jobs:
     - name: Save Cache deps folder
       # Fork change: see the vcpkg/sccache note - never building the default branch means
       # this cache is otherwise never populated.
-      if: always()
+      #
+      # Skipped on an exact hit, for the same reason as the vcpkg save: the key is now
+      # content-addressed, so an exact hit means the entry already exists.
+      if: always() && steps.restore-cache-deps.outputs.cache-hit != 'true'
+      continue-on-error: true
       uses: actions/cache/save@v5
       with:
         key: ${{ steps.restore-cache-deps.outputs.cache-primary-key }}
@@ -217,6 +237,10 @@ jobs:
   build-windows:
     needs: generate-soh-otr
     runs-on: windows-latest
+    permissions:
+      contents: read
+      # Fork change: needed by the cache-prune step at the end of this job.
+      actions: write
     steps:
     - name: Install dependencies
       run: |
@@ -230,7 +254,23 @@ jobs:
       uses: hendrikmuhs/ccache-action@v1.2.23
       with:
         variant: sccache
-        max-size: "1G"
+        # Fork change: 3G, up from 1G.
+        #
+        # 1G was set on 2026-08-08 to stop Windows eating the repo's 10 GB cache budget. It
+        # worked, and it also made the cache useless: this build issues ~1701 compile
+        # requests whose cached output is ~1.9 GB, so sccache filled to the cap mid-build
+        # and evicted the entries the next run needed. Every Windows run from that change
+        # onward reported the same thing - restored ~1 GB successfully, then:
+        #
+        #   Compile requests 1701 / Cache hits 0 / Cache hits rate 0.00 %
+        #   Cache size 1023 MiB / Max cache size 1 GiB
+        #
+        # Verified identical on runs 31288117697, 31332403414, 31626965628 and 31630304255:
+        # a cache that is smaller than one build's working set costs a ~1 GB upload and
+        # download per run and returns nothing. The budget is protected by the prune step
+        # at the end of this job instead, which is the right lever - number of retained
+        # entries, not a cap below the working set.
+        max-size: "3G"
         evict-old-files: job
         # Fork change: save on any branch - see the note in generate-soh-otr above.
         save: true
@@ -251,9 +291,14 @@ jobs:
       id: restore-cache-vcpkg
       uses: actions/cache/restore@v5
       with:
-        key: ${{ runner.os }}-vcpkg-${{ github.ref }}-${{ github.sha }}
+        # Fork change: key on the thing that decides the contents, not on the commit.
+        #
+        # This was ${{ runner.os }}-vcpkg-${{ github.ref }}-${{ github.sha }}, which can never
+        # hit its own key and mints a fresh ~406 MB entry on every single run - 6 entries and
+        # 2.4 GB of the 10 GB budget as of 2026-08-12, for a directory whose contents only
+        # change when the package list in CMakeLists.txt does. Now one entry per package list.
+        key: ${{ runner.os }}-vcpkg-${{ hashFiles('CMakeLists.txt', 'CMake/automate-vcpkg.cmake') }}
         restore-keys: |
-          ${{ runner.os }}-vcpkg-${{ github.ref }}-
           ${{ runner.os }}-vcpkg-
         path: vcpkg
     - name: Configure Developer Command Prompt
@@ -285,8 +330,38 @@ jobs:
       # Fork change: same reason as the sccache save above - this fork never builds the
       # default branch, so gating on it means the vcpkg cache is never written and every
       # run pays the restore miss.
-      if: always()
+      #
+      # Skipped on an exact hit: the key is now content-addressed, so an exact hit means
+      # this entry already exists and re-saving it would fail on the duplicate key.
+      if: always() && steps.restore-cache-vcpkg.outputs.cache-hit != 'true'
+      continue-on-error: true
       uses: actions/cache/save@v5
       with:
         key: ${{ steps.restore-cache-vcpkg.outputs.cache-primary-key }}
         path: vcpkg
+
+    - name: Prune old sccache entries
+      # Fork change: keep the budget under control by entry count rather than by capping
+      # the cache below one build's working set, which is what made it useless before.
+      #
+      # hendrikmuhs/ccache-action appends a timestamp to its key by design (append-timestamp
+      # defaults to true), so every run mints a NEW entry and restores the newest by prefix.
+      # Nothing ever deletes the old ones. At ~2-3 GB per Windows entry that fills the repo's
+      # 10 GB budget within a few runs, and GitHub then evicts least-recently-used entries -
+      # which are the other platforms' caches and vcpkg, not this one. Measured 2026-08-12
+      # before this step existed: 9.5 GB across 37 entries, Windows sccache 4.99 GB of it.
+      #
+      # Keep the two most recent: the one this run just saved, and its predecessor as a
+      # fallback if this run's save was incomplete.
+      if: always()
+      continue-on-error: true
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        gh api "repos/${{ github.repository }}/actions/caches?per_page=100" \
+          --jq '.actions_caches[] | select(.key | startswith("sccache-Windows-")) | "\(.created_at)\t\(.id)"' \
+          | sort -r | tail -n +3 | cut -f2 | while read -r id; do
+              echo "Deleting stale sccache entry $id"
+              gh api -X DELETE "repos/${{ github.repository }}/actions/caches/$id" || true
+            done
