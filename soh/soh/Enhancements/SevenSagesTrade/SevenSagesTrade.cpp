@@ -63,10 +63,14 @@ extern "C" {
 #include "macros.h"
 #include "functions.h"
 #include "variables.h"
-}
 
-// Not declared in any header the C++ side sees - same one-line extern IvanCoop.cpp uses.
+// Not declared in any header the C++ side sees - same one-line extern the Anchor
+// files use. It has to sit inside the extern "C" block: MSVC mangles global
+// variable names, so a C++-linkage declaration here emits ?gPlayState@@3PEAU...
+// and fails to link against the C definition. The Itanium ABI does not mangle
+// variables, which is why a macOS or Linux build links either way.
 extern PlayState* gPlayState;
+}
 
 namespace {
 
