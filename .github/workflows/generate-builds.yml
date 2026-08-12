@@ -10,7 +10,22 @@ on:
   push:
     branches:
       - '**'
+    # Fork change: don't spend a full multi-platform build on prose. Note the one
+    # consequence: README.md ships as readme.txt inside the artifact, so a README-only
+    # commit won't be reflected until the next build that runs for another reason.
+    # (Written out twice rather than shared with a YAML anchor - GitHub Actions does not
+    # support anchors or aliases in workflow files.)
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/ISSUE_TEMPLATE/**'
+      - 'LICENSE'
   pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/ISSUE_TEMPLATE/**'
+      - 'LICENSE'
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   # Fork change: queue instead of killing. hendrikmuhs/ccache-action saves its cache in a
