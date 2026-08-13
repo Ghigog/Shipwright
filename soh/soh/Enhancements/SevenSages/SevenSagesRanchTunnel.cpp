@@ -120,13 +120,21 @@ struct TunnelMouth {
     int16_t yaw; // which way you face on arrival at THIS mouth
 };
 
-// Both coordinates are placeholders. Place each end with its menu button and the real values
-// persist; this table is only the default for someone who never does.
+// MEASURED, not placeholders - and that distinction shipped broken once, so it is worth stating.
+//
+// The menu buttons persist a placement to CVars, which is how these two coordinates were found. But
+// CVars live in a player's own profile directory, so a fresh install has none and falls back to
+// THIS table. v0.2.1 went out with (0,0,-2400) and (0,0,0) still sitting here: the holes spawned at
+// meaningless positions, inside terrain, and the feature appeared simply absent to anyone who was
+// not the person who had placed them locally.
+//
+// So: after placing a mouth by hand, read the value back out and put it here. The placer is for
+// finding a spot, not for holding it.
 TunnelMouth sMouths[] = {
-    // 0 - inside the ranch, up by the fence.
-    { SCENE_LON_LON_RANCH, ENTR_HYRULE_FIELD_CENTER_EXIT, 1, 0.0f, 0.0f, -2400.0f, 0 },
-    // 1 - out in Hyrule Field, south of the ranch.
-    { SCENE_HYRULE_FIELD, ENTR_LON_LON_RANCH_ENTRANCE, 0, 0.0f, 0.0f, 0.0f, 0 },
+    // 0 - inside the ranch, by the west fence.
+    { SCENE_LON_LON_RANCH, ENTR_HYRULE_FIELD_CENTER_EXIT, 1, -1439.6f, 0.0f, 1192.1f, 28251 },
+    // 1 - out in Hyrule Field, south-west of the ranch.
+    { SCENE_HYRULE_FIELD, ENTR_LON_LON_RANCH_ENTRANCE, 0, -4369.1f, -118.5f, 7643.3f, -15627 },
 };
 constexpr uint8_t kMouthCount = (uint8_t)ARRAY_COUNT(sMouths);
 
